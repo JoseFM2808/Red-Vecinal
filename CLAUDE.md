@@ -1,0 +1,48 @@
+# Vecino Seguro — Contexto del proyecto (Claude Code)
+
+> Este archivo se carga automáticamente cuando trabajas en este repo con Claude Code.
+> Contexto completo (problema, decisiones, arquitectura, monetización, roadmap, riesgos): **`docs/PROYECTO.md`**
+
+## Qué es
+Vecino Seguro: red vecinal de reporte de seguridad con geolocalización + blockchain, construida para
+el Hackathon Ethereum Lima 2026 (deadline: 12 ago, 4pm). Complementa al serenazgo/policía en zonas
+donde no llegan o no generan confianza — no los reemplaza.
+
+## Diseño ya decidido (no reabrir sin razón)
+- Identidad **pseudónima por defecto** (wallet). Revelación de identidad real solo bajo
+  consentimiento del usuario o solicitud judicial verificable (multisig usuario + plataforma + autoridad).
+- **Doble ruta de respuesta**: red vecinal + botón de escalamiento directo a serenazgo/policía/ambulancia.
+- Recompensa en token orientada a **prueba de presencia** (no "tiempo de app abierta"), con
+  rate-limit anti-Sybil básico para el MVP.
+- On-chain se guarda el **hash** del reporte (IPFS + coordenadas + timestamp), no la identidad.
+
+## Stack técnico
+- **Contratos**: Solidity sobre Arbitrum Sepolia (testnet) → mira a Arbitrum One.
+  - `ReportRegistry.sol` — hash IPFS + coordenadas + categoría + timestamp, emite evento.
+  - `TokenReward.sol` (ERC-20) — mint con rate-limit por wallet/zona/tiempo.
+  - `IdentityEscrow.sol` — vínculo wallet↔identidad cifrado, multisig simplificado 2-de-3 para el MVP.
+- **Frontend**: React/Next.js, mobile-first.
+  - Wallet abstraction: Privy o Web3Auth (nada de seed phrases visibles al usuario).
+  - Mapa en tiempo real: Mapbox/Leaflet.
+  - Flujo: categoría → foto/video → geolocalización automática → confirmar → recompensa.
+  - Botón de escalamiento a autoridad (webhook/SMS/WhatsApp simulado para demo).
+  - Pantalla conceptual de "revelación bajo orden judicial" (demo, no integración legal real).
+- **Storage**: IPFS/Pinata para evidencia multimedia.
+
+## Alcance del MVP (no expandir sin justificación fuerte)
+- Máximo **2 categorías de reporte** (ej. actividad sospechosa + infraestructura/luminaria).
+- Si el tiempo aprieta: priorizar que **una sola categoría** funcione end-to-end
+  (reporte → token → mapa → escalamiento) antes que varias a medio terminar.
+- Sismos: **no** es funcionalidad núcleo. Solo mencionarlo como roadmap futuro en el pitch,
+  o como categoría de reporte liviana ("sismo sentido" tipo USGS "Did You Feel It?") si sobra tiempo
+  al final — nunca como motor de detección propio.
+
+## Riesgos a comunicar con transparencia (no ocultar en el pitch)
+- Anti-Sybil del MVP es básico (rate-limit), no prueba de presencia completa.
+- Revelación selectiva es demo conceptual del mecanismo, no integración legal real.
+
+## Convenciones de trabajo
+- Antes de tocar el alcance o las decisiones de diseño de arriba, confirmar que el cambio no
+  compromete la entrega del 12 de agosto.
+- Cualquier decisión nueva de arquitectura o alcance que se tome durante el desarrollo debe
+  añadirse a `docs/PROYECTO.md` para que quede como fuente de verdad.
