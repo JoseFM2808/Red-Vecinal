@@ -4,7 +4,7 @@
 
 Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o por el equipo se registra aquí ANTES o AL MOMENTO de escribir el código que la implementa. `docs/DECISIONES.md` se genera desde este archivo (npm run docs) y la pestaña Arquitectura de la app lo renderiza.
 
-**27 decisiones registradas · 12 esperan validacion humana**
+**28 decisiones registradas · 12 esperan validacion humana**
 
 ## Esperan que una persona decida
 
@@ -54,6 +54,7 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | [ADR-101](#adr-101) | Círculo de cuidado: aviso cuando pasa algo cerca de alguien de tu familia | IA+Humano | aceptada | alta | Problema e impacto, Producto y UX, Implementacion tecnica |
 | [ADR-102](#adr-102) | El círculo es la única parte de la app que exige cuenta | IA+Humano | aceptada | alta | Producto y UX, Problema e impacto, Implementacion tecnica |
 | [ADR-025](#adr-025) | El círculo de cuidado sale del laboratorio y entra a producción | IA+Humano | aceptada | media | Producto y UX, Problema e impacto, Pitch y demo |
+| [ADR-026](#adr-026) | El acceso deja de depender de la pantalla de bienvenida | IA+Humano | aceptada | alta | Producto y UX, Pitch y demo |
 
 ---
 
@@ -883,3 +884,34 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 **Evidencia en el codigo.** `src/app/circulo/page.tsx`, `src/components/proveedores/CirculoProvider.tsx`, `CLAUDE.md`, `README.md`
 
 > **Necesita decision humana:** Decidir cómo se presenta el círculo en el pitch. Si se muestra, hay que poder responder la pregunta de control vs cuidado delante del jurado; si no se responde bien, es la funcionalidad que más fácil se vuelve en contra. La alternativa es tenerla en la app pero no demostrarla.
+
+---
+
+## ADR-026
+
+### El acceso deja de depender de la pantalla de bienvenida
+
+`2026-08-07` · autor: **IA+Humano** · estado: **aceptada** · reversibilidad: **alta**
+
+**Contexto.** El equipo abrio la web y no encontro forma de entrar ni de elegir modo demostracion. La causa: la pantalla de bienvenida de ADR-022 solo aparece una vez por dispositivo, y una vez descartada el unico acceso volvia a estar escondido dentro de la pestana Cuenta. Es el mismo problema que ADR-022 pretendia resolver, reaparecido en cuanto alguien ya habia visitado el sitio.
+
+**Alternativas descartadas.**
+
+- *Mostrar la bienvenida en cada visita hasta que la persona inicie sesion* — Convierte en peaje recurrente algo que se diseno para no serlo, y castiga justamente a quien decidio usar la app sin cuenta, que es el camino por defecto del producto.
+- *Poner el boton de Google en todas las cabeceras* — El acceso compite con el indicador de red y con la accion de cada pantalla. Inicio es donde tiene sentido, porque es la pantalla de presentacion.
+- *Dejarlo como estaba y explicar que hay que ir a Cuenta* — Si una persona del propio equipo no lo encuentra, un jurado tampoco.
+
+**Decision.** Entrada permanente en la cabecera de Inicio: un boton Entrar cuando no hay sesion, y el avatar con enlace a Cuenta cuando la hay. No bloquea nada. Ademas, Cuenta gana un boton para volver a ver la bienvenida, pensado para ensayar la demo desde el principio. La clave de localStorage se mueve a src/lib/bienvenida.ts para que pantalla y boton no se desincronicen.
+
+**Consecuencias.**
+
+- Entrar es visible desde el primer segundo sin convertirse en una barrera.
+- Se puede ensayar la demo desde la pantalla de bienvenida las veces que haga falta.
+- Si no hay credenciales de Google configuradas, el boton no aparece: la app sigue funcionando con el alias local.
+- El indicador de red baja a su propia linea en Inicio para no competir con el acceso.
+
+**Costo de revertir.** Bajo: un componente y una linea en la cabecera.
+
+**Sirve a.** Producto y UX, Pitch y demo
+
+**Evidencia en el codigo.** `src/components/inicio/AccesoRapido.tsx`, `src/lib/bienvenida.ts`, `src/app/page.tsx`, `src/components/cuenta/PanelCuenta.tsx`

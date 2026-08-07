@@ -9,6 +9,7 @@ import { TarjetaReporte } from "@/components/reportes/TarjetaReporte";
 import { Icono } from "@/components/ui/Icono";
 import { Aviso, Dato, EtiquetaSimulado } from "@/components/ui/primitivos";
 import { describirPolitica, POLITICA_RECOMPENSA } from "@/lib/antisybil";
+import { reiniciarBienvenida } from "@/lib/bienvenida";
 import { obtenerAdaptadorDeCadena } from "@/lib/chain";
 import { abreviarDireccion } from "@/lib/identidad";
 import type { Reporte } from "@/lib/tipos";
@@ -135,6 +136,21 @@ export function PanelCuenta() {
         <p className="mt-2 text-[11px] leading-relaxed text-tenue">
           Borra los reportes de este dispositivo y vuelve a sembrar la red de ejemplo. Util antes de
           presentar.
+        </p>
+
+        <button
+          type="button"
+          onClick={() => {
+            reiniciarBienvenida();
+            window.location.href = "/";
+          }}
+          className="toque mt-3 w-full rounded-xl border border-borde bg-superficie-alta text-sm font-medium text-suave"
+        >
+          Volver a ver la pantalla de bienvenida
+        </button>
+        <p className="mt-2 text-[11px] leading-relaxed text-tenue">
+          La bienvenida solo aparece la primera vez en cada dispositivo. Esto la reactiva, util
+          para ensayar la demo desde el principio.
         </p>
       </section>
 

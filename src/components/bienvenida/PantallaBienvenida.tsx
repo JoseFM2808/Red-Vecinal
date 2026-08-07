@@ -4,6 +4,7 @@ import { signIn } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { useApp } from "@/components/proveedores/AppProvider";
 import { useGoogleDisponible } from "@/components/proveedores/SesionProvider";
+import { bienvenidaYaVista, marcarBienvenidaVista } from "@/lib/bienvenida";
 import { Icono } from "@/components/ui/Icono";
 
 /**
@@ -18,8 +19,6 @@ import { Icono } from "@/components/ui/Icono";
  * Si no hay credenciales de Google cargadas, la pantalla igual se muestra (sirve de
  * presentacion) y lo dice, en vez de fingir que el login no existe.
  */
-
-const CLAVE_VISTA = "vecino-seguro:bienvenida:v1";
 
 function LogoGoogle() {
   return (
@@ -56,19 +55,11 @@ export function PantallaBienvenida() {
   // Solo despues de montar: localStorage no existe en el servidor y leerlo durante el
   // render romperia la hidratacion de una pagina estatica.
   useEffect(() => {
-    try {
-      if (window.localStorage.getItem(CLAVE_VISTA) !== "1") setVisible(true);
-    } catch {
-      // Modo privado sin almacenamiento: no se insiste con la bienvenida.
-    }
+    if (!bienvenidaYaVista()) setVisible(true);
   }, []);
 
   const marcarVista = () => {
-    try {
-      window.localStorage.setItem(CLAVE_VISTA, "1");
-    } catch {
-      // sin almacenamiento: reaparecera la proxima vez, no es grave
-    }
+    marcarBienvenidaVista();
     setVisible(false);
   };
 
@@ -123,11 +114,7 @@ export function PantallaBienvenida() {
                 disabled={ocupado}
                 onClick={() => {
                   setOcupado(true);
-                  try {
-                    window.localStorage.setItem(CLAVE_VISTA, "1");
-                  } catch {
-                    // sin almacenamiento
-                  }
+                  marcarBienvenidaVista();
                   void signIn("google", { redirectTo: "/" });
                 }}
                 className="toque flex w-full items-center justify-center gap-2.5 rounded-xl bg-white text-sm font-semibold text-[#1f1f1f] transition active:scale-[0.99] disabled:opacity-60"

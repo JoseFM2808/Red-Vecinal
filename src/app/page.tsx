@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AccesoRapido } from "@/components/inicio/AccesoRapido";
 import { ResumenRed } from "@/components/inicio/ResumenRed";
 import { AvisoSismo } from "@/components/sismos/AvisoSismo";
 import { Icono } from "@/components/ui/Icono";
@@ -46,6 +47,10 @@ export default function PaginaInicio() {
             </span>
             <h1 className="text-base font-semibold tracking-tight">Vecino Seguro</h1>
           </div>
+          {/* Entrada permanente al acceso: la bienvenida solo sale una vez (ADR-026). */}
+          <AccesoRapido />
+        </div>
+        <div className="mt-2 flex justify-end">
           <IndicadorRed />
         </div>
         <p className="mt-3 text-sm leading-relaxed text-suave">{problema.tesis}</p>

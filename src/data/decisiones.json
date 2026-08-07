@@ -1031,6 +1031,48 @@
       ],
       "requiere_validacion_humana": true,
       "nota_para_humano": "Decidir cómo se presenta el círculo en el pitch. Si se muestra, hay que poder responder la pregunta de control vs cuidado delante del jurado; si no se responde bien, es la funcionalidad que más fácil se vuelve en contra. La alternativa es tenerla en la app pero no demostrarla."
+    },
+    {
+      "id": "ADR-026",
+      "titulo": "El acceso deja de depender de la pantalla de bienvenida",
+      "fecha": "2026-08-07",
+      "autor": "IA+Humano",
+      "estado": "aceptada",
+      "contexto": "El equipo abrio la web y no encontro forma de entrar ni de elegir modo demostracion. La causa: la pantalla de bienvenida de ADR-022 solo aparece una vez por dispositivo, y una vez descartada el unico acceso volvia a estar escondido dentro de la pestana Cuenta. Es el mismo problema que ADR-022 pretendia resolver, reaparecido en cuanto alguien ya habia visitado el sitio.",
+      "opciones": [
+        {
+          "nombre": "Mostrar la bienvenida en cada visita hasta que la persona inicie sesion",
+          "descartada_porque": "Convierte en peaje recurrente algo que se diseno para no serlo, y castiga justamente a quien decidio usar la app sin cuenta, que es el camino por defecto del producto."
+        },
+        {
+          "nombre": "Poner el boton de Google en todas las cabeceras",
+          "descartada_porque": "El acceso compite con el indicador de red y con la accion de cada pantalla. Inicio es donde tiene sentido, porque es la pantalla de presentacion."
+        },
+        {
+          "nombre": "Dejarlo como estaba y explicar que hay que ir a Cuenta",
+          "descartada_porque": "Si una persona del propio equipo no lo encuentra, un jurado tampoco."
+        }
+      ],
+      "decision": "Entrada permanente en la cabecera de Inicio: un boton Entrar cuando no hay sesion, y el avatar con enlace a Cuenta cuando la hay. No bloquea nada. Ademas, Cuenta gana un boton para volver a ver la bienvenida, pensado para ensayar la demo desde el principio. La clave de localStorage se mueve a src/lib/bienvenida.ts para que pantalla y boton no se desincronicen.",
+      "consecuencias": [
+        "Entrar es visible desde el primer segundo sin convertirse en una barrera.",
+        "Se puede ensayar la demo desde la pantalla de bienvenida las veces que haga falta.",
+        "Si no hay credenciales de Google configuradas, el boton no aparece: la app sigue funcionando con el alias local.",
+        "El indicador de red baja a su propia linea en Inicio para no competir con el acceso."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Bajo: un componente y una linea en la cabecera.",
+      "criterios_rubrica": [
+        "ux",
+        "pitch"
+      ],
+      "evidencia": [
+        "src/components/inicio/AccesoRapido.tsx",
+        "src/lib/bienvenida.ts",
+        "src/app/page.tsx",
+        "src/components/cuenta/PanelCuenta.tsx"
+      ],
+      "requiere_validacion_humana": false
     }
   ]
 }
