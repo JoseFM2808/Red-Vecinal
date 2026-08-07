@@ -122,6 +122,14 @@
       "archivos": ["src/lib/sismos.ts", "src/components/sismos/AvisoSismo.tsx"]
     },
     {
+      "id": "circulo",
+      "nombre": "Círculo de cuidado (rama Lab_Dai)",
+      "rol": "Si alguien comparte su ubicación contigo, avisa cuando ocurre un reporte cerca de esa persona y deja su teléfono a un toque. Funcionalidad exploratoria: no entra al alcance del 12 de agosto.",
+      "estado": "simulado",
+      "tecnologias": ["Funciones puras con tests", "Notification API", "localStorage"],
+      "archivos": ["src/lib/circulo.ts", "src/lib/circulo-simulacion.ts", "src/components/circulo/PanelCirculo.tsx"]
+    },
+    {
       "id": "despliegue",
       "nombre": "Despliegue y cabeceras",
       "rol": "Vercel con detección automática de Next.js. Cabeceras de seguridad y CSP declaradas en next.config.ts para poder probarlas en local. Un preflight aborta el build si alguien expone un secreto con prefijo NEXT_PUBLIC_.",
@@ -288,6 +296,11 @@
       "tema": "Anti-Sybil",
       "queHacemos": "Límite por wallet y por zona, más multiplicador por corroboración independiente.",
       "queFaltaria": "Un adversario con varios dispositivos todavía puede farmear. La prueba de presencia criptográfica es roadmap y así se dice en el pitch."
+    },
+    {
+      "tema": "Círculo de cuidado (rama Lab_Dai)",
+      "queHacemos": "Geometría, frescura de la ubicación, evaluación de cercanía y deduplicación de avisos, todo real y con tests. Avisos con la Notification API del navegador.",
+      "queFaltaria": "El transporte: hoy la ubicación del contacto se mueve localmente. El tiempo real entre dispositivos necesita servidor, y eso choca con la promesa de no guardar datos de nadie. Tampoco hay avisos con la app cerrada."
     },
     {
       "tema": "Acceso con Google",

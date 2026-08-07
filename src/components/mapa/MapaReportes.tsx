@@ -5,9 +5,12 @@ import { useMemo, useState } from "react";
 import { useApp } from "@/components/proveedores/AppProvider";
 import { HojaDetalle } from "@/components/reportes/HojaDetalle";
 import { TarjetaReporte } from "@/components/reportes/TarjetaReporte";
+import { useCirculo } from "@/components/proveedores/CirculoProvider";
 import { AvisoSismo } from "@/components/sismos/AvisoSismo";
 import { Icono } from "@/components/ui/Icono";
 import { CATEGORIAS } from "@/lib/categorias";
+import { estadoDeContacto, reporteMasCercano } from "@/lib/circulo";
+import type { ContactoEnMapa } from "./MapaLeaflet";
 import type { Coordenada, IdCategoria, Reporte } from "@/lib/tipos";
 
 /**
@@ -28,6 +31,7 @@ const CENTRO_LIMA: Coordenada = { lat: -12.05, lng: -77.03 };
 
 export function MapaReportes() {
   const { reportes, cargando } = useApp();
+  const { contactos } = useCirculo();
   const [filtro, setFiltro] = useState<IdCategoria | null>(null);
   const [seleccionado, setSeleccionado] = useState<string | null>(null);
   const [posicionUsuario, setPosicionUsuario] = useState<Coordenada | null>(null);
@@ -42,6 +46,24 @@ export function MapaReportes() {
     () => reportes.find((r) => r.id === seleccionado) ?? null,
     [reportes, seleccionado],
   );
+
+  // Contactos que estan compartiendo ubicacion, con su radio de aviso (rama Lab_Dai).
+  const contactosEnMapa = useMemo<ContactoEnMapa[]>(() => {
+    const ahora = Date.now();
+    return contactos.flatMap((contacto) => {
+      if (estadoDeContacto(contacto, ahora) !== "en_linea" || !contacto.coordenada) return [];
+      const cercano = reporteMasCercano(contacto, reportes, ahora);
+      return [
+        {
+          id: contacto.id,
+          nombre: contacto.nombre,
+          coordenada: contacto.coordenada,
+          enRiesgo: cercano !== null && cercano.distanciaM <= contacto.radioAvisoM,
+          radioAvisoM: contacto.radioAvisoM,
+        },
+      ];
+    });
+  }, [contactos, reportes]);
 
   const centro = useMemo<Coordenada>(() => {
     if (detalle) return detalle.coordenada;
@@ -75,6 +97,7 @@ export function MapaReportes() {
           zoom={detalle ? 16 : 12}
           seleccionado={seleccionado}
           posicionUsuario={posicionUsuario}
+          contactos={contactosEnMapa}
           onSeleccionar={setSeleccionado}
         />
 

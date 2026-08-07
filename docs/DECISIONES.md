@@ -4,7 +4,7 @@
 
 Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o por el equipo se registra aquí ANTES o AL MOMENTO de escribir el código que la implementa. `docs/DECISIONES.md` se genera desde este archivo (npm run docs) y la pestaña Arquitectura de la app lo renderiza.
 
-**21 decisiones registradas · 9 esperan validacion humana**
+**22 decisiones registradas · 10 esperan validacion humana**
 
 ## Esperan que una persona decida
 
@@ -19,6 +19,7 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | ADR-019 | Tercera categoría: sismo sentido, como agregado comunitario y no como detector | Confirmar con el equipo de contratos que `uint8 category` acepta el índice 2 y que ReportRegistry no valida un máximo de 2 categorías. |
 | ADR-020 | La detección de distrito afirmaba con seguridad un distrito equivocado | Verificar en el celular, desde tu distrito real, que ahora aparece el correcto y que el margen de precisión que muestra es razonable. Si sigue fallando con ±20 m de precisión, avísame el distrito y la coordenada para ajustar el centroide. |
 | ADR-021 | Login con Google opcional: da continuidad entre dispositivos, no identidad pública | Falta lo único que no puedo hacer yo: crear el cliente OAuth en Google Cloud Console y cargar AUTH_SECRET, AUTH_GOOGLE_ID y AUTH_GOOGLE_SECRET en Vercel. Pasos exactos en docs/DESPLIEGUE.md. Hasta entonces el login queda invisible y la app funciona igual. Confirmar también que al equipo le parece bien que la cuenta de Google sea privada y no el identificador público. |
+| ADR-101 | Círculo de cuidado: aviso cuando pasa algo cerca de alguien de tu familia | Dos preguntas antes de considerar sacar esto de Lab_Dai. (1) Producto: ¿cómo se evita que se use para controlar a una pareja o a un hijo adolescente en vez de para cuidarlos? Sin una respuesta, la funcionalidad puede hacer más daño que bien. (2) Técnica: el tiempo real de verdad necesita servidor, y eso rompe la promesa de 'no hay servidor con tus datos'. Hay que decidir si se acepta ese costo o si se busca algo peer-to-peer. |
 
 ## Indice
 
@@ -45,6 +46,7 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | [ADR-019](#adr-019) | Tercera categoría: sismo sentido, como agregado comunitario y no como detector | IA+Humano | aceptada | alta | Problema e impacto, Producto y UX, Implementacion tecnica, Pitch y demo |
 | [ADR-020](#adr-020) | La detección de distrito afirmaba con seguridad un distrito equivocado | IA+Humano | aceptada | alta | Producto y UX, Problema e impacto, Implementacion tecnica |
 | [ADR-021](#adr-021) | Login con Google opcional: da continuidad entre dispositivos, no identidad pública | IA+Humano | aceptada | alta | Producto y UX, Implementacion tecnica, Problema e impacto |
+| [ADR-101](#adr-101) | Círculo de cuidado: aviso cuando pasa algo cerca de alguien de tu familia | IA+Humano | propuesta | alta | Problema e impacto, Producto y UX, Implementacion tecnica |
 
 ---
 
@@ -675,3 +677,38 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 **Evidencia en el codigo.** `src/auth.ts`, `src/lib/identidad.ts`, `src/lib/identidad.test.ts`, `src/components/cuenta/AccesoGoogle.tsx`, `src/components/proveedores/SesionProvider.tsx`
 
 > **Necesita decision humana:** Falta lo único que no puedo hacer yo: crear el cliente OAuth en Google Cloud Console y cargar AUTH_SECRET, AUTH_GOOGLE_ID y AUTH_GOOGLE_SECRET en Vercel. Pasos exactos en docs/DESPLIEGUE.md. Hasta entonces el login queda invisible y la app funciona igual. Confirmar también que al equipo le parece bien que la cuenta de Google sea privada y no el identificador público.
+
+---
+
+## ADR-101
+
+### Círculo de cuidado: aviso cuando pasa algo cerca de alguien de tu familia
+
+`2026-08-07` · autor: **IA+Humano** · estado: **propuesta** · reversibilidad: **alta**
+
+**Contexto.** El equipo quiere probar una idea que no estaba contemplada: si alguien comparte su ubicación contigo, recibir un aviso cuando ocurre un reporte cerca de ESA persona, con su teléfono a un toque para llamarla. Tipo family care. Por ser exploratoria vive en la rama Lab_Dai y no entra al alcance del 12 de agosto. La numeración 1xx marca decisiones de ramas experimentales.
+
+**Alternativas descartadas.**
+
+- *Backend en tiempo real (Supabase, Pusher, Firebase)* — Es lo que haría falta para que la ubicación viaje de verdad entre dispositivos, pero contradice ADR-009 (sin base de datos) y crearía justo lo que el producto promete no tener: un servidor con las ubicaciones de las familias. Para un experimento no se justifica; si la idea prospera, esa es la conversación seria que hay que tener.
+- *Compartir la ubicación en cadena* — Publicar dónde está tu madre en un registro inmutable y público es exactamente lo contrario de lo que la app defiende.
+- *Radio de aviso fijo* — No es lo mismo cuidar a alguien en una avenida que en un pasaje. El radio lo elige quien recibe el aviso: 200 m, 500 m, 1 km o 2 km.
+
+**Decision.** Se implementa completo salvo el transporte. La geometría, la frescura de la ubicación, la evaluación de cercanía y la deduplicación de avisos son funciones puras con 20 tests. Lo único simulado es que la posición del contacto se mueve localmente con una trayectoria determinista; en la versión real llegaría desde su dispositivo y ese archivo desaparece. Los avisos usan la Notification API real del navegador más un panel dentro de la app. Los teléfonos se guardan solo en el dispositivo.
+
+**Consecuencias.**
+
+- Sexta pestaña 'Círculo': es la excepción declarada al límite de cinco de CLAUDE.md, y solo en esta rama. Verificado que las seis entran en 360 px sin truncarse.
+- Compartir nace desactivado: es decisión del contacto, no de quien lo agrega. Coherente con el resto del producto.
+- El mapa muestra a los contactos con su radio de aviso dibujado, y late en rojo cuando tienen un reporte dentro.
+- Un mismo reporte avisa una sola vez por contacto: la clave contacto+reporte se recuerda entre recargas.
+- Los avisos no llegan con la app cerrada. Para eso harían falta push notifications con service worker y un servidor que las envíe.
+- Riesgo de producto que hay que discutir antes de sacarlo del laboratorio: una app que muestra dónde está tu familia es también una herramienta de control. El consentimiento revocable por el contacto es el mínimo, y probablemente no basta.
+
+**Costo de revertir.** Bajo: la rama se descarta o se quitan la pestaña y el proveedor. Nada de main depende de esto.
+
+**Sirve a.** Problema e impacto, Producto y UX, Implementacion tecnica
+
+**Evidencia en el codigo.** `src/lib/circulo.ts`, `src/lib/circulo.test.ts`, `src/lib/circulo-simulacion.ts`, `src/components/circulo/PanelCirculo.tsx`, `src/components/proveedores/CirculoProvider.tsx`
+
+> **Necesita decision humana:** Dos preguntas antes de considerar sacar esto de Lab_Dai. (1) Producto: ¿cómo se evita que se use para controlar a una pareja o a un hijo adolescente en vez de para cuidarlos? Sin una respuesta, la funcionalidad puede hacer más daño que bien. (2) Técnica: el tiempo real de verdad necesita servidor, y eso rompe la promesa de 'no hay servidor con tus datos'. Hay que decidir si se acepta ese costo o si se busca algo peer-to-peer.

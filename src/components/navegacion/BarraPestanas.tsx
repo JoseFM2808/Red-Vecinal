@@ -5,7 +5,13 @@ import { usePathname } from "next/navigation";
 import { Icono, type NombreIcono } from "@/components/ui/Icono";
 
 /**
- * Barra inferior fija. Cinco destinos, ni uno mas (CLAUDE.md).
+ * Barra inferior fija.
+ *
+ * En `main` son cinco destinos. Esta rama (Lab_Dai) agrega "Circulo" como sexto para
+ * poder probar la funcionalidad de cuidado familiar — es la excepcion al limite de
+ * CLAUDE.md y esta anotada en ADR-101. Si el experimento no prospera, se quita la
+ * entrada y la barra vuelve a cinco.
+ *
  * El boton del centro es el reporte: es la accion que la app existe para hacer,
  * y en una emergencia tiene que estar bajo el pulgar sin buscarla.
  */
@@ -15,14 +21,23 @@ interface Pestana {
   etiqueta: string;
   icono: NombreIcono;
   destacada?: boolean;
+  /** Nombre completo para lectores de pantalla cuando la etiqueta va abreviada. */
+  nombreAccesible?: string;
 }
 
 const PESTANAS: readonly Pestana[] = [
   { href: "/", etiqueta: "Inicio", icono: "inicio" },
   { href: "/mapa", etiqueta: "Mapa", icono: "mapa" },
   { href: "/reportar", etiqueta: "Reportar", icono: "reportar", destacada: true },
+  { href: "/circulo", etiqueta: "Circulo", icono: "circulo" },
   { href: "/cuenta", etiqueta: "Cuenta", icono: "cuenta" },
-  { href: "/arquitectura", etiqueta: "Arquitectura", icono: "arquitectura" },
+  // Con seis pestanas "Arquitectura" no entra en 360 px; se abrevia solo en la barra.
+  {
+    href: "/arquitectura",
+    etiqueta: "Arquit.",
+    icono: "arquitectura",
+    nombreAccesible: "Arquitectura",
+  },
 ];
 
 export function BarraPestanas() {
@@ -64,12 +79,15 @@ export function BarraPestanas() {
               <Link
                 href={pestana.href}
                 aria-current={activa ? "page" : undefined}
+                aria-label={pestana.nombreAccesible ?? pestana.etiqueta}
                 className={`toque flex w-full flex-col items-center justify-center gap-1 py-2.5 transition ${
                   activa ? "text-marca" : "text-tenue"
                 }`}
               >
                 <Icono nombre={pestana.icono} className="h-5 w-5" />
-                <span className="text-[10px] font-medium leading-none">{pestana.etiqueta}</span>
+                <span className="max-w-full truncate px-0.5 text-[10px] font-medium leading-none">
+                  {pestana.etiqueta}
+                </span>
               </Link>
             </li>
           );

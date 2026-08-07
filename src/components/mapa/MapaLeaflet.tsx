@@ -3,7 +3,7 @@
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useEffect, useMemo } from "react";
-import { MapContainer, Marker, TileLayer, useMap } from "react-leaflet";
+import { Circle, MapContainer, Marker, TileLayer, Tooltip, useMap } from "react-leaflet";
 import { obtenerCategoria } from "@/lib/categorias";
 import type { Coordenada, Reporte } from "@/lib/tipos";
 
@@ -15,12 +15,23 @@ import type { Coordenada, Reporte } from "@/lib/tipos";
  * MapaReportes), por eso puede importar `leaflet` en el nivel superior.
  */
 
+/** Contacto del circulo dibujado en el mapa (rama Lab_Dai). */
+export interface ContactoEnMapa {
+  id: string;
+  nombre: string;
+  coordenada: Coordenada;
+  /** Hay un reporte reciente dentro de su radio de aviso. */
+  enRiesgo: boolean;
+  radioAvisoM: number;
+}
+
 interface Props {
   reportes: Reporte[];
   centro: Coordenada;
   zoom: number;
   seleccionado: string | null;
   posicionUsuario: Coordenada | null;
+  contactos?: ContactoEnMapa[];
   onSeleccionar: (id: string) => void;
 }
 
@@ -41,6 +52,18 @@ const ICONO_USUARIO = L.divIcon({
   iconAnchor: [8, 8],
 });
 
+/** Contacto del circulo: inicial dentro de un disco, rojo si tiene un reporte cerca. */
+function iconoContacto(nombre: string, enRiesgo: boolean): L.DivIcon {
+  const color = enRiesgo ? "#ff5c5c" : "#2fe6a8";
+  const inicial = nombre.slice(0, 1).toUpperCase();
+  return L.divIcon({
+    className: "",
+    html: `<div class="marcador-contacto${enRiesgo ? " marcador-contacto-alerta" : ""}" style="--color-contacto:${color}">${inicial}</div>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+  });
+}
+
 /** Sigue al reporte seleccionado sin recrear el mapa. */
 function Seguir({ lat, lng, zoom }: { lat: number; lng: number; zoom: number }) {
   const map = useMap();
@@ -56,6 +79,7 @@ export default function MapaLeaflet({
   zoom,
   seleccionado,
   posicionUsuario,
+  contactos,
   onSeleccionar,
 }: Props) {
   const marcadores = useMemo(
@@ -93,6 +117,34 @@ export default function MapaLeaflet({
           icon={icono}
           eventHandlers={{ click: () => onSeleccionar(reporte.id) }}
         />
+      ))}
+
+      {/* Circulo de cuidado: el radio de aviso se dibuja para que se entienda de un vistazo. */}
+      {(contactos ?? []).map((contacto) => (
+        <Circle
+          key={`radio-${contacto.id}`}
+          center={[contacto.coordenada.lat, contacto.coordenada.lng]}
+          radius={contacto.radioAvisoM}
+          pathOptions={{
+            color: contacto.enRiesgo ? "#ff5c5c" : "#2fe6a8",
+            weight: 1,
+            opacity: 0.45,
+            fillOpacity: 0.06,
+          }}
+        />
+      ))}
+
+      {(contactos ?? []).map((contacto) => (
+        <Marker
+          key={contacto.id}
+          position={[contacto.coordenada.lat, contacto.coordenada.lng]}
+          icon={iconoContacto(contacto.nombre, contacto.enRiesgo)}
+          zIndexOffset={500}
+        >
+          <Tooltip direction="top" offset={[0, -16]}>
+            {contacto.nombre}
+          </Tooltip>
+        </Marker>
       ))}
 
       {posicionUsuario ? (

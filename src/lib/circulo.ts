@@ -2,7 +2,7 @@ import { distanciaMetros } from "./geo";
 import type { Coordenada, IdCategoria, Reporte } from "./tipos";
 
 /**
- * Circulo de cuidado (rama Lab_Dai, ADR-L01).
+ * Circulo de cuidado (rama Lab_Dai, ADR-101).
  *
  * La idea: alguien de tu familia comparte su ubicacion contigo. Cuando ocurre un
  * reporte cerca de DONDE ESTA ESA PERSONA — no donde estas tu — te llega un aviso,

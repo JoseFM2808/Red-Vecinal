@@ -95,6 +95,13 @@ Cuando dos o más vecinos distintos reportan un sismo en 30 minutos, se muestra 
 - Tecnologias: Función pura con tests, Vitest
 - Codigo: `src/lib/sismos.ts`, `src/components/sismos/AvisoSismo.tsx`
 
+### Círculo de cuidado (rama Lab_Dai) `circulo` — Simulado
+
+Si alguien comparte su ubicación contigo, avisa cuando ocurre un reporte cerca de esa persona y deja su teléfono a un toque. Funcionalidad exploratoria: no entra al alcance del 12 de agosto.
+
+- Tecnologias: Funciones puras con tests, Notification API, localStorage
+- Codigo: `src/lib/circulo.ts`, `src/lib/circulo-simulacion.ts`, `src/components/circulo/PanelCirculo.tsx`
+
 ### Despliegue y cabeceras `despliegue` — Listo
 
 Vercel con detección automática de Next.js. Cabeceras de seguridad y CSP declaradas en next.config.ts para poder probarlas en local. Un preflight aborta el build si alguien expone un secreto con prefijo NEXT_PUBLIC_.
@@ -178,6 +185,7 @@ Red: Arbitrum Sepolia → Arbitrum One
 | --- | --- | --- |
 | Anclaje on-chain | El adaptador simulado produce un hash de transacción y un enlace al explorador con el formato real. | Desplegar ReportRegistry y activar NEXT_PUBLIC_CHAIN_MODE=arbitrum. |
 | Anti-Sybil | Límite por wallet y por zona, más multiplicador por corroboración independiente. | Un adversario con varios dispositivos todavía puede farmear. La prueba de presencia criptográfica es roadmap y así se dice en el pitch. |
+| Círculo de cuidado (rama Lab_Dai) | Geometría, frescura de la ubicación, evaluación de cercanía y deduplicación de avisos, todo real y con tests. Avisos con la Notification API del navegador. | El transporte: hoy la ubicación del contacto se mueve localmente. El tiempo real entre dispositivos necesita servidor, y eso choca con la promesa de no guardar datos de nadie. Tampoco hay avisos con la app cerrada. |
 | Acceso con Google | Login opcional con Auth.js. El alias se deriva de la cuenta, así que entrar desde otro teléfono devuelve el mismo seudónimo y los mismos reportes. Sin base de datos: la sesión es una cookie firmada en el dispositivo. | Crear el cliente OAuth en Google Cloud y cargar las credenciales en Vercel. Hasta entonces el botón no aparece y todos usan su seudónimo local. La derivación del alias es de demostración, no una KDF. |
 | Revelación selectiva | Demostración del mecanismo 2-de-3 y del rastro público de cada solicitud. | Integración legal real con el Poder Judicial y custodia de claves por un tercero acreditado. |
 | Escalamiento a la autoridad | Ruta API que valida y emite folio; reenvía a un webhook real si está configurado. | Convenio con un municipio y su endpoint de recepción. |

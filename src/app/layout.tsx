@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { BarraPestanas } from "@/components/navegacion/BarraPestanas";
 import { AppProvider } from "@/components/proveedores/AppProvider";
+import { CirculoProvider } from "@/components/proveedores/CirculoProvider";
 import { SesionProvider } from "@/components/proveedores/SesionProvider";
 import { googleConfigurado } from "@/lib/auth/config";
 import { urlBase } from "@/lib/url-base";
@@ -55,10 +56,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* El layout es server component: aqui se decide si hay login sin exponer credenciales. */}
         <SesionProvider googleDisponible={googleConfigurado()}>
           <AppProvider>
-            <div className="mx-auto flex min-h-dvh max-w-lg flex-col">
-              <main className="flex-1 espacio-barra">{children}</main>
-            </div>
-            <BarraPestanas />
+            {/* Rama Lab_Dai: el circulo necesita los reportes, va dentro de AppProvider. */}
+            <CirculoProvider>
+              <div className="mx-auto flex min-h-dvh max-w-lg flex-col">
+                <main className="flex-1 espacio-barra">{children}</main>
+              </div>
+              <BarraPestanas />
+            </CirculoProvider>
           </AppProvider>
         </SesionProvider>
       </body>

@@ -626,6 +626,43 @@
       "evidencia": ["src/auth.ts", "src/lib/identidad.ts", "src/lib/identidad.test.ts", "src/components/cuenta/AccesoGoogle.tsx", "src/components/proveedores/SesionProvider.tsx"],
       "requiere_validacion_humana": true,
       "nota_para_humano": "Falta lo único que no puedo hacer yo: crear el cliente OAuth en Google Cloud Console y cargar AUTH_SECRET, AUTH_GOOGLE_ID y AUTH_GOOGLE_SECRET en Vercel. Pasos exactos en docs/DESPLIEGUE.md. Hasta entonces el login queda invisible y la app funciona igual. Confirmar también que al equipo le parece bien que la cuenta de Google sea privada y no el identificador público."
+    },
+    {
+      "id": "ADR-101",
+      "titulo": "Círculo de cuidado: aviso cuando pasa algo cerca de alguien de tu familia",
+      "fecha": "2026-08-07",
+      "autor": "IA+Humano",
+      "estado": "propuesta",
+      "contexto": "El equipo quiere probar una idea que no estaba contemplada: si alguien comparte su ubicación contigo, recibir un aviso cuando ocurre un reporte cerca de ESA persona, con su teléfono a un toque para llamarla. Tipo family care. Por ser exploratoria vive en la rama Lab_Dai y no entra al alcance del 12 de agosto. La numeración 1xx marca decisiones de ramas experimentales.",
+      "opciones": [
+        {
+          "nombre": "Backend en tiempo real (Supabase, Pusher, Firebase)",
+          "descartada_porque": "Es lo que haría falta para que la ubicación viaje de verdad entre dispositivos, pero contradice ADR-009 (sin base de datos) y crearía justo lo que el producto promete no tener: un servidor con las ubicaciones de las familias. Para un experimento no se justifica; si la idea prospera, esa es la conversación seria que hay que tener."
+        },
+        {
+          "nombre": "Compartir la ubicación en cadena",
+          "descartada_porque": "Publicar dónde está tu madre en un registro inmutable y público es exactamente lo contrario de lo que la app defiende."
+        },
+        {
+          "nombre": "Radio de aviso fijo",
+          "descartada_porque": "No es lo mismo cuidar a alguien en una avenida que en un pasaje. El radio lo elige quien recibe el aviso: 200 m, 500 m, 1 km o 2 km."
+        }
+      ],
+      "decision": "Se implementa completo salvo el transporte. La geometría, la frescura de la ubicación, la evaluación de cercanía y la deduplicación de avisos son funciones puras con 20 tests. Lo único simulado es que la posición del contacto se mueve localmente con una trayectoria determinista; en la versión real llegaría desde su dispositivo y ese archivo desaparece. Los avisos usan la Notification API real del navegador más un panel dentro de la app. Los teléfonos se guardan solo en el dispositivo.",
+      "consecuencias": [
+        "Sexta pestaña 'Círculo': es la excepción declarada al límite de cinco de CLAUDE.md, y solo en esta rama. Verificado que las seis entran en 360 px sin truncarse.",
+        "Compartir nace desactivado: es decisión del contacto, no de quien lo agrega. Coherente con el resto del producto.",
+        "El mapa muestra a los contactos con su radio de aviso dibujado, y late en rojo cuando tienen un reporte dentro.",
+        "Un mismo reporte avisa una sola vez por contacto: la clave contacto+reporte se recuerda entre recargas.",
+        "Los avisos no llegan con la app cerrada. Para eso harían falta push notifications con service worker y un servidor que las envíe.",
+        "Riesgo de producto que hay que discutir antes de sacarlo del laboratorio: una app que muestra dónde está tu familia es también una herramienta de control. El consentimiento revocable por el contacto es el mínimo, y probablemente no basta."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Bajo: la rama se descarta o se quitan la pestaña y el proveedor. Nada de main depende de esto.",
+      "criterios_rubrica": ["problema", "ux", "tecnica"],
+      "evidencia": ["src/lib/circulo.ts", "src/lib/circulo.test.ts", "src/lib/circulo-simulacion.ts", "src/components/circulo/PanelCirculo.tsx", "src/components/proveedores/CirculoProvider.tsx"],
+      "requiere_validacion_humana": true,
+      "nota_para_humano": "Dos preguntas antes de considerar sacar esto de Lab_Dai. (1) Producto: ¿cómo se evita que se use para controlar a una pareja o a un hijo adolescente en vez de para cuidarlos? Sin una respuesta, la funcionalidad puede hacer más daño que bien. (2) Técnica: el tiempo real de verdad necesita servidor, y eso rompe la promesa de 'no hay servidor con tus datos'. Hay que decidir si se acepta ese costo o si se busca algo peer-to-peer."
     }
   ]
 }

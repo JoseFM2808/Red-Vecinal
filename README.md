@@ -1,5 +1,14 @@
 # Vecino Seguro — beta
 
+> **Estás en la rama `Lab_Dai`.** Además de todo lo de `main`, incluye el **círculo de
+> cuidado**: si alguien comparte su ubicación contigo, recibes un aviso cuando ocurre un
+> reporte cerca de esa persona, con su teléfono a un toque para llamarla.
+>
+> Es exploratorio y **no** entra al alcance del 12 de agosto. Lo único simulado es el
+> transporte de la ubicación del contacto; la geometría, los avisos y la deduplicación son
+> reales y tienen 20 tests. Contexto, límites y las dos preguntas abiertas antes de sacarlo
+> del laboratorio: `ADR-101` en [`docs/DECISIONES.md`](docs/DECISIONES.md).
+
 Red vecinal de reporte de seguridad con geolocalización y evidencia anclada en Arbitrum.
 Hackathon Ethereum Lima 2026.
 
