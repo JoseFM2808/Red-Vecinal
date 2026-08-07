@@ -4,7 +4,7 @@
 
 Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o por el equipo se registra aquí ANTES o AL MOMENTO de escribir el código que la implementa. `docs/DECISIONES.md` se genera desde este archivo (npm run docs) y la pestaña Arquitectura de la app lo renderiza.
 
-**21 decisiones registradas · 9 esperan validacion humana**
+**22 decisiones registradas · 9 esperan validacion humana**
 
 ## Esperan que una persona decida
 
@@ -45,6 +45,7 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | [ADR-019](#adr-019) | Tercera categoría: sismo sentido, como agregado comunitario y no como detector | IA+Humano | aceptada | alta | Problema e impacto, Producto y UX, Implementacion tecnica, Pitch y demo |
 | [ADR-020](#adr-020) | La detección de distrito afirmaba con seguridad un distrito equivocado | IA+Humano | aceptada | alta | Producto y UX, Problema e impacto, Implementacion tecnica |
 | [ADR-021](#adr-021) | Login con Google opcional: da continuidad entre dispositivos, no identidad pública | IA+Humano | aceptada | alta | Producto y UX, Implementacion tecnica, Problema e impacto |
+| [ADR-022](#adr-022) | Pantalla de bienvenida en el primer arranque, no una barrera de login | IA+Humano | aceptada | alta | Producto y UX, Pitch y demo |
 
 ---
 
@@ -675,3 +676,35 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 **Evidencia en el codigo.** `src/auth.ts`, `src/lib/identidad.ts`, `src/lib/identidad.test.ts`, `src/components/cuenta/AccesoGoogle.tsx`, `src/components/proveedores/SesionProvider.tsx`
 
 > **Necesita decision humana:** Falta lo único que no puedo hacer yo: crear el cliente OAuth en Google Cloud Console y cargar AUTH_SECRET, AUTH_GOOGLE_ID y AUTH_GOOGLE_SECRET en Vercel. Pasos exactos en docs/DESPLIEGUE.md. Hasta entonces el login queda invisible y la app funciona igual. Confirmar también que al equipo le parece bien que la cuenta de Google sea privada y no el identificador público.
+
+---
+
+## ADR-022
+
+### Pantalla de bienvenida en el primer arranque, no una barrera de login
+
+`2026-08-07` · autor: **IA+Humano** · estado: **aceptada** · reversibilidad: **alta**
+
+**Contexto.** Al probar la app, el equipo esperaba ver el login al abrirla y no lo encontró. El acceso vivía dentro de la pestaña Cuenta (ADR-021) y había que ir a buscarlo: existía pero era invisible. El problema real no era la falta de login, era la falta de presentación.
+
+**Alternativas descartadas.**
+
+- *Login obligatorio al iniciar* — Rompe la promesa central de que se puede reportar sin registro, que está en el pitch y escrita en la propia pantalla de Cuenta. Además mete fricción justo antes de la acción que la app existe para hacer, y penaliza el criterio de UX.
+- *Dejarlo solo en la pestaña Cuenta* — Es lo que ya estaba y el equipo comprobó en la práctica que nadie lo encuentra.
+- *Mostrar la bienvenida solo si Google está configurado* — Hoy no lo está, así que no se vería nada y el problema seguiría igual. Además la pantalla vale por sí sola como presentación del producto, que la app no tenía.
+
+**Decision.** Pantalla a pantalla completa en el primer arranque, una sola vez, con la propuesta de valor en tres líneas y dos salidas: 'Continuar con Google' y 'Entrar sin cuenta'. No bloquea: descartarla deja la app completa. Si no hay credenciales de Google, la pantalla igual aparece y lo dice, en vez de fingir que el login no existe.
+
+**Consecuencias.**
+
+- El acceso deja de ser invisible sin convertirse en un peaje.
+- La app gana la presentación que le faltaba: quien la abre por primera vez entiende qué es antes de tocar nada.
+- Un toque extra en el primer arranque. Solo una vez, y la bandera vive en el dispositivo.
+- Quien ya entró con Google no la ve nunca.
+- Se lee después de montar para no romper la hidratación: las páginas siguen siendo estáticas.
+
+**Costo de revertir.** Bajo: se quita un componente del layout.
+
+**Sirve a.** Producto y UX, Pitch y demo
+
+**Evidencia en el codigo.** `src/components/bienvenida/PantallaBienvenida.tsx`, `src/app/layout.tsx`

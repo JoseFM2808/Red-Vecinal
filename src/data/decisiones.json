@@ -626,6 +626,41 @@
       "evidencia": ["src/auth.ts", "src/lib/identidad.ts", "src/lib/identidad.test.ts", "src/components/cuenta/AccesoGoogle.tsx", "src/components/proveedores/SesionProvider.tsx"],
       "requiere_validacion_humana": true,
       "nota_para_humano": "Falta lo único que no puedo hacer yo: crear el cliente OAuth en Google Cloud Console y cargar AUTH_SECRET, AUTH_GOOGLE_ID y AUTH_GOOGLE_SECRET en Vercel. Pasos exactos en docs/DESPLIEGUE.md. Hasta entonces el login queda invisible y la app funciona igual. Confirmar también que al equipo le parece bien que la cuenta de Google sea privada y no el identificador público."
+    },
+    {
+      "id": "ADR-022",
+      "titulo": "Pantalla de bienvenida en el primer arranque, no una barrera de login",
+      "fecha": "2026-08-07",
+      "autor": "IA+Humano",
+      "estado": "aceptada",
+      "contexto": "Al probar la app, el equipo esperaba ver el login al abrirla y no lo encontró. El acceso vivía dentro de la pestaña Cuenta (ADR-021) y había que ir a buscarlo: existía pero era invisible. El problema real no era la falta de login, era la falta de presentación.",
+      "opciones": [
+        {
+          "nombre": "Login obligatorio al iniciar",
+          "descartada_porque": "Rompe la promesa central de que se puede reportar sin registro, que está en el pitch y escrita en la propia pantalla de Cuenta. Además mete fricción justo antes de la acción que la app existe para hacer, y penaliza el criterio de UX."
+        },
+        {
+          "nombre": "Dejarlo solo en la pestaña Cuenta",
+          "descartada_porque": "Es lo que ya estaba y el equipo comprobó en la práctica que nadie lo encuentra."
+        },
+        {
+          "nombre": "Mostrar la bienvenida solo si Google está configurado",
+          "descartada_porque": "Hoy no lo está, así que no se vería nada y el problema seguiría igual. Además la pantalla vale por sí sola como presentación del producto, que la app no tenía."
+        }
+      ],
+      "decision": "Pantalla a pantalla completa en el primer arranque, una sola vez, con la propuesta de valor en tres líneas y dos salidas: 'Continuar con Google' y 'Entrar sin cuenta'. No bloquea: descartarla deja la app completa. Si no hay credenciales de Google, la pantalla igual aparece y lo dice, en vez de fingir que el login no existe.",
+      "consecuencias": [
+        "El acceso deja de ser invisible sin convertirse en un peaje.",
+        "La app gana la presentación que le faltaba: quien la abre por primera vez entiende qué es antes de tocar nada.",
+        "Un toque extra en el primer arranque. Solo una vez, y la bandera vive en el dispositivo.",
+        "Quien ya entró con Google no la ve nunca.",
+        "Se lee después de montar para no romper la hidratación: las páginas siguen siendo estáticas."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Bajo: se quita un componente del layout.",
+      "criterios_rubrica": ["ux", "pitch"],
+      "evidencia": ["src/components/bienvenida/PantallaBienvenida.tsx", "src/app/layout.tsx"],
+      "requiere_validacion_humana": false
     }
   ]
 }
