@@ -4,6 +4,7 @@ import { PantallaBienvenida } from "@/components/bienvenida/PantallaBienvenida";
 import { BarraPestanas } from "@/components/navegacion/BarraPestanas";
 import { AppProvider } from "@/components/proveedores/AppProvider";
 import { SesionProvider } from "@/components/proveedores/SesionProvider";
+import { UbicacionProvider } from "@/components/proveedores/UbicacionProvider";
 import { googleConfigurado } from "@/lib/auth/config";
 import { urlBase } from "@/lib/url-base";
 
@@ -55,14 +56,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-dvh bg-fondo text-texto antialiased">
         {/* El layout es server component: aqui se decide si hay login sin exponer credenciales. */}
         <SesionProvider googleDisponible={googleConfigurado()}>
-          <AppProvider>
-            <div className="mx-auto flex min-h-dvh max-w-lg flex-col">
-              <main className="flex-1 espacio-barra">{children}</main>
-            </div>
-            <BarraPestanas />
-            {/* Solo la primera vez que se abre la app. No bloquea nada (ADR-022). */}
-            <PantallaBienvenida />
-          </AppProvider>
+          {/* Fuera de la sesion a proposito: la ubicacion no depende de tener cuenta. */}
+          <UbicacionProvider>
+            <AppProvider>
+              <div className="mx-auto flex min-h-dvh max-w-lg flex-col">
+                <main className="flex-1 espacio-barra">{children}</main>
+              </div>
+              <BarraPestanas />
+              {/* Solo la primera vez que se abre la app. No bloquea nada (ADR-022). */}
+              <PantallaBienvenida />
+            </AppProvider>
+          </UbicacionProvider>
         </SesionProvider>
       </body>
     </html>

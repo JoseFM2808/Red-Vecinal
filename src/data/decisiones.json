@@ -661,6 +661,41 @@
       "criterios_rubrica": ["ux", "pitch"],
       "evidencia": ["src/components/bienvenida/PantallaBienvenida.tsx", "src/app/layout.tsx"],
       "requiere_validacion_humana": false
+    },
+    {
+      "id": "ADR-023",
+      "titulo": "Tu ubicación actual es visible siempre, con cuenta o sin ella",
+      "fecha": "2026-08-07",
+      "autor": "IA+Humano",
+      "estado": "aceptada",
+      "contexto": "Ver dónde estás solo era posible pulsando un icono pequeño en una esquina del mapa, y el resultado se perdía al cambiar de pestaña. El equipo pidió que la ubicación se vea siempre y que no dependa de estar logueado. Es coherente con el producto: la app promete funcionar completa sin registro, así que atar la ubicación a la sesión sería incoherente.",
+      "opciones": [
+        {
+          "nombre": "Pedir el permiso automáticamente al abrir la app",
+          "descartada_porque": "Un navegador que recibe la petición sin gesto previo del usuario suele bloquearla de forma permanente. Se perdería la ubicación para siempre a cambio de ahorrar un toque."
+        },
+        {
+          "nombre": "Dejar el estado dentro del componente del mapa",
+          "descartada_porque": "Se perdía al navegar y no servía para el resto de pantallas."
+        },
+        {
+          "nombre": "getCurrentPosition en vez de watchPosition",
+          "descartada_porque": "Da una foto fija. 'Mi ubicación actual' implica que se mantenga al día mientras la persona camina."
+        }
+      ],
+      "decision": "`UbicacionProvider` vive en el layout, FUERA del proveedor de sesión, para que quede claro en el código que no depende del login. Al montar consulta el estado del permiso —lo que no abre ninguna ventana— y solo si ya estaba concedido empieza a seguir la posición; si no, espera al gesto del usuario. Se muestra en Inicio con el distrito y el margen de precisión, y en el mapa con el punto y su círculo de incertidumbre.",
+      "consecuencias": [
+        "La ubicación sobrevive al cambio de pestaña: se pide una vez, no en cada pantalla.",
+        "El flujo de reporte arranca con la posición ya conocida y aun así pide una lectura fresca: en una emergencia, esperar al GPS con la pantalla en blanco es lo que hace que la gente cierre la app.",
+        "Se dibuja el margen de error real en vez de fingir un punto exacto.",
+        "Verificado con el permiso denegado (explica cómo reactivarlo) y con GPS simulado: 'Estas en Surquillo · ±24 m', punto en el mapa y persistencia entre pestañas, todo sin sesión iniciada.",
+        "watchPosition consume más batería que una lectura puntual. Aceptable para el MVP; si el uso crece habrá que revisarlo."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Bajo: es un proveedor y dos componentes de presentación.",
+      "criterios_rubrica": ["ux", "problema"],
+      "evidencia": ["src/components/proveedores/UbicacionProvider.tsx", "src/components/ubicacion/TarjetaUbicacion.tsx", "src/components/mapa/MapaReportes.tsx"],
+      "requiere_validacion_humana": false
     }
   ]
 }

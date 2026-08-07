@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useApp, type ResultadoEscalamiento } from "@/components/proveedores/AppProvider";
+import { useUbicacion } from "@/components/proveedores/UbicacionProvider";
 import { Icono } from "@/components/ui/Icono";
 import { Aviso, Dato, EtiquetaSimulado } from "@/components/ui/primitivos";
 import { CATEGORIAS, esIdCategoria, obtenerCategoria } from "@/lib/categorias";
@@ -33,6 +34,7 @@ const UBICACION_DEMO: Coordenada = { lat: -11.9762, lng: -76.9941 };
 
 export function FlujoReporte() {
   const { enviarReporte, escalar } = useApp();
+  const { coordenada: ubicacionCompartida, precisionM: precisionCompartida } = useUbicacion();
 
   // El panel comunitario de sismos enlaza a /reportar?categoria=sismo_sentido para que
   // "Yo tambien lo senti" sea un solo toque. Se valida contra el catalogo: un parametro
@@ -84,8 +86,18 @@ export function FlujoReporte() {
   }, []);
 
   useEffect(() => {
-    if (paso === "detalle" && estadoGps === "inactivo") pedirUbicacion();
-  }, [estadoGps, paso, pedirUbicacion]);
+    if (paso !== "detalle" || estadoGps !== "inactivo") return;
+
+    // Si el proveedor compartido ya tiene una posicion reciente, se muestra al instante
+    // y aun asi se pide una lectura fresca: en una emergencia, esperar al GPS con la
+    // pantalla en blanco es justo lo que hace que la gente cierre la app.
+    if (ubicacionCompartida) {
+      setCoordenada(ubicacionCompartida);
+      setPrecisionM(precisionCompartida);
+      setEstadoGps("listo");
+    }
+    pedirUbicacion();
+  }, [estadoGps, paso, pedirUbicacion, precisionCompartida, ubicacionCompartida]);
 
   useEffect(() => {
     if (!archivo) {

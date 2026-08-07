@@ -3,6 +3,7 @@ import { ResumenRed } from "@/components/inicio/ResumenRed";
 import { AvisoSismo } from "@/components/sismos/AvisoSismo";
 import { Icono } from "@/components/ui/Icono";
 import { IndicadorRed } from "@/components/ui/IndicadorRed";
+import { TarjetaUbicacion } from "@/components/ubicacion/TarjetaUbicacion";
 import { Tarjeta, TituloSeccion } from "@/components/ui/primitivos";
 import { ARQUITECTURA } from "@/lib/arquitectura";
 
@@ -53,6 +54,10 @@ export default function PaginaInicio() {
       {/* Solo aparece si varios vecinos reportaron un sismo en la ultima media hora. */}
       <section className="px-4 empty:hidden">
         <AvisoSismo />
+      </section>
+
+      <section className="px-4">
+        <TarjetaUbicacion />
       </section>
 
       <section className="px-4">

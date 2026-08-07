@@ -4,7 +4,7 @@
 
 Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o por el equipo se registra aquí ANTES o AL MOMENTO de escribir el código que la implementa. `docs/DECISIONES.md` se genera desde este archivo (npm run docs) y la pestaña Arquitectura de la app lo renderiza.
 
-**22 decisiones registradas · 9 esperan validacion humana**
+**23 decisiones registradas · 9 esperan validacion humana**
 
 ## Esperan que una persona decida
 
@@ -46,6 +46,7 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | [ADR-020](#adr-020) | La detección de distrito afirmaba con seguridad un distrito equivocado | IA+Humano | aceptada | alta | Producto y UX, Problema e impacto, Implementacion tecnica |
 | [ADR-021](#adr-021) | Login con Google opcional: da continuidad entre dispositivos, no identidad pública | IA+Humano | aceptada | alta | Producto y UX, Implementacion tecnica, Problema e impacto |
 | [ADR-022](#adr-022) | Pantalla de bienvenida en el primer arranque, no una barrera de login | IA+Humano | aceptada | alta | Producto y UX, Pitch y demo |
+| [ADR-023](#adr-023) | Tu ubicación actual es visible siempre, con cuenta o sin ella | IA+Humano | aceptada | alta | Producto y UX, Problema e impacto |
 
 ---
 
@@ -708,3 +709,35 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 **Sirve a.** Producto y UX, Pitch y demo
 
 **Evidencia en el codigo.** `src/components/bienvenida/PantallaBienvenida.tsx`, `src/app/layout.tsx`
+
+---
+
+## ADR-023
+
+### Tu ubicación actual es visible siempre, con cuenta o sin ella
+
+`2026-08-07` · autor: **IA+Humano** · estado: **aceptada** · reversibilidad: **alta**
+
+**Contexto.** Ver dónde estás solo era posible pulsando un icono pequeño en una esquina del mapa, y el resultado se perdía al cambiar de pestaña. El equipo pidió que la ubicación se vea siempre y que no dependa de estar logueado. Es coherente con el producto: la app promete funcionar completa sin registro, así que atar la ubicación a la sesión sería incoherente.
+
+**Alternativas descartadas.**
+
+- *Pedir el permiso automáticamente al abrir la app* — Un navegador que recibe la petición sin gesto previo del usuario suele bloquearla de forma permanente. Se perdería la ubicación para siempre a cambio de ahorrar un toque.
+- *Dejar el estado dentro del componente del mapa* — Se perdía al navegar y no servía para el resto de pantallas.
+- *getCurrentPosition en vez de watchPosition* — Da una foto fija. 'Mi ubicación actual' implica que se mantenga al día mientras la persona camina.
+
+**Decision.** `UbicacionProvider` vive en el layout, FUERA del proveedor de sesión, para que quede claro en el código que no depende del login. Al montar consulta el estado del permiso —lo que no abre ninguna ventana— y solo si ya estaba concedido empieza a seguir la posición; si no, espera al gesto del usuario. Se muestra en Inicio con el distrito y el margen de precisión, y en el mapa con el punto y su círculo de incertidumbre.
+
+**Consecuencias.**
+
+- La ubicación sobrevive al cambio de pestaña: se pide una vez, no en cada pantalla.
+- El flujo de reporte arranca con la posición ya conocida y aun así pide una lectura fresca: en una emergencia, esperar al GPS con la pantalla en blanco es lo que hace que la gente cierre la app.
+- Se dibuja el margen de error real en vez de fingir un punto exacto.
+- Verificado con el permiso denegado (explica cómo reactivarlo) y con GPS simulado: 'Estas en Surquillo · ±24 m', punto en el mapa y persistencia entre pestañas, todo sin sesión iniciada.
+- watchPosition consume más batería que una lectura puntual. Aceptable para el MVP; si el uso crece habrá que revisarlo.
+
+**Costo de revertir.** Bajo: es un proveedor y dos componentes de presentación.
+
+**Sirve a.** Producto y UX, Problema e impacto
+
+**Evidencia en el codigo.** `src/components/proveedores/UbicacionProvider.tsx`, `src/components/ubicacion/TarjetaUbicacion.tsx`, `src/components/mapa/MapaReportes.tsx`
