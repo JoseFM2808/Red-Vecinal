@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { PantallaBienvenida } from "@/components/bienvenida/PantallaBienvenida";
 import { BarraPestanas } from "@/components/navegacion/BarraPestanas";
 import { AppProvider } from "@/components/proveedores/AppProvider";
 import { CirculoProvider } from "@/components/proveedores/CirculoProvider";
@@ -62,6 +63,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <main className="flex-1 espacio-barra">{children}</main>
               </div>
               <BarraPestanas />
+              {/* Solo la primera vez que se abre la app. No bloquea nada (ADR-022). */}
+              <PantallaBienvenida />
             </CirculoProvider>
           </AppProvider>
         </SesionProvider>
