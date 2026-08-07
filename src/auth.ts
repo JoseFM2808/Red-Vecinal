@@ -33,10 +33,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   trustHost: true,
 
   pages: {
-    // Errores de OAuth vuelven a Cuenta con ?error=, en vez de a una pagina
-    // en ingles de NextAuth que rompe el tono de la app.
-    signIn: "/cuenta",
-    error: "/cuenta",
+    // Ambas apuntan a la raiz, no a /cuenta: con la puerta de acceso (ADR-027) esa ruta
+    // esta cerrada para quien no tiene sesion, que es justo el caso de un login fallido.
+    // Mandarlo alli lo dejaba viendo la misma puerta sin ninguna explicacion.
+    // La puerta lee ?error= y lo traduce.
+    signIn: "/",
+    error: "/",
   },
 
   callbacks: {

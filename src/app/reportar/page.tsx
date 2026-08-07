@@ -7,7 +7,7 @@ export default function PaginaReportar() {
     <div>
       <Encabezado
         titulo="Nuevo reporte"
-        bajada="Tres pasos. Sin registro, sin nombre, sin numero de telefono."
+        bajada="Tres pasos. La red te ve con tu alias, nunca con tu nombre."
       />
       {/*
         FlujoReporte lee ?categoria= para que "Yo tambien lo senti" del panel de sismos

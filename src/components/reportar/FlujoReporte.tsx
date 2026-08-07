@@ -59,7 +59,8 @@ export function FlujoReporte() {
   const [etapa, setEtapa] = useState<EtapaFlujo>("validando");
   const [resultado, setResultado] = useState<ResultadoFlujo | null>(null);
   const [escalamiento, setEscalamiento] = useState<ResultadoEscalamiento | null>(null);
-  const [escalando, setEscalando] = useState(false);
+  /** Que destino se esta enviando, para que solo ESE boton diga "Enviando". */
+  const [escalando, setEscalando] = useState<"serenazgo" | "policia" | "ambulancia" | null>(null);
 
   const inputArchivo = useRef<HTMLInputElement>(null);
 
@@ -120,7 +121,7 @@ export function FlujoReporte() {
     setEstadoGps("inactivo");
     setResultado(null);
     setEscalamiento(null);
-    setEscalando(false);
+    setEscalando(null);
   };
 
   const enviar = async () => {
@@ -132,6 +133,14 @@ export function FlujoReporte() {
       { categoria, descripcion, coordenada, archivo, zonaNombreManual: zonaManual },
       setEtapa,
     );
+
+    // Confirmacion fisica: en la calle la persona puede haber bajado el telefono o estar
+    // mirando la situacion en vez de la pantalla. Dos pulsos si salio, uno largo si no.
+    // navigator.vibrate no existe en iOS Safari; por eso nunca es la unica senal.
+    if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+      navigator.vibrate(res.ok ? [40, 60, 40] : 180);
+    }
+
     setResultado(res);
     setPaso("resultado");
   };
@@ -147,6 +156,12 @@ export function FlujoReporte() {
             key={c.id}
             type="button"
             onClick={() => {
+              // Si lo escrito venia de un chip de la categoria anterior, se limpia: si no,
+              // "Robo en curso" acabaria publicado como descripcion de un poste sin luz.
+              // Lo que la persona escribio a mano se respeta.
+              if (categoria && obtenerCategoria(categoria).sugerencias.includes(descripcion)) {
+                setDescripcion("");
+              }
               setCategoria(c.id);
               setPaso("detalle");
             }}
@@ -380,15 +395,27 @@ export function FlujoReporte() {
           </div>
         </div>
 
-        <button
-          type="button"
-          disabled={!listoParaEnviar}
-          onClick={() => void enviar()}
-          className="toque flex w-full items-center justify-center gap-2 rounded-2xl bg-alerta py-4 text-base font-semibold text-white shadow-lg shadow-alerta/20 transition active:scale-[0.98] disabled:opacity-40 disabled:shadow-none"
-        >
-          <Icono nombre="reportar" className="h-5 w-5" />
-          Publicar reporte
-        </button>
+        {/*
+          Pegajoso al fondo: con las sugerencias largas de actividad sospechosa, el paso 2
+          pasa de 800 px y el boton quedaba ~200 px por debajo del pliegue, fuera del
+          alcance del pulgar. Se ancla por encima de la barra de pestanas.
+        */}
+        <div className="sticky bottom-[calc(var(--alto-barra)+env(safe-area-inset-bottom,0px)+0.5rem)] z-10 -mx-4 bg-fondo px-4 pb-2 pt-3">
+          <button
+            type="button"
+            disabled={!listoParaEnviar}
+            onClick={() => void enviar()}
+            className="toque flex w-full items-center justify-center gap-2 rounded-2xl bg-alerta py-4 text-base font-semibold text-white shadow-lg shadow-alerta/20 transition active:scale-[0.98] disabled:opacity-40 disabled:shadow-none"
+          >
+            <Icono nombre="reportar" className="h-5 w-5" />
+            {/* El boton explica por que esta apagado, en vez de quedarse gris y mudo. */}
+            {listoParaEnviar
+              ? "Publicar reporte"
+              : estadoGps === "buscando"
+                ? "Buscando tu ubicacion…"
+                : "Falta la ubicacion"}
+          </button>
+        </div>
       </div>
     );
   }
@@ -404,7 +431,8 @@ export function FlujoReporte() {
     return (
       <div className="space-y-4 px-4">
         <p className="text-sm text-suave">Publicando tu reporte…</p>
-        <ol className="space-y-2.5">
+        {/* Region viva: los cambios de etapa se anuncian a quien usa lector de pantalla. */}
+        <ol className="space-y-2.5" role="status" aria-live="polite">
           {etapas.map((e, i) => {
             const hecha = indiceActual > i || etapa === "listo";
             const activa = indiceActual === i && etapa !== "listo";
@@ -436,23 +464,46 @@ export function FlujoReporte() {
 
   if (paso === "resultado" && resultado) {
     if (!resultado.ok) {
+      // Un fallo de red se puede reintentar; un limite anti-Sybil dura minutos, asi que
+      // ahi prometer un reintento seria mentir. Lo que sirve en ambos casos es no perder
+      // el borrador: volver al paso 2 conserva foto, texto y ubicacion.
+      const esFalloTecnico = resultado.codigo === "error";
+
       return (
         <div className="space-y-4 px-4 pt-2">
-          <Aviso tono="alerta" icono="alerta">
-            {resultado.mensaje}
-          </Aviso>
-          {resultado.codigo !== "error" ? (
+          <div role="alert">
+            <Aviso tono="alerta" icono="alerta">
+              {resultado.mensaje}
+            </Aviso>
+          </div>
+          {!esFalloTecnico ? (
             <p className="text-xs leading-relaxed text-tenue">
               Este limite es la defensa anti-Sybil del MVP: evita que una sola cuenta inunde la red
               para farmear tokens. Se aplica igual en el contrato, no solo en la app.
             </p>
           ) : null}
+
+          <button
+            type="button"
+            onClick={() => {
+              setResultado(null);
+              setPaso("detalle");
+              if (esFalloTecnico) void enviar();
+            }}
+            className="toque w-full rounded-xl bg-marca text-sm font-semibold text-fondo transition active:scale-[0.99]"
+          >
+            {esFalloTecnico ? "Reintentar" : "Volver a mi reporte"}
+          </button>
+          <p className="text-center text-[11px] leading-relaxed text-tenue">
+            Tu foto y lo que escribiste siguen guardados.
+          </p>
+
           <button
             type="button"
             onClick={reiniciar}
-            className="toque w-full rounded-xl border border-borde bg-superficie-alta py-3 text-sm font-medium text-texto"
+            className="toque w-full rounded-xl border border-borde py-3 text-sm font-medium text-suave"
           >
-            Volver a empezar
+            Empezar un reporte nuevo
           </button>
         </div>
       );
@@ -474,6 +525,44 @@ export function FlujoReporte() {
             </p>
           </div>
         </div>
+
+        {cat.urgente && !escalamiento?.ok ? (
+          <section>
+            <h2 className="etiqueta-seccion mb-2">Necesitas ayuda ahora?</h2>
+            <div className="grid grid-cols-3 gap-2">
+              {(["serenazgo", "policia", "ambulancia"] as const).map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  disabled={escalando !== null}
+                  onClick={async () => {
+                    setEscalando(d);
+                    setEscalamiento(await escalar(reporte.id, d));
+                    setEscalando(null);
+                  }}
+                  className="toque rounded-xl border border-alerta/40 bg-alerta/10 px-2 py-3 text-sm font-semibold capitalize text-alerta transition active:scale-[0.98] disabled:opacity-50"
+                >
+                  {escalando === d ? "Enviando…" : d}
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 text-[11px] leading-relaxed text-tenue">
+              La red vecinal ya fue avisada. Esto agrega la ruta institucional.
+            </p>
+          </section>
+        ) : null}
+
+        {escalamiento?.ok ? (
+          <Aviso tono="info" icono="megafono">
+            Aviso escalado con folio <span className="font-mono">{escalamiento.folio}</span>.
+          </Aviso>
+        ) : null}
+
+        {escalamiento && !escalamiento.ok ? (
+          <Aviso tono="alerta" icono="alerta">
+            {escalamiento.mensaje}
+          </Aviso>
+        ) : null}
 
         <section>
           <div className="mb-2 flex items-center justify-between">
@@ -513,43 +602,6 @@ export function FlujoReporte() {
           </div>
         </section>
 
-        {cat.urgente && !escalamiento?.ok ? (
-          <section>
-            <h2 className="etiqueta-seccion mb-2">Necesitas ayuda ahora?</h2>
-            <div className="grid grid-cols-3 gap-2">
-              {(["serenazgo", "policia", "ambulancia"] as const).map((d) => (
-                <button
-                  key={d}
-                  type="button"
-                  disabled={escalando}
-                  onClick={async () => {
-                    setEscalando(true);
-                    setEscalamiento(await escalar(reporte.id, d));
-                    setEscalando(false);
-                  }}
-                  className="toque rounded-xl border border-borde bg-superficie-alta px-2 py-3 text-xs font-medium capitalize text-texto transition active:scale-[0.98] disabled:opacity-50"
-                >
-                  {escalando ? "Enviando…" : d}
-                </button>
-              ))}
-            </div>
-            <p className="mt-2 text-[11px] leading-relaxed text-tenue">
-              La red vecinal ya fue avisada. Esto agrega la ruta institucional.
-            </p>
-          </section>
-        ) : null}
-
-        {escalamiento?.ok ? (
-          <Aviso tono="info" icono="megafono">
-            Aviso escalado con folio <span className="font-mono">{escalamiento.folio}</span>.
-          </Aviso>
-        ) : null}
-
-        {escalamiento && !escalamiento.ok ? (
-          <Aviso tono="alerta" icono="alerta">
-            {escalamiento.mensaje}
-          </Aviso>
-        ) : null}
 
         <div className="flex gap-2">
           <Link

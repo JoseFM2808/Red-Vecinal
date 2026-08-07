@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useApp } from "@/components/proveedores/AppProvider";
 import { Icono } from "@/components/ui/Icono";
 import { Aviso, Dato, EtiquetaSimulado } from "@/components/ui/primitivos";
@@ -26,7 +26,8 @@ const DESTINOS: { id: DestinoEscalamiento; etiqueta: string }[] = [
 
 export function HojaDetalle({ reporte, onCerrar }: { reporte: Reporte; onCerrar: () => void }) {
   const { identidad, corroborar, escalar } = useApp();
-  const [escalando, setEscalando] = useState(false);
+  /** Que destino se esta enviando, para que solo ESE boton lo diga. */
+  const [escalando, setEscalando] = useState<DestinoEscalamiento | null>(null);
   const [errorEscalamiento, setErrorEscalamiento] = useState<string | null>(null);
   const categoria = obtenerCategoria(reporte.categoria);
 
@@ -37,11 +38,24 @@ export function HojaDetalle({ reporte, onCerrar }: { reporte: Reporte; onCerrar:
     identidad !== null &&
     reporte.corroboraciones.some((d) => d.toLowerCase() === identidad.direccion.toLowerCase());
 
+  // onCerrar llega como arrow nueva en cada render de quien la monta, asi que se guarda
+  // en un ref para que el listener no se vuelva a suscribir en cada render.
+  const cerrarRef = useRef(onCerrar);
+  cerrarRef.current = onCerrar;
+
+  useEffect(() => {
+    const alPulsar = (e: KeyboardEvent) => {
+      if (e.key === "Escape") cerrarRef.current();
+    };
+    window.addEventListener("keydown", alPulsar);
+    return () => window.removeEventListener("keydown", alPulsar);
+  }, []);
+
   const manejarEscalar = async (destino: DestinoEscalamiento) => {
-    setEscalando(true);
+    setEscalando(destino);
     setErrorEscalamiento(null);
     const resultado = await escalar(reporte.id, destino);
-    setEscalando(false);
+    setEscalando(null);
     // Si falla, se dice. Un boton que se queda mudo hace pensar que el aviso salio.
     if (!resultado.ok) setErrorEscalamiento(resultado.mensaje);
   };
@@ -55,7 +69,7 @@ export function HojaDetalle({ reporte, onCerrar }: { reporte: Reporte; onCerrar:
       onClick={onCerrar}
     >
       <div
-        className="subir-hoja max-h-[85dvh] w-full max-w-lg overflow-y-auto rounded-t-3xl border-t border-borde bg-superficie pb-8"
+        className="subir-hoja max-h-[85dvh] w-full max-w-lg overflow-y-auto overscroll-contain rounded-t-3xl border-t border-borde bg-superficie pb-8"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-borde bg-superficie px-4 pb-3 pt-3">
@@ -194,11 +208,11 @@ export function HojaDetalle({ reporte, onCerrar }: { reporte: Reporte; onCerrar:
                     <button
                       key={d.id}
                       type="button"
-                      disabled={escalando}
+                      disabled={escalando !== null}
                       onClick={() => void manejarEscalar(d.id)}
-                      className="toque rounded-xl border border-borde bg-superficie-alta px-2 py-3 text-xs font-medium text-texto transition active:scale-[0.98] disabled:opacity-50"
+                      className="toque rounded-xl border border-alerta/40 bg-alerta/10 px-2 py-3 text-sm font-semibold text-alerta transition active:scale-[0.98] disabled:opacity-50"
                     >
-                      {escalando ? "Enviando…" : d.etiqueta}
+                      {escalando === d.id ? "Enviando…" : d.etiqueta}
                     </button>
                   ))}
                 </div>

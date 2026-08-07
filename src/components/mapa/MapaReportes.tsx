@@ -107,7 +107,7 @@ export function MapaReportes() {
         `min-h` evita que en horizontal el mapa se quede en ~170 px, donde los chips de
         arriba y los botones de abajo se lo comen entero.
       */}
-      <div className="relative isolate h-[46dvh] min-h-[200px] w-full overflow-hidden border-b border-borde">
+      <div className="relative isolate h-[46dvh] min-h-[200px] w-full overflow-hidden border-b border-borde md:h-[58dvh]">
         <MapaLeaflet
           reportes={visibles}
           centro={centro}

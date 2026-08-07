@@ -22,7 +22,8 @@ donde no llegan o no generan confianza — no los reemplaza.
   - `ReportRegistry.sol` — hash IPFS + coordenadas + categoría + timestamp, emite evento.
   - `TokenReward.sol` (ERC-20) — mint con rate-limit por wallet/zona/tiempo.
   - `IdentityEscrow.sol` — vínculo wallet↔identidad cifrado, multisig simplificado 2-de-3 para el MVP.
-- **Frontend** (este repo): Next.js 15 App Router + React 19 + Tailwind 4, TypeScript estricto, mobile-first.
+- **Frontend** (este repo): Next.js 15 App Router + React 19 + Tailwind 4, TypeScript estricto.
+  Mobile-first, con barra lateral desde el punto de corte `md` en escritorio (ADR-028).
   - Login **opcional** con Google (Auth.js v5). No identifica ante la red: el alias publico no cambia (ADR-021).
   - Wallet abstraction: Privy o Web3Auth (nada de seed phrases visibles al usuario).
   - Mapa en tiempo real: Leaflet + OpenStreetMap (sin API key — ver ADR-004).

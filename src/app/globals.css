@@ -15,7 +15,10 @@
   --color-borde: #272e38;
   --color-texto: #e9eef4;
   --color-suave: #96a1b0;
-  --color-tenue: #5d6875;
+  /* #828d9c y no #5d6875: el anterior daba 3.14:1 sobre superficie, por debajo de AA.
+     Este da 5.29:1 y sostiene todos los textos pequenos — etiquetas de seccion,
+     coordenadas, placeholders y las pestanas inactivas. */
+  --color-tenue: #828d9c;
 
   --color-marca: #2fe6a8;
   --color-marca-oscura: #0f5c44;
@@ -64,6 +67,24 @@ body {
 
 * {
   -webkit-tap-highlight-color: transparent;
+}
+
+/*
+ * Foco visible para teclado, en un solo sitio.
+ *
+ * Varios componentes usan `focus:outline-none` para quitar el contorno azul del navegador,
+ * que sobre el tema oscuro queda feo — pero sin nada que lo sustituya quien navega con
+ * teclado se queda sin saber donde esta. Esta regla va FUERA de @layer a proposito: el CSS
+ * sin capa gana a las utilidades de Tailwind, asi que restituye el foco sin tener que
+ * tocar cada componente.
+ *
+ * `:focus-visible` y no `:focus`: quien toca la pantalla o hace clic no ve ningun anillo,
+ * solo quien navega con teclado.
+ */
+:focus-visible {
+  outline: 2px solid var(--color-marca);
+  outline-offset: 2px;
+  border-radius: 0.5rem;
 }
 
 @layer components {

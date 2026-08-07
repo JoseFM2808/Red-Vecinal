@@ -4,7 +4,7 @@
 
 Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o por el equipo se registra aquí ANTES o AL MOMENTO de escribir el código que la implementa. `docs/DECISIONES.md` se genera desde este archivo (npm run docs) y la pestaña Arquitectura de la app lo renderiza.
 
-**29 decisiones registradas · 13 esperan validacion humana**
+**31 decisiones registradas · 13 esperan validacion humana**
 
 ## Esperan que una persona decida
 
@@ -57,6 +57,8 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | [ADR-025](#adr-025) | El círculo de cuidado sale del laboratorio y entra a producción | IA+Humano | aceptada | media | Producto y UX, Problema e impacto, Pitch y demo |
 | [ADR-026](#adr-026) | El acceso deja de depender de la pantalla de bienvenida | IA+Humano | reemplazada | alta | Producto y UX, Pitch y demo |
 | [ADR-027](#adr-027) | El acceso pasa a ser una puerta: sin cuenta no se entra | IA+Humano | aceptada | alta | Producto y UX, Pitch y demo, Problema e impacto |
+| [ADR-028](#adr-028) | Version de escritorio: la misma app con barra lateral, no un rediseño | IA+Humano | aceptada | alta | Producto y UX, Pitch y demo |
+| [ADR-029](#adr-029) | Ronda de mejoras de experiencia guiada por auditoria | IA+Humano | aceptada | alta | Producto y UX, Problema e impacto |
 
 ---
 
@@ -951,3 +953,66 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 **Evidencia en el codigo.** `src/components/acceso/PuertaAcceso.tsx`, `src/app/layout.tsx`, `docs/PITCH.md`
 
 > **Necesita decision humana:** Confirmar que el equipo asume el intercambio: se gana una puerta clara y una identidad real que revelar, se pierde el argumento de "se reporta sin registro" que el pitch usaba como ventaja frente a las apps municipales. Si el jurado pregunta por friccion en una emergencia, hay que tener respuesta.
+
+---
+
+## ADR-028
+
+### Version de escritorio: la misma app con barra lateral, no un rediseño
+
+`2026-08-07` · autor: **IA+Humano** · estado: **aceptada** · reversibilidad: **alta**
+
+**Contexto.** En pantalla grande la app era una columna de movil de 512 px flotando en el centro, con una barra de pestanas pegada al fondo del monitor. El jurado y el equipo la ven casi siempre desde un portatil, asi que esa primera impresion pesa.
+
+**Alternativas descartadas.**
+
+- *Rediseñar con paneles a dos columnas (mapa y lista lado a lado)* — Es el rediseño correcto para escritorio pero duplica los estados de cada pantalla a cinco dias de la demo, justo en el componente mas fragil.
+- *Detectar el ancho con JavaScript y renderizar dos navegaciones distintas* — Introduce diferencia entre lo que se pinta en el servidor y en el cliente. Con clases responsivas no hay hidratacion que pueda discrepar.
+- *Dejarlo como estaba* — Una app que en un monitor de 27 pulgadas se ve como un telefono al centro parece sin terminar, y eso cuesta en el criterio de producto.
+
+**Decision.** La misma barra con dos formas, resueltas por clases responsivas: abajo y horizontal en movil, lateral de 240 px desde el punto de corte md, con la marca y los nombres completos. El contenido se desplaza para dejarle sitio y la columna de lectura pasa de 512 a 672 px. El mapa gana altura en escritorio.
+
+**Consecuencias.**
+
+- En escritorio se aprovecha el espacio sin tocar una sola pantalla: solo la navegacion y el ancho del contenedor.
+- Verificado que movil no cambia: barra inferior de 56 px, marca oculta, Arquit. abreviado y areas tactiles de 55 a 75 px.
+- En escritorio caben los nombres completos, asi que Arquitectura deja de ir abreviada.
+- No es un layout de escritorio de verdad: sigue siendo una columna. Un panel a dos columnas para el mapa queda como siguiente paso si sobra tiempo.
+
+**Costo de revertir.** Bajo: quitar las clases md: de la barra y del layout.
+
+**Sirve a.** Producto y UX, Pitch y demo
+
+**Evidencia en el codigo.** `src/components/navegacion/BarraPestanas.tsx`, `src/app/layout.tsx`, `src/components/mapa/MapaReportes.tsx`
+
+---
+
+## ADR-029
+
+### Ronda de mejoras de experiencia guiada por auditoria
+
+`2026-08-07` · autor: **IA+Humano** · estado: **aceptada** · reversibilidad: **alta**
+
+**Contexto.** Ocho agentes auditaron la app en cuatro dimensiones de experiencia (accesibilidad, retroalimentacion, flujo de reporte, orientacion) y cada hallazgo se contrasto de forma adversarial. Sobrevivieron catorce; tres se refutaron por estar ya resueltos.
+
+**Alternativas descartadas.**
+
+- *Aplicar los catorce hallazgos* — Varios eran de prioridad baja y tocaban el historial del navegador o el modelo de datos. A cinco dias de la demo, el riesgo no se paga.
+- *Aplicar solo lo cosmetico* — Habria dejado fuera los dos que de verdad hacen dano: perder el borrador al fallar y enterrar el boton de emergencia.
+
+**Decision.** Se aplican los de prioridad alta y los medios baratos. Lo mas importante: al fallar un reporte ya no se pierde el borrador (antes el unico boton borraba foto, texto y ubicacion, y el limite anti-Sybil de 15 minutos por zona lo dispara en cualquier demo); el boton de llamar a la autoridad sube por encima del hash y del token; el token --color-tenue pasa de 3.14:1 a 5.29:1 de contraste; el boton de publicar se ancla al pulgar; y hay foco visible para teclado en toda la app.
+
+**Consecuencias.**
+
+- Contraste medido con la formula WCAG: 5.82 / 5.29 / 4.76 sobre los tres fondos, contra 3.45 / 3.14 / 2.82 antes.
+- Verificado que un rechazo por limite de zona conserva el texto escrito y devuelve al paso 2.
+- El orden de la pantalla de exito ya no entierra la emergencia bajo los detalles de blockchain, que era el caso de robo en curso.
+- Vibracion al publicar, porque en la calle la persona puede no estar mirando la pantalla. Nunca es la unica senal: iOS Safari no la soporta.
+- Cambiar de categoria ya no arrastra la sugerencia de la anterior, que publicaba descripciones falsas.
+- Quedan sin aplicar por riesgo o coste: el historial del navegador para cerrar la hoja, el enlace profundo a un reporte y el bloqueo de scroll del fondo.
+
+**Costo de revertir.** Bajo: son cambios locales y un token de color.
+
+**Sirve a.** Producto y UX, Problema e impacto
+
+**Evidencia en el codigo.** `src/app/globals.css`, `src/components/reportar/FlujoReporte.tsx`, `src/components/reportes/HojaDetalle.tsx`

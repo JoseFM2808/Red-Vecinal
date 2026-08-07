@@ -1,7 +1,7 @@
 "use client";
 
 import { signIn, useSession } from "next-auth/react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useGoogleDisponible } from "@/components/proveedores/SesionProvider";
 import { Icono } from "@/components/ui/Icono";
 
@@ -47,6 +47,26 @@ const PROMESAS = [
   { icono: "cadena" as const, texto: "Tu evidencia queda anclada en Arbitrum" },
 ];
 
+/**
+ * NextAuth vuelve a la raiz con ?error=CODIGO cuando el login falla. La puerta tiene que
+ * leerlo: si no, la persona vuelve a ver la misma pantalla sin ninguna pista de que paso
+ * y lo unico que puede hacer es volver a intentar a ciegas.
+ */
+function mensajeDeError(codigo: string): string {
+  switch (codigo) {
+    case "Configuration":
+      return "El acceso con Google no esta bien configurado en este despliegue. Avisa al equipo: sin eso no se puede entrar.";
+    case "AccessDenied":
+      return "Google no autorizo el acceso. Si cancelaste sin querer, puedes intentarlo otra vez.";
+    case "OAuthAccountNotLinked":
+      return "Esa cuenta ya esta vinculada de otra forma. Prueba con otra cuenta de Google.";
+    case "Verification":
+      return "El enlace de acceso caduco. Intentalo de nuevo.";
+    default:
+      return "No se pudo completar el acceso. Intentalo de nuevo.";
+  }
+}
+
 /** Espera sobria mientras se resuelve la sesion. Evita el parpadeo de contenido. */
 function Cargando() {
   return (
@@ -63,6 +83,18 @@ export function PuertaAcceso({ children }: { children: ReactNode }) {
   const { status } = useSession();
   const googleDisponible = useGoogleDisponible();
   const [ocupado, setOcupado] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const codigo = new URLSearchParams(window.location.search).get("error");
+    if (!codigo) return;
+
+    setError(mensajeDeError(codigo));
+    // Se limpia la URL para que el aviso no reaparezca al recargar ni viaje si se comparte.
+    const url = new URL(window.location.href);
+    url.searchParams.delete("error");
+    window.history.replaceState({}, "", url.toString());
+  }, []);
 
   if (status === "loading") return <Cargando />;
 
@@ -95,6 +127,16 @@ export function PuertaAcceso({ children }: { children: ReactNode }) {
         </div>
 
         <div className="space-y-3">
+          {error ? (
+            <div
+              role="alert"
+              className="flex items-start gap-2.5 rounded-xl border border-alerta/40 bg-alerta/10 p-3"
+            >
+              <Icono nombre="alerta" className="mt-0.5 h-4 w-4 shrink-0 text-alerta" />
+              <p className="text-xs leading-relaxed text-texto/90">{error}</p>
+            </div>
+          ) : null}
+
           <button
             type="button"
             disabled={ocupado}

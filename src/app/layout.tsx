@@ -64,8 +64,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <CirculoProvider>
                 {/* Sin sesion no se pinta nada de la app: la puerta va primero (ADR-027). */}
                 <PuertaAcceso>
-                  <div className="mx-auto flex min-h-dvh max-w-lg flex-col">
-                    <main className="flex-1 espacio-barra">{children}</main>
+                  {/*
+                    md:pl-60 deja sitio a la barra lateral de escritorio; en movil la barra
+                    va abajo y ese hueco no existe. La columna de lectura se ensancha un
+                    poco en pantallas grandes, pero no tanto como para que las lineas de
+                    texto se vuelvan incomodas.
+                  */}
+                  <div className="md:pl-60">
+                    <div className="mx-auto flex min-h-dvh max-w-lg flex-col md:max-w-2xl">
+                      <main className="flex-1 espacio-barra md:pb-10">{children}</main>
+                    </div>
                   </div>
                   <BarraPestanas />
                 </PuertaAcceso>
