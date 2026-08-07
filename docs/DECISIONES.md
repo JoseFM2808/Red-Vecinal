@@ -4,7 +4,7 @@
 
 Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o por el equipo se registra aquí ANTES o AL MOMENTO de escribir el código que la implementa. `docs/DECISIONES.md` se genera desde este archivo (npm run docs) y la pestaña Arquitectura de la app lo renderiza.
 
-**23 decisiones registradas · 10 esperan validacion humana**
+**25 decisiones registradas · 11 esperan validacion humana**
 
 ## Esperan que una persona decida
 
@@ -20,6 +20,7 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | ADR-020 | La detección de distrito afirmaba con seguridad un distrito equivocado | Verificar en el celular, desde tu distrito real, que ahora aparece el correcto y que el margen de precisión que muestra es razonable. Si sigue fallando con ±20 m de precisión, avísame el distrito y la coordenada para ajustar el centroide. |
 | ADR-021 | Login con Google opcional: da continuidad entre dispositivos, no identidad pública | Falta lo único que no puedo hacer yo: crear el cliente OAuth en Google Cloud Console y cargar AUTH_SECRET, AUTH_GOOGLE_ID y AUTH_GOOGLE_SECRET en Vercel. Pasos exactos en docs/DESPLIEGUE.md. Hasta entonces el login queda invisible y la app funciona igual. Confirmar también que al equipo le parece bien que la cuenta de Google sea privada y no el identificador público. |
 | ADR-101 | Círculo de cuidado: aviso cuando pasa algo cerca de alguien de tu familia | Dos preguntas antes de considerar sacar esto de Lab_Dai. (1) Producto: ¿cómo se evita que se use para controlar a una pareja o a un hijo adolescente en vez de para cuidarlos? Sin una respuesta, la funcionalidad puede hacer más daño que bien. (2) Técnica: el tiempo real de verdad necesita servidor, y eso rompe la promesa de 'no hay servidor con tus datos'. Hay que decidir si se acepta ese costo o si se busca algo peer-to-peer. |
+| ADR-102 | El círculo es la única parte de la app que exige cuenta | Decidir si al cerrar sesión se borran los contactos del dispositivo. Hoy se conservan y reaparecen al volver a entrar, que es cómodo pero deja teléfonos de terceros guardados en un equipo donde ya nadie inició sesión. |
 
 ## Indice
 
@@ -47,7 +48,9 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | [ADR-020](#adr-020) | La detección de distrito afirmaba con seguridad un distrito equivocado | IA+Humano | aceptada | alta | Producto y UX, Problema e impacto, Implementacion tecnica |
 | [ADR-021](#adr-021) | Login con Google opcional: da continuidad entre dispositivos, no identidad pública | IA+Humano | aceptada | alta | Producto y UX, Implementacion tecnica, Problema e impacto |
 | [ADR-022](#adr-022) | Pantalla de bienvenida en el primer arranque, no una barrera de login | IA+Humano | aceptada | alta | Producto y UX, Pitch y demo |
+| [ADR-023](#adr-023) | Tu ubicación actual es visible siempre, con cuenta o sin ella | IA+Humano | aceptada | alta | Producto y UX, Problema e impacto |
 | [ADR-101](#adr-101) | Círculo de cuidado: aviso cuando pasa algo cerca de alguien de tu familia | IA+Humano | propuesta | alta | Problema e impacto, Producto y UX, Implementacion tecnica |
+| [ADR-102](#adr-102) | El círculo es la única parte de la app que exige cuenta | IA+Humano | aceptada | alta | Producto y UX, Problema e impacto, Implementacion tecnica |
 
 ---
 
@@ -713,6 +716,38 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 
 ---
 
+## ADR-023
+
+### Tu ubicación actual es visible siempre, con cuenta o sin ella
+
+`2026-08-07` · autor: **IA+Humano** · estado: **aceptada** · reversibilidad: **alta**
+
+**Contexto.** Ver dónde estás solo era posible pulsando un icono pequeño en una esquina del mapa, y el resultado se perdía al cambiar de pestaña. El equipo pidió que la ubicación se vea siempre y que no dependa de estar logueado. Es coherente con el producto: la app promete funcionar completa sin registro, así que atar la ubicación a la sesión sería incoherente.
+
+**Alternativas descartadas.**
+
+- *Pedir el permiso automáticamente al abrir la app* — Un navegador que recibe la petición sin gesto previo del usuario suele bloquearla de forma permanente. Se perdería la ubicación para siempre a cambio de ahorrar un toque.
+- *Dejar el estado dentro del componente del mapa* — Se perdía al navegar y no servía para el resto de pantallas.
+- *getCurrentPosition en vez de watchPosition* — Da una foto fija. 'Mi ubicación actual' implica que se mantenga al día mientras la persona camina.
+
+**Decision.** `UbicacionProvider` vive en el layout, FUERA del proveedor de sesión, para que quede claro en el código que no depende del login. Al montar consulta el estado del permiso —lo que no abre ninguna ventana— y solo si ya estaba concedido empieza a seguir la posición; si no, espera al gesto del usuario. Se muestra en Inicio con el distrito y el margen de precisión, y en el mapa con el punto y su círculo de incertidumbre.
+
+**Consecuencias.**
+
+- La ubicación sobrevive al cambio de pestaña: se pide una vez, no en cada pantalla.
+- El flujo de reporte arranca con la posición ya conocida y aun así pide una lectura fresca: en una emergencia, esperar al GPS con la pantalla en blanco es lo que hace que la gente cierre la app.
+- Se dibuja el margen de error real en vez de fingir un punto exacto.
+- Verificado con el permiso denegado (explica cómo reactivarlo) y con GPS simulado: 'Estas en Surquillo · ±24 m', punto en el mapa y persistencia entre pestañas, todo sin sesión iniciada.
+- watchPosition consume más batería que una lectura puntual. Aceptable para el MVP; si el uso crece habrá que revisarlo.
+
+**Costo de revertir.** Bajo: es un proveedor y dos componentes de presentación.
+
+**Sirve a.** Producto y UX, Problema e impacto
+
+**Evidencia en el codigo.** `src/components/proveedores/UbicacionProvider.tsx`, `src/components/ubicacion/TarjetaUbicacion.tsx`, `src/components/mapa/MapaReportes.tsx`
+
+---
+
 ## ADR-101
 
 ### Círculo de cuidado: aviso cuando pasa algo cerca de alguien de tu familia
@@ -745,3 +780,37 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 **Evidencia en el codigo.** `src/lib/circulo.ts`, `src/lib/circulo.test.ts`, `src/lib/circulo-simulacion.ts`, `src/components/circulo/PanelCirculo.tsx`, `src/components/proveedores/CirculoProvider.tsx`
 
 > **Necesita decision humana:** Dos preguntas antes de considerar sacar esto de Lab_Dai. (1) Producto: ¿cómo se evita que se use para controlar a una pareja o a un hijo adolescente en vez de para cuidarlos? Sin una respuesta, la funcionalidad puede hacer más daño que bien. (2) Técnica: el tiempo real de verdad necesita servidor, y eso rompe la promesa de 'no hay servidor con tus datos'. Hay que decidir si se acepta ese costo o si se busca algo peer-to-peer.
+
+---
+
+## ADR-102
+
+### El círculo es la única parte de la app que exige cuenta
+
+`2026-08-07` · autor: **IA+Humano** · estado: **aceptada** · reversibilidad: **alta**
+
+**Contexto.** El equipo pidió que la pestaña Círculo solo se vea con la autenticación de Google activa. Choca de frente con la regla del producto —todo funciona sin registro— así que hacía falta una razón que no fuera 'porque sí'.
+
+**Alternativas descartadas.**
+
+- *Mostrar el círculo siempre, como el resto* — Es lo que había, y guardaba teléfonos de familiares en un dispositivo sin ninguna cuenta detrás que permitiera revocarlos.
+- *Ocultar solo la pestaña y dejar la ruta accesible* — Seguridad por oscuridad: la URL sigue funcionando y el proveedor seguiría emitiendo avisos en segundo plano.
+- *Extender el requisito de cuenta al resto de la app* — Rompería la promesa central. La excepción se justifica por el dato que maneja el círculo, no por comodidad de implementación.
+
+**Decision.** Sin sesión de Google: la pestaña no aparece (la barra vuelve a cinco), `/circulo` muestra una pantalla que explica por qué se pide la cuenta y ofrece entrar, y el proveedor no carga contactos, no corre el latido y no emite ningún aviso. La razón se dice en pantalla: aquí viven los teléfonos de tu familia y las posiciones que te comparten, y una cuenta detrás es lo que permite revocarlo.
+
+**Consecuencias.**
+
+- La excepción a 'todo sin registro' queda acotada a la funcionalidad que maneja datos de terceros, y explicada al usuario en vez de impuesta.
+- Le da al login un propósito visible más allá de recuperar el alias.
+- El bloqueo es real, no cosmético: sin sesión el proveedor no ejecuta nada.
+- Los contactos guardados sobreviven en el dispositivo tras cerrar sesión y reaparecen al volver a entrar. Es discutible: lo estricto sería borrarlos al salir.
+- En un despliegue sin credenciales de Google el círculo queda inaccesible por completo. Es correcto, pero conviene saberlo antes de una demo.
+
+**Costo de revertir.** Bajo: es un booleano derivado de la sesión.
+
+**Sirve a.** Producto y UX, Problema e impacto, Implementacion tecnica
+
+**Evidencia en el codigo.** `src/components/proveedores/CirculoProvider.tsx`, `src/components/navegacion/BarraPestanas.tsx`, `src/components/circulo/PanelCirculo.tsx`
+
+> **Necesita decision humana:** Decidir si al cerrar sesión se borran los contactos del dispositivo. Hoy se conservan y reaparecen al volver a entrar, que es cómodo pero deja teléfonos de terceros guardados en un equipo donde ya nadie inició sesión.

@@ -4,6 +4,11 @@
 > cuidado**: si alguien comparte su ubicación contigo, recibes un aviso cuando ocurre un
 > reporte cerca de esa persona, con su teléfono a un toque para llamarla.
 >
+> **El círculo es la única parte de la app que exige cuenta de Google** (`ADR-102`): aquí
+> viven los teléfonos de tu familia y las posiciones que te comparten. Sin sesión la
+> pestaña no aparece, la ruta explica por qué, y el proveedor no carga nada ni emite avisos.
+> Todo lo demás —reportar, mapa, ubicación— sigue funcionando sin cuenta.
+>
 > Es exploratorio y **no** entra al alcance del 12 de agosto. Lo único simulado es el
 > transporte de la ubicación del contacto; la geometría, los avisos y la deduplicación son
 > reales y tienen 20 tests. Contexto, límites y las dos preguntas abiertas antes de sacarlo

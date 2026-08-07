@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
 import { useApp } from "@/components/proveedores/AppProvider";
+import { useUbicacion } from "@/components/proveedores/UbicacionProvider";
 import { HojaDetalle } from "@/components/reportes/HojaDetalle";
 import { TarjetaReporte } from "@/components/reportes/TarjetaReporte";
 import { useCirculo } from "@/components/proveedores/CirculoProvider";
@@ -34,8 +35,11 @@ export function MapaReportes() {
   const { contactos } = useCirculo();
   const [filtro, setFiltro] = useState<IdCategoria | null>(null);
   const [seleccionado, setSeleccionado] = useState<string | null>(null);
-  const [posicionUsuario, setPosicionUsuario] = useState<Coordenada | null>(null);
   const [centroManual, setCentroManual] = useState<Coordenada | null>(null);
+  // La ubicacion viene del proveedor compartido: se mantiene al cambiar de pestana y
+  // no depende de estar logueado (ADR-023).
+  const { coordenada: posicionUsuario, precisionM, estado: estadoUbicacion, solicitar } =
+    useUbicacion();
 
   const visibles = useMemo(
     () => (filtro ? reportes.filter((r) => r.categoria === filtro) : reportes),
@@ -73,19 +77,14 @@ export function MapaReportes() {
   }, [centroManual, detalle, visibles]);
 
   const ubicarme = () => {
-    if (!("geolocation" in navigator)) return;
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const coordenada = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        setPosicionUsuario(coordenada);
-        setSeleccionado(null);
-        setCentroManual(coordenada);
-      },
-      () => {
-        // Permiso denegado: el mapa se queda donde esta, sin bloquear nada.
-      },
-      { enableHighAccuracy: true, timeout: 8000 },
-    );
+    // Si ya se conoce la posicion, centrar. Si no, pedir el permiso — que exige
+    // este gesto del usuario para que el navegador no lo bloquee de entrada.
+    if (posicionUsuario) {
+      setSeleccionado(null);
+      setCentroManual(posicionUsuario);
+      return;
+    }
+    solicitar();
   };
 
   return (
@@ -98,6 +97,7 @@ export function MapaReportes() {
           seleccionado={seleccionado}
           posicionUsuario={posicionUsuario}
           contactos={contactosEnMapa}
+          precisionUsuarioM={precisionM}
           onSeleccionar={setSeleccionado}
         />
 
@@ -137,11 +137,30 @@ export function MapaReportes() {
         <button
           type="button"
           onClick={ubicarme}
-          aria-label="Centrar en mi ubicacion"
-          className="toque absolute bottom-3 right-3 z-[500] grid place-items-center rounded-full border border-borde bg-superficie/95 text-info shadow-lg backdrop-blur"
+          disabled={estadoUbicacion === "buscando"}
+          aria-label={posicionUsuario ? "Centrar en mi ubicacion" : "Mostrar mi ubicacion"}
+          className={`toque absolute bottom-3 right-3 z-[500] grid place-items-center rounded-full border shadow-lg backdrop-blur transition ${
+            posicionUsuario
+              ? "border-info/50 bg-info/20 text-info"
+              : "border-borde bg-superficie/95 text-suave"
+          } ${estadoUbicacion === "buscando" ? "animate-pulse" : ""}`}
         >
           <Icono nombre="ubicacion" className="h-5 w-5" />
         </button>
+
+        {!posicionUsuario && estadoUbicacion !== "no_soportada" ? (
+          <button
+            type="button"
+            onClick={ubicarme}
+            className="toque absolute bottom-3 left-3 z-[500] flex items-center gap-2 rounded-full border border-borde bg-superficie/95 px-3.5 text-xs font-medium text-suave shadow-lg backdrop-blur"
+          >
+            {estadoUbicacion === "denegada"
+              ? "Ubicacion bloqueada"
+              : estadoUbicacion === "buscando"
+                ? "Buscando…"
+                : "Ver mi ubicacion"}
+          </button>
+        ) : null}
       </div>
 
       <div className="space-y-2 p-4">

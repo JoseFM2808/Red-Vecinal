@@ -32,6 +32,8 @@ interface Props {
   seleccionado: string | null;
   posicionUsuario: Coordenada | null;
   contactos?: ContactoEnMapa[];
+  /** Radio de incertidumbre del GPS, para dibujarlo en vez de fingir precision. */
+  precisionUsuarioM?: number | null;
   onSeleccionar: (id: string) => void;
 }
 
@@ -80,6 +82,7 @@ export default function MapaLeaflet({
   seleccionado,
   posicionUsuario,
   contactos,
+  precisionUsuarioM,
   onSeleccionar,
 }: Props) {
   const marcadores = useMemo(
@@ -147,8 +150,21 @@ export default function MapaLeaflet({
         </Marker>
       ))}
 
+      {/* Circulo de precision: se dibuja el margen real del GPS en vez de fingir un punto exacto. */}
+      {posicionUsuario && precisionUsuarioM && precisionUsuarioM > 30 ? (
+        <Circle
+          center={[posicionUsuario.lat, posicionUsuario.lng]}
+          radius={precisionUsuarioM}
+          pathOptions={{ color: "#62a8ff", weight: 1, opacity: 0.4, fillOpacity: 0.08 }}
+        />
+      ) : null}
+
       {posicionUsuario ? (
-        <Marker position={[posicionUsuario.lat, posicionUsuario.lng]} icon={ICONO_USUARIO} />
+        <Marker
+          position={[posicionUsuario.lat, posicionUsuario.lng]}
+          icon={ICONO_USUARIO}
+          zIndexOffset={1000}
+        />
       ) : null}
     </MapContainer>
   );

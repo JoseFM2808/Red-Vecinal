@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useCirculo } from "@/components/proveedores/CirculoProvider";
 import { Icono, type NombreIcono } from "@/components/ui/Icono";
 
 /**
@@ -23,13 +24,15 @@ interface Pestana {
   destacada?: boolean;
   /** Nombre completo para lectores de pantalla cuando la etiqueta va abreviada. */
   nombreAccesible?: string;
+  /** Solo se muestra con sesion de Google iniciada (ADR-102). */
+  requiereSesion?: boolean;
 }
 
 const PESTANAS: readonly Pestana[] = [
   { href: "/", etiqueta: "Inicio", icono: "inicio" },
   { href: "/mapa", etiqueta: "Mapa", icono: "mapa" },
   { href: "/reportar", etiqueta: "Reportar", icono: "reportar", destacada: true },
-  { href: "/circulo", etiqueta: "Circulo", icono: "circulo" },
+  { href: "/circulo", etiqueta: "Circulo", icono: "circulo", requiereSesion: true },
   { href: "/cuenta", etiqueta: "Cuenta", icono: "cuenta" },
   // Con seis pestanas "Arquitectura" no entra en 360 px; se abrevia solo en la barra.
   {
@@ -42,6 +45,10 @@ const PESTANAS: readonly Pestana[] = [
 
 export function BarraPestanas() {
   const ruta = usePathname();
+  const { habilitado: circuloHabilitado } = useCirculo();
+
+  // Sin sesion la barra vuelve a cinco pestanas, como en `main`.
+  const visibles = PESTANAS.filter((p) => !p.requiereSesion || circuloHabilitado);
 
   return (
     <nav
@@ -49,7 +56,7 @@ export function BarraPestanas() {
       className="fixed inset-x-0 bottom-0 z-50 border-t border-borde bg-superficie/95 backdrop-blur safe-abajo"
     >
       <ul className="mx-auto flex max-w-lg items-stretch justify-between px-1">
-        {PESTANAS.map((pestana) => {
+        {visibles.map((pestana) => {
           const activa = ruta === pestana.href;
 
           if (pestana.destacada) {

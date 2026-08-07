@@ -41,6 +41,13 @@ import type { Coordenada } from "@/lib/tipos";
  * Cada 20 segundos mueve a los contactos que estan compartiendo y vuelve a evaluar si
  * algun reporte reciente cayo cerca de alguno. Los avisos no se repiten: la clave
  * contacto+reporte se recuerda entre recargas.
+ *
+ * REQUIERE SESION (ADR-102). A diferencia del resto de la app, el circulo solo funciona
+ * con la cuenta de Google iniciada. La razon no es tecnica: aqui se guardan los telefonos
+ * de tu familia y las posiciones que te comparten, que es el dato mas sensible que maneja
+ * el producto. Atarlo a una cuenta es lo que permite revocarlo y no dejarlo suelto en un
+ * telefono prestado. Sin sesion no se cargan contactos, no corre el latido y no se emite
+ * ningun aviso.
  */
 
 export type PermisoNotificacion = NotificationPermission | "no_soportado";
@@ -53,6 +60,8 @@ export interface NuevoContacto {
 }
 
 interface EstadoCirculo {
+  /** Hay sesion de Google iniciada. Sin esto el circulo no existe (ADR-102). */
+  habilitado: boolean;
   contactos: ContactoCirculo[];
   avisos: AvisoCercania[];
   permiso: PermisoNotificacion;
@@ -77,7 +86,8 @@ function permisoActual(): PermisoNotificacion {
 }
 
 export function CirculoProvider({ children }: { children: ReactNode }) {
-  const { reportes } = useApp();
+  const { reportes, cuenta } = useApp();
+  const habilitado = cuenta !== null;
 
   const [contactos, setContactos] = useState<ContactoCirculo[]>([]);
   const [avisos, setAvisos] = useState<AvisoCercania[]>([]);
@@ -92,8 +102,15 @@ export function CirculoProvider({ children }: { children: ReactNode }) {
     bases.current.set(id, base);
   }, []);
 
-  // Arranque: contactos guardados o los sembrados de demo.
+  // Arranque: contactos guardados o los sembrados de demo. Solo con sesion iniciada.
   useEffect(() => {
+    if (!habilitado) {
+      setContactos([]);
+      setAvisos([]);
+      setListo(false);
+      return;
+    }
+
     const ahora = Date.now();
     const guardados = cargarContactos();
     const iniciales = guardados ?? contactosSembrados(ahora);
@@ -109,11 +126,11 @@ export function CirculoProvider({ children }: { children: ReactNode }) {
     setPermiso(permisoActual());
     setListo(true);
     if (!guardados) guardarContactos(iniciales);
-  }, [registrarBase]);
+  }, [habilitado, registrarBase]);
 
   // Latido: mueve a quien esta compartiendo. Es lo unico simulado de la funcionalidad.
   useEffect(() => {
-    if (!listo) return;
+    if (!listo || !habilitado) return;
 
     const latir = () => {
       setContactos((previos) => {
@@ -125,11 +142,11 @@ export function CirculoProvider({ children }: { children: ReactNode }) {
 
     const id = window.setInterval(latir, INTERVALO_SIMULACION_MS);
     return () => window.clearInterval(id);
-  }, [listo]);
+  }, [habilitado, listo]);
 
   // Evaluacion de cercania: corre con cada latido y con cada reporte nuevo.
   useEffect(() => {
-    if (!listo || contactos.length === 0) return;
+    if (!listo || !habilitado || contactos.length === 0) return;
 
     const nuevos = evaluarAvisos(contactos, reportes, Date.now(), avisados.current);
     if (nuevos.length === 0) return;
@@ -151,7 +168,7 @@ export function CirculoProvider({ children }: { children: ReactNode }) {
         }
       }
     }
-  }, [contactos, listo, reportes]);
+  }, [contactos, habilitado, listo, reportes]);
 
   const persistir = useCallback((siguiente: ContactoCirculo[]) => {
     setContactos(siguiente);
@@ -247,6 +264,7 @@ export function CirculoProvider({ children }: { children: ReactNode }) {
 
   const valor = useMemo<EstadoCirculo>(
     () => ({
+      habilitado,
       contactos,
       avisos,
       permiso,
@@ -267,6 +285,7 @@ export function CirculoProvider({ children }: { children: ReactNode }) {
       contactos,
       descartarAviso,
       eliminarContacto,
+      habilitado,
       listo,
       permiso,
       reiniciarCirculo,

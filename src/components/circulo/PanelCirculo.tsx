@@ -1,8 +1,10 @@
 "use client";
 
+import { signIn } from "next-auth/react";
 import { useState } from "react";
 import { useApp } from "@/components/proveedores/AppProvider";
 import { useCirculo } from "@/components/proveedores/CirculoProvider";
+import { useGoogleDisponible } from "@/components/proveedores/SesionProvider";
 import { Icono } from "@/components/ui/Icono";
 import { Aviso, EtiquetaSimulado } from "@/components/ui/primitivos";
 import { obtenerCategoria } from "@/lib/categorias";
@@ -260,9 +262,67 @@ function FormularioContacto() {
   );
 }
 
+/**
+ * El circulo es la unica parte de la app que exige cuenta (ADR-102): aqui viven los
+ * telefonos de tu familia y las posiciones que te comparten. Atarlo a una sesion es lo
+ * que permite revocarlo y no dejarlo suelto en un telefono prestado.
+ */
+function AccesoRequerido() {
+  const googleDisponible = useGoogleDisponible();
+  const [ocupado, setOcupado] = useState(false);
+
+  return (
+    <div className="px-4">
+      <div className="tarjeta p-5 text-center">
+        <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-superficie-alta text-marca">
+          <Icono nombre="candado" className="h-6 w-6" />
+        </span>
+        <h2 className="mt-4 text-base font-semibold text-texto">El circulo necesita tu cuenta</h2>
+        <p className="mt-2 text-xs leading-relaxed text-suave">
+          Es la unica parte de la app que la pide, y por una razon concreta: aqui se guardan
+          los telefonos de tu familia y las ubicaciones que te comparten. Es el dato mas
+          sensible del producto, y con una cuenta detras puedes revocarlo.
+        </p>
+        <p className="mt-2 text-[11px] leading-relaxed text-tenue">
+          Reportar, el mapa y todo lo demas siguen funcionando sin cuenta.
+        </p>
+
+        {googleDisponible ? (
+          <button
+            type="button"
+            disabled={ocupado}
+            onClick={() => {
+              setOcupado(true);
+              void signIn("google", { redirectTo: "/circulo" });
+            }}
+            className="toque mt-5 flex w-full items-center justify-center rounded-xl bg-white text-sm font-semibold text-[#1f1f1f] transition active:scale-[0.99] disabled:opacity-60"
+          >
+            {ocupado ? "Abriendo Google…" : "Continuar con Google"}
+          </button>
+        ) : (
+          <p className="mt-5 rounded-xl border border-borde bg-superficie-alta p-3 text-[11px] leading-relaxed text-tenue">
+            El acceso con Google todavia no esta configurado en este despliegue, asi que el
+            circulo no se puede activar aun.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function PanelCirculo() {
-  const { contactos, avisos, permiso, listo, descartarAviso, solicitarPermiso, reiniciarCirculo } =
-    useCirculo();
+  const {
+    habilitado,
+    contactos,
+    avisos,
+    permiso,
+    listo,
+    descartarAviso,
+    solicitarPermiso,
+    reiniciarCirculo,
+  } = useCirculo();
+
+  if (!habilitado) return <AccesoRequerido />;
 
   return (
     <div className="space-y-6 px-4">
