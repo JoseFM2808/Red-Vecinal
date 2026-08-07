@@ -27,7 +27,7 @@ function leerChainId(): number {
 }
 
 export const CONFIG = {
-  version: "0.1.0-beta.1",
+  version: "0.1.0-beta.2",
   modoCadena: leerModo(),
   chainId: leerChainId(),
   direcciones: {

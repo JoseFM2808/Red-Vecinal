@@ -38,7 +38,11 @@ Guion exacto (ensayarlo con cronómetro):
 4. **Recompensa** — 15 VSG con multiplicador ×1.5. "No pagamos por tener la app abierta:
    pagamos cuando otro vecino confirma el mismo hecho a menos de 300 metros dentro de 30 minutos.
    Eso es caro de falsificar; tener la app abierta no."
-5. **Mapa** — el reporte aparece georreferenciado junto a los demás.
+5. **Mapa** — el reporte aparece georreferenciado junto a los demás. Si el panel de sismos
+   está activo, señalarlo: "cuando varios vecinos reportan un sismo en la misma media hora,
+   la app arma el mapa de quién lo sintió, tipo 'Did You Feel It?' del USGS. Ojo con la
+   frase exacta: **cuenta reportes, no mide sismos.** No tenemos acelerómetros y no vamos
+   a fingir que sí."
 6. **Cuenta → Revelación selectiva** — tocar las firmas y mostrar el umbral 2-de-3.
    "Ni siquiera nosotros podemos abrir el vínculo solos."
 7. **Arquitectura** — cerrar aquí. Es el diferenciador: mostrar el estado real de cada módulo,
@@ -102,6 +106,14 @@ Cerrar repitiendo la frase clave.
 > La coordenada se trunca a ~11 metros antes de salir del teléfono. La foto va a IPFS, nunca a un
 > servidor nuestro. A la cadena solo llega un hash. El vínculo con la persona está cifrado y
 > requiere 2 de 3 firmas para abrirse, con rastro público de quién lo pidió.
+
+**"¿Detectan sismos de verdad?"**
+> No, y no lo decimos de otra forma. Agregamos lo que reportan los vecinos: si dos o más
+> personas distintas dicen "lo sentí" en media hora, mostramos el mapa por zonas y la
+> intensidad más repetida. Es el modelo del "Did You Feel It?" del USGS. Un detector real
+> es procesamiento de señal sobre miles de acelerómetros: otro proyecto, y uno que además
+> no usaría Arbitrum para nada. Lo interesante es que la categoría reutiliza toda la
+> infraestructura que ya construimos sin una línea nueva en la capa de cadena.
 
 **"¿Qué construyeron ustedes y qué es librería?"**
 > El dominio completo (hash canónico, geometría de zonas, política anti-Sybil) es propio y tiene

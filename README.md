@@ -31,26 +31,43 @@ Para verlo como se va a usar de verdad: DevTools → vista móvil, 375 px de anc
 El proyecto es un Next.js estándar; Vercel lo detecta solo.
 
 1. Importar el repositorio en [vercel.com/new](https://vercel.com/new).
-2. Framework: **Next.js** (autodetectado). Build: `npm run build`. Sin ajustes extra.
-3. Deploy.
+2. Framework: **Next.js** (autodetectado). Dejar todos los *Override* apagados.
+3. Deploy. Cada push a `main` redespliega solo.
 
-No hay que configurar nada más para que la demo funcione. Las variables de `.env.example` son
-todas opcionales — se cargan cuando el equipo de contratos publique las direcciones
+**No hay que configurar ninguna variable para que la demo funcione.** Las de `.env.example` son
+todas opcionales.
+
+> Las variables `NEXT_PUBLIC_*` se incrustan en el bundle durante el **build**. Cambiar una en
+> el panel **no** afecta a un deploy ya publicado: hay que hacer **Redeploy**. Lo mismo vale
+> para `ESCALATION_WEBHOOK_URL`, porque Vercel congela el entorno al crear el deployment.
+
+Ámbitos recomendados para los dos secretos:
+
+- `PINATA_JWT` → Production y Preview, marcada **Sensitive**. Nunca con prefijo `NEXT_PUBLIC_`
+  (el preflight aborta el build si alguien lo intenta).
+- `ESCALATION_WEBHOOK_URL` → **solo Production**, para que una rama de preview no pueda avisar
+  a un serenazgo real por accidente.
+
+El resto se cargan cuando el equipo de contratos publique las direcciones
 (ver [`docs/SIGUIENTES-PASOS-ARBITRUM.md`](docs/SIGUIENTES-PASOS-ARBITRUM.md)).
 
 El botón de reportar usa la geolocalización del navegador, que exige HTTPS: en Vercel funciona,
 en `localhost` también. Si el GPS falla, el flujo ofrece una ubicación de demostración.
+
+**Ajustes del panel, cabeceras, CSP y checklist previo a la demo:
+[`docs/DESPLIEGUE.md`](docs/DESPLIEGUE.md).**
 
 ---
 
 ## Comandos
 
 ```bash
-npm run dev      # desarrollo
-npm run check    # validate + docs:check + typecheck + lint + test   ← antes de decir "listo"
-npm run test     # solo los tests del dominio
-npm run docs     # regenera docs/ARQUITECTURA.md y docs/DECISIONES.md desde src/data
-npm run build    # build de produccion (lo mismo que corre Vercel)
+npm run dev       # desarrollo
+npm run check     # preflight + validate + docs:check + typecheck + lint + test  ← antes de "listo"
+npm run test      # solo los tests del dominio (59)
+npm run docs      # regenera docs/ARQUITECTURA.md y docs/DECISIONES.md desde src/data
+npm run preflight # valida el entorno; aborta si un secreto lleva prefijo NEXT_PUBLIC_
+npm run build     # build de produccion (lo mismo que corre Vercel)
 ```
 
 ---
@@ -72,6 +89,8 @@ src/
    ├─ antisybil.ts         Política de recompensa — especificación de TokenReward.sol
    ├─ hash.ts              Hash canónico — el bytes32 que ve el contrato
    ├─ geo.ts               Truncado de coordenadas y celdas de zona
+   ├─ zonas.ts             Distrito estimado en el dispositivo, sin geocoding externo
+   ├─ sismos.ts            Agregado comunitario "lo sentiste" (cuenta reportes, no mide)
    ├─ flujo-reporte.ts     Orquestador: validar → IPFS → hash → anclar
    ├─ chain/               Interfaz con Arbitrum + adaptador simulado
    └─ storage/             Interfaz con IPFS + adaptador simulado
@@ -88,6 +107,8 @@ Lo simulado está etiquetado **dentro del producto** (pestaña Arquitectura → 
 
 | Pieza | Hoy | Falta |
 | --- | --- | --- |
+| Detección de sismos | Agrega los reportes de vecinos por zona ("lo sentiste") | Nada previsto: **cuenta reportes, no mide sismos** |
+| Distrito del reporte | Estimado en el dispositivo con 49 referencias de Lima y Callao, corregible a mano | Cerca de un borde puede apuntar al distrito vecino |
 | Anclaje on-chain | Comprobante simulado con el formato real de Arbiscan | Desplegar `ReportRegistry` |
 | Recompensas | Política aplicada en cliente, con tests | `TokenReward.sol` |
 | Evidencia IPFS | CID determinista derivado del hash del archivo | Pinata con JWT |
@@ -105,6 +126,7 @@ Lo simulado está etiquetado **dentro del producto** (pestaña Arquitectura → 
 | [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md) | Capas, flujo, contratos, límites *(generado)* |
 | [`docs/DECISIONES.md`](docs/DECISIONES.md) | Bitácora de decisiones con alternativas descartadas *(generado)* |
 | [`docs/REGLAS-IA.md`](docs/REGLAS-IA.md) | Reglas de trabajo con IA en este repositorio |
+| [`docs/DESPLIEGUE.md`](docs/DESPLIEGUE.md) | Vercel: panel, variables, CSP y checklist previo a la demo |
 | [`docs/SIGUIENTES-PASOS-ARBITRUM.md`](docs/SIGUIENTES-PASOS-ARBITRUM.md) | Handoff al equipo de contratos |
 | [`docs/PITCH.md`](docs/PITCH.md) | Guion de 5 minutos y respuestas a las preguntas difíciles |
 

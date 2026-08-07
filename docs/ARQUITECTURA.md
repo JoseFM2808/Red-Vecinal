@@ -2,7 +2,7 @@
 
 # Arquitectura — Vecino Seguro
 
-**Version:** 0.1.0-beta.1 · **Actualizado:** 2026-08-06
+**Version:** 0.1.0-beta.2 · **Actualizado:** 2026-08-07
 
 Red vecinal de reporte de seguridad. El vecino reporta en 3 toques desde el celular; la evidencia se sube a IPFS, su hash se ancla en Arbitrum y la red vecinal se entera al instante. Un botón aparte escala a serenazgo o policía. Nadie ve quién reportó salvo que el propio usuario lo autorice o exista una orden judicial verificable.
 
@@ -88,6 +88,20 @@ Pseudónimo generado en el dispositivo, sin seed phrase visible. Pantalla que de
 - Tecnologias: Privy o Web3Auth (a integrar), IdentityEscrow.sol
 - Codigo: `src/lib/identidad.ts`, `src/components/cuenta/RevelacionSelectiva.tsx`
 
+### Agregado comunitario de sismos `sismos` — Listo
+
+Cuando dos o más vecinos distintos reportan un sismo en 30 minutos, se muestra el agregado por zona y la intensidad más repetida. Cuenta reportes, no mide sismos: no hay acelerómetros ni detección propia.
+
+- Tecnologias: Función pura con tests, Vitest
+- Codigo: `src/lib/sismos.ts`, `src/components/sismos/AvisoSismo.tsx`
+
+### Despliegue y cabeceras `despliegue` — Listo
+
+Vercel con detección automática de Next.js. Cabeceras de seguridad y CSP declaradas en next.config.ts para poder probarlas en local. Un preflight aborta el build si alguien expone un secreto con prefijo NEXT_PUBLIC_.
+
+- Tecnologias: Vercel, GitHub Actions, Content-Security-Policy
+- Codigo: `next.config.ts`, `vercel.json`, `scripts/preflight-env.mjs`, `.github/workflows/ci.yml`
+
 ### Gobernanza del desarrollo con IA `gobernanza` — Listo
 
 Bitácora de decisiones validada en CI y renderizada dentro del producto. La arquitectura y los docs se generan del mismo JSON, así no pueden divergir.
@@ -99,9 +113,9 @@ Bitácora de decisiones validada en CI y renderizada dentro del producto. La arq
 
 | # | Paso | Detalle | Capa | On-chain |
 | --- | --- | --- | --- | --- |
-| 1 | El vecino elige categoría | Dos opciones grandes: actividad sospechosa o infraestructura en riesgo. Un toque. | `ui` | no |
+| 1 | El vecino elige categoría | Tres opciones grandes: actividad sospechosa, infraestructura en riesgo o sismo sentido. Un toque. | `ui` | no |
 | 2 | Adjunta evidencia y describe | Foto opcional desde la cámara del teléfono; descripción corta. Nada obligatorio que frene el reporte urgente. | `ui` | no |
-| 3 | Se captura la ubicación | GPS del navegador. Las coordenadas se truncan a ~11 m antes de salir del dispositivo: suficiente para el mapa, insuficiente para señalar una puerta. | `dominio` | no |
+| 3 | Se captura la ubicación | GPS del navegador. Las coordenadas se truncan a ~11 m antes de salir del dispositivo: suficiente para el mapa, insuficiente para señalar una puerta. Se muestra el margen de precisión y el distrito estimado, que el vecino puede corregir a mano. | `dominio` | no |
 | 4 | La evidencia va a IPFS | El archivo se sube y devuelve un CID. La foto nunca pasa por un servidor nuestro. | `storage` | no |
 | 5 | Se calcula el hash canónico | SHA-256 sobre el JSON canónico (CID + coordenadas en microgrados + categoría + timestamp). Es el bytes32 que verá el contrato. | `dominio` | no |
 | 6 | Se ancla en Arbitrum | ReportRegistry.submitReport() guarda el hash y emite ReportSubmitted. Es lo único que toca la cadena: ni foto, ni nombre, ni dirección exacta. | `cadena` | si |
@@ -118,7 +132,7 @@ Registro inmutable de reportes: hash de contenido, coordenadas en microgrados, c
 Red: Arbitrum Sepolia → Arbitrum One
 
 - `submitReport(bytes32 contentHash, int32 latE6, int32 lngE6, uint8 category, bytes32 zoneId)`
-  <br>El frontend ya construye exactamente este payload.
+  <br>El frontend ya construye exactamente este payload. category: 0 actividad sospechosa, 1 infraestructura, 2 sismo sentido. Los índices ya escritos en cadena no se reordenan.
 - `event ReportSubmitted(uint256 indexed id, address indexed reporter, bytes32 contentHash, int32 latE6, int32 lngE6, uint8 category, uint64 timestamp)`
   <br>Fuente de verdad del índice compartido entre dispositivos.
 
@@ -167,6 +181,8 @@ Red: Arbitrum Sepolia → Arbitrum One
 | Revelación selectiva | Demostración del mecanismo 2-de-3 y del rastro público de cada solicitud. | Integración legal real con el Poder Judicial y custodia de claves por un tercero acreditado. |
 | Escalamiento a la autoridad | Ruta API que valida y emite folio; reenvía a un webhook real si está configurado. | Convenio con un municipio y su endpoint de recepción. |
 | Índice compartido | Los reportes persisten en el dispositivo; la app arranca con datos sembrados de Lima. | Leer eventos de ReportSubmitted por RPC para que dos teléfonos vean el mismo mapa. |
+| Detección de distrito | 49 distritos de referencia de Lima y Callao, resueltos en el dispositivo. Si el punto no cae claramente dentro de uno, se dice 'Cerca de X' en vez de afirmarlo, y el vecino puede corregirlo a mano. | Cerca del borde de un distrito grande la estimación puede apuntar al vecino de al lado. No se usa geocoding externo a propósito: enviaría la coordenada del vecino a un tercero. |
+| Detección de sismos | Agrega los reportes de vecinos: si varios coinciden en media hora, muestra el mapa comunitario por zonas. | No hay medición sismológica. Un detector real es procesamiento de señal sobre acelerómetros, un proyecto aparte. |
 | Evidencia en IPFS | CID determinista calculado desde el hash del archivo. | Pinata con JWT en variables de entorno de Vercel. |
 
 ## Siguientes pasos
@@ -201,8 +217,10 @@ Red: Arbitrum Sepolia → Arbitrum One
 ### Implementación técnica — 25%
 
 - Adaptadores con interfaz para cadena, storage e identidad.
-- Reglas de dominio como funciones puras con tests en Vitest.
-- npm run check: validación de datos, docs sincronizados, tipos, lint y tests.
+- Reglas de dominio como funciones puras con 59 tests en Vitest.
+- npm run check: preflight de entorno, validación de datos, docs sincronizados, tipos, lint y tests.
+- CSP y cabeceras de seguridad verificadas contra el build real, no asumidas.
+- El build aborta si alguien expone un secreto con prefijo NEXT_PUBLIC_.
 
 ### Uso del ecosistema Arbitrum — 20%
 

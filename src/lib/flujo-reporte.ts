@@ -38,6 +38,13 @@ export interface SolicitudReporte {
   archivo: File | null;
   identidad: Identidad;
   reportesPrevios: readonly Reporte[];
+  /**
+   * Distrito elegido a mano por el vecino cuando la deteccion automatica se equivoca
+   * (ADR-020). Solo cambia la ETIQUETA que se muestra y se envia a la autoridad.
+   * `zonaId`, que es lo que usa la politica anti-Sybil, se sigue derivando de la
+   * coordenada: si fuera editable, seria un modo trivial de saltarse el limite por zona.
+   */
+  zonaNombreManual?: string | null;
 }
 
 export type ResultadoFlujo =
@@ -126,7 +133,7 @@ export async function crearReporte(
         descripcion: solicitud.descripcion.trim(),
         coordenada,
         zonaId,
-        zonaNombre: nombreDeZona(coordenada),
+        zonaNombre: solicitud.zonaNombreManual?.trim() || nombreDeZona(coordenada),
         creadoEn: ahora,
         autorSeudonimo: solicitud.identidad.seudonimo,
         autorDireccion: solicitud.identidad.direccion,

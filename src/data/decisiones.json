@@ -204,7 +204,7 @@
       "titulo": "Dos categorías de reporte, ni una más",
       "fecha": "2026-08-06",
       "autor": "IA+Humano",
-      "estado": "aceptada",
+      "estado": "reemplazada",
       "contexto": "El alcance fijado en CLAUDE.md limita el MVP a 2 categorías. La tentación de agregar más (sismos, accidentes) diluye el tiempo restante antes del 12 de agosto.",
       "opciones": [
         {
@@ -417,6 +417,174 @@
       "criterios_rubrica": ["ux", "tecnica", "problema"],
       "evidencia": ["src/lib/zonas.ts"],
       "requiere_validacion_humana": false
+    },
+    {
+      "id": "ADR-016",
+      "titulo": "Cabeceras de seguridad en next.config.ts, con una CSP honesta sobre lo que no protege",
+      "fecha": "2026-08-07",
+      "autor": "IA",
+      "estado": "aceptada",
+      "contexto": "La app se despliega en Vercel y va a circular por WhatsApp. Sin cabeceras no hay ninguna política de seguridad. El riesgo real es el inverso al habitual: una directiva mal puesta rompe el mapa o el GPS delante del jurado, y eso cuesta más que la protección que aporta.",
+      "opciones": [
+        {
+          "nombre": "Declarar las cabeceras en vercel.json",
+          "descartada_porque": "Solo se verían en producción. En next.config.ts aplican también en `next start`, así que la política se prueba en local antes de desplegar — que es justo lo que permitió verificar que las teselas y la geolocalización siguen funcionando."
+        },
+        {
+          "nombre": "CSP estricta con nonces por middleware",
+          "descartada_porque": "Exige un middleware.ts que volvería dinámicas las 5 rutas hoy estáticas, a cambio de un endurecimiento que no cabe verificar antes del 12 de agosto."
+        },
+        {
+          "nombre": "No poner CSP",
+          "descartada_porque": "object-src 'none', base-uri 'self' y form-action 'self' valen aunque script-src lleve 'unsafe-inline'."
+        }
+      ],
+      "decision": "CSP y cabeceras en `next.config.ts`, solo en producción. script-src y style-src llevan 'unsafe-inline' porque Next serializa el payload RSC en scripts inline y los marcadores del mapa se pintan con atributo style; img-src incluye data: y blob: por las miniaturas de canvas y la vista previa de la foto. Los orígenes de Arbitrum y Pinata ya están permitidos para que la integración del equipo no falle en silencio. Permissions-Policy declara geolocation=(self) y camera=(self): verificado en el navegador con document.featurePolicy.allowsFeature(), no asumido.",
+      "consecuencias": [
+        "Verificado contra el build real: teselas 4/4, los 12 marcadores conservan color, cero violaciones en consola.",
+        "Con 'unsafe-inline' la CSP no es defensa anti-XSS y hay que decirlo así en el pitch; lo que sí aporta es acotar orígenes, formularios y base URI.",
+        "Se omiten a propósito X-Frame-Options, COEP y HSTS manual: romperían el iframe de las plataformas de hackathon, las teselas y un futuro dominio propio.",
+        "Queda la válvula CSP_MODO=report-only para degradar sin tocar código si algo falla el 11 de agosto."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Bajo: una variable de entorno pasa la CSP a solo-reporte, o se borra el bloque headers().",
+      "criterios_rubrica": ["tecnica", "ux"],
+      "evidencia": ["next.config.ts"],
+      "requiere_validacion_humana": false
+    },
+    {
+      "id": "ADR-017",
+      "titulo": "Sin analítica de terceros, aunque Vercel la ofrezca en un clic",
+      "fecha": "2026-08-07",
+      "autor": "IA",
+      "estado": "aceptada",
+      "contexto": "Al configurar el despliegue, lo natural es añadir @vercel/analytics y @vercel/speed-insights: son de primera parte, pesan poco y se activan con una línea.",
+      "opciones": [
+        {
+          "nombre": "Añadir Vercel Analytics y Speed Insights",
+          "descartada_porque": "El producto promete que la ubicación del vecino no sale del dispositivo y que no hay servidor propio guardando nada. Incluir un script que reporta la navegación de cada usuario a un tercero contradice esa promesa, y es exactamente el tipo de detalle que un jurado atento encuentra revisando el bundle."
+        },
+        {
+          "nombre": "Añadirla solo en preview",
+          "descartada_porque": "Complica la configuración para medir a un público que son cuatro personas del equipo."
+        }
+      ],
+      "decision": "No se instala analítica de terceros. Si en algún momento hace falta medir, se hace con métricas agregadas del lado del servidor, sin identificar sesiones, y se registra aquí antes.",
+      "consecuencias": [
+        "Coherencia entre lo que el pitch promete y lo que el bundle hace.",
+        "Dos dependencias menos que puedan romper el build.",
+        "No hay datos de uso de la demo: se acepta a cambio de no contradecir la propuesta de valor."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Bajo, pero exigiría revisar el discurso de privacidad del pitch.",
+      "criterios_rubrica": ["problema", "pitch", "tecnica"],
+      "evidencia": ["package.json", "src/app/layout.tsx"],
+      "requiere_validacion_humana": true,
+      "nota_para_humano": "Confirmar que el equipo está de acuerdo en renunciar a métricas de uso de la demo a cambio de coherencia con la promesa de privacidad."
+    },
+    {
+      "id": "ADR-018",
+      "titulo": "Vercel se configura solo; lo que sí bloquea el build es un secreto expuesto",
+      "fecha": "2026-08-07",
+      "autor": "IA",
+      "estado": "aceptada",
+      "contexto": "Hay que decidir cuánto configurar en vercel.json, si CI debe bloquear el despliegue y qué debería impedir que un build salga a producción.",
+      "opciones": [
+        {
+          "nombre": "vercel.json con buildCommand, installCommand y outputDirectory",
+          "descartada_porque": "Vercel detecta Next.js solo. Fijar esos comandos a mano añade tres formas de que el deploy se rompa al cambiar algo del proyecto, sin ganar nada."
+        },
+        {
+          "nombre": "Bloquear el despliegue con el resultado de GitHub Actions",
+          "descartada_porque": "Un build roto ya no llega a producción: Vercel conserva el deployment anterior. Añadir un bloqueo es una vía más de fallo el día de la demo."
+        },
+        {
+          "nombre": "No validar el entorno",
+          "descartada_porque": "Un secreto con prefijo NEXT_PUBLIC_ se publica en el bundle sin que nadie se entere."
+        }
+      ],
+      "decision": "`vercel.json` mínimo (solo `$schema` y `framework`). CI en GitHub Actions corre `npm run check` y `npm run build` como red de seguridad, sin bloquear el despliegue. Lo que sí aborta el build es `scripts/preflight-env.mjs`, y solo por dos motivos: un secreto con prefijo NEXT_PUBLIC_ o una NEXT_PUBLIC_SITE_URL malformada. Todo lo demás son avisos.",
+      "consecuencias": [
+        "El único build que se cae es el que publicaría un secreto o el que iba a fallar igual más adelante con un error peor.",
+        "La región de las funciones se elige en el panel, no en vercel.json: un valor no soportado allí tumbaría el deploy.",
+        "El equipo tiene los pasos del panel escritos en docs/DESPLIEGUE.md en vez de en un archivo que Vercel podría interpretar distinto."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Bajo.",
+      "criterios_rubrica": ["tecnica", "pitch"],
+      "evidencia": ["vercel.json", ".github/workflows/ci.yml", "scripts/preflight-env.mjs", "docs/DESPLIEGUE.md"],
+      "requiere_validacion_humana": false
+    },
+    {
+      "id": "ADR-019",
+      "titulo": "Tercera categoría: sismo sentido, como agregado comunitario y no como detector",
+      "fecha": "2026-08-07",
+      "autor": "IA+Humano",
+      "estado": "aceptada",
+      "contexto": "El equipo pidió incorporar reporte de sismos. ADR-008 había cerrado el catálogo en dos categorías, pero docs/PROYECTO.md sección 6 ya identificaba una versión liviana como la única viable antes del 12 de agosto: reportar 'lo sentí' reutilizando la infraestructura existente, al estilo del 'Did You Feel It?' del USGS.",
+      "opciones": [
+        {
+          "nombre": "Motor de detección propio con acelerómetros",
+          "descartada_porque": "Es procesamiento de señal e infraestructura de sensores en tiempo real, un proyecto aparte que además no usa el ecosistema Arbitrum — diluiría dos criterios de la rúbrica a la vez. docs/PROYECTO.md ya lo descartaba."
+        },
+        {
+          "nombre": "Ensanchar el radio de corroboración para sismos",
+          "descartada_porque": "Un sismo lo siente toda la ciudad, así que el radio tendría que ser de decenas de kilómetros — y entonces dos cuentas cualesquiera de Lima se corroborarían entre sí. Sería un agujero anti-Sybil a cambio de nada, porque el panel comunitario no reparte tokens."
+        },
+        {
+          "nombre": "Añadir un campo de intensidad al reporte",
+          "descartada_porque": "Cambiaría el modelo de dominio y el payload canónico que el equipo de contratos está portando. La intensidad se captura con chips que rellenan la descripción: mismo valor de interfaz, cero cambios en el contrato."
+        }
+      ],
+      "decision": "Se agrega `sismo_sentido` con `indiceContrato: 2` (los índices ya escritos en cadena no se reordenan). El panel 'lo sentiste' aparece cuando dos o más vecinos distintos reportan en 30 minutos y muestra el agregado por zona y la intensidad más repetida. Es informativo: la recompensa se calcula con las mismas reglas anti-Sybil que cualquier otra categoría, sin excepciones.",
+      "consecuencias": [
+        "Reutiliza mapa, hash, anclaje y recompensa sin código nuevo en la capa de cadena.",
+        "El texto dice siempre 'vecinos reportaron', nunca 'se detectó un sismo de magnitud X': la app no puede saber eso.",
+        "Los reportes de sismo rara vez alcanzarán el multiplicador, porque exige otro vecino a menos de 300 m. Es el precio consciente de no debilitar el anti-Sybil.",
+        "El pitch pasa de 'roadmap futuro' a 'ya funciona', con el límite declarado de que cuenta reportes, no mide sismos.",
+        "Reemplaza a ADR-008: el catálogo queda en tres categorías."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Bajo: quitar la entrada del catálogo. El índice 2 quedaría reservado y no se reutiliza.",
+      "criterios_rubrica": ["problema", "ux", "tecnica", "pitch"],
+      "evidencia": ["src/lib/categorias.ts", "src/lib/sismos.ts", "src/lib/sismos.test.ts", "src/components/sismos/AvisoSismo.tsx"],
+      "requiere_validacion_humana": true,
+      "nota_para_humano": "Confirmar con el equipo de contratos que `uint8 category` acepta el índice 2 y que ReportRegistry no valida un máximo de 2 categorías."
+    },
+    {
+      "id": "ADR-020",
+      "titulo": "La detección de distrito afirmaba con seguridad un distrito equivocado",
+      "fecha": "2026-08-07",
+      "autor": "IA+Humano",
+      "estado": "aceptada",
+      "contexto": "Un miembro del equipo reportó desde su ubicación real y la app lo ubicó en Miraflores. La causa estaba en la implementación de ADR-015: `nombreDeZona()` elegía el más cercano de solo 16 distritos de referencia, con un radio de tolerancia de 12 km. Desde casi cualquier punto de Lima hay un centroide de esa lista a menos de 12 km, así que la función nunca decía 'no sé' y siempre afirmaba un distrito — con frecuencia el equivocado. Quien estaba en Surquillo, Barranco, San Borja, Lince o Jesús María aparecía en Miraflores. No es un detalle estético: la etiqueta de zona viaja en el aviso que recibe la autoridad.",
+      "opciones": [
+        {
+          "nombre": "Geocodificación inversa con un servicio externo",
+          "descartada_porque": "Sigue vigente la razón de ADR-015: enviaría la coordenada exacta del vecino a un tercero en cada reporte, que es justo lo que el producto promete no hacer."
+        },
+        {
+          "nombre": "Solo ampliar la lista de distritos",
+          "descartada_porque": "Reduce el error pero no lo elimina: en distritos grandes el centroide queda lejos del borde. Sin admitir la incertidumbre, la app seguiría afirmando con seguridad algo que a veces es falso."
+        },
+        {
+          "nombre": "Mostrar solo las coordenadas y quitar el nombre",
+          "descartada_porque": "Un par de números no le sirve ni al vecino ni al serenazgo que recibe el aviso."
+        }
+      ],
+      "decision": "Tres cambios juntos. (1) La lista pasa de 16 a 49 referencias, cubriendo Lima Metropolitana y el Callao. (2) El radio de confianza baja a 2.5 km y el máximo a 8 km: más allá el texto dice 'Cerca de X' o 'Zona sin referencia' en vez de afirmar. (3) La app muestra la precisión que reporta el navegador y avisa cuando supera los 200 m, porque en una laptop la ubicación viene por wifi y ningún catálogo de distritos puede arreglar un error de kilómetros. Además el vecino puede corregir el distrito a mano antes de publicar.",
+      "consecuencias": [
+        "Siete distritos que antes caían en Miraflores ahora resuelven bien, con tests de regresión que lo fijan.",
+        "La app admite cuando no está segura, en vez de inventar con confianza.",
+        "La corrección manual cambia solo la etiqueta que se muestra y se envía a la autoridad; `zonaId`, que alimenta el límite anti-Sybil por zona, se sigue derivando de la coordenada. Si fuera editable sería un modo trivial de saltarse el límite.",
+        "Queda un límite conocido: cerca del borde de un distrito grande la estimación puede seguir apuntando al vecino de al lado. Por eso lo que se envía a la autoridad es la coordenada, no el nombre."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Bajo: es una función pura de un solo archivo con sus tests.",
+      "criterios_rubrica": ["ux", "problema", "tecnica"],
+      "evidencia": ["src/lib/zonas.ts", "src/lib/zonas.test.ts", "src/components/reportar/FlujoReporte.tsx"],
+      "requiere_validacion_humana": true,
+      "nota_para_humano": "Verificar en el celular, desde tu distrito real, que ahora aparece el correcto y que el margen de precisión que muestra es razonable. Si sigue fallando con ±20 m de precisión, avísame el distrito y la coordenada para ajustar el centroide."
     }
   ]
 }

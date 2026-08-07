@@ -4,7 +4,7 @@
 
 Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o por el equipo se registra aquí ANTES o AL MOMENTO de escribir el código que la implementa. `docs/DECISIONES.md` se genera desde este archivo (npm run docs) y la pestaña Arquitectura de la app lo renderiza.
 
-**15 decisiones registradas · 5 esperan validacion humana**
+**20 decisiones registradas · 8 esperan validacion humana**
 
 ## Esperan que una persona decida
 
@@ -15,6 +15,9 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | ADR-009 | Persistencia local en el dispositivo, sin base de datos | Para la demo en vivo con varios teléfonos hace falta un índice compartido. Opción recomendada: leer eventos de ReportRegistry vía RPC de Arbitrum Sepolia (lo cubre el equipo de contratos). |
 | ADR-012 | Arbitrum como capa de asentamiento, no como adorno | Validar con el equipo de contratos el costo real por reporte medido en Arbitrum Sepolia para reemplazar la estimación de la UI por un dato medido. |
 | ADR-014 | Prueba de presencia: la beta mide corroboración, no tiempo de app abierta | Decidir con el equipo si la recompensa se mintea al reportar (optimista) o solo tras corroborarse (conservador). La beta implementa el conservador. |
+| ADR-017 | Sin analítica de terceros, aunque Vercel la ofrezca en un clic | Confirmar que el equipo está de acuerdo en renunciar a métricas de uso de la demo a cambio de coherencia con la promesa de privacidad. |
+| ADR-019 | Tercera categoría: sismo sentido, como agregado comunitario y no como detector | Confirmar con el equipo de contratos que `uint8 category` acepta el índice 2 y que ReportRegistry no valida un máximo de 2 categorías. |
+| ADR-020 | La detección de distrito afirmaba con seguridad un distrito equivocado | Verificar en el celular, desde tu distrito real, que ahora aparece el correcto y que el margen de precisión que muestra es razonable. Si sigue fallando con ±20 m de precisión, avísame el distrito y la coordenada para ajustar el centroide. |
 
 ## Indice
 
@@ -27,7 +30,7 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | [ADR-005](#adr-005) | Identidad pseudónima local en la beta; wallet abstraction queda como costura | IA | aceptada | alta | Producto y UX, Implementacion tecnica |
 | [ADR-006](#adr-006) | La arquitectura es un dato, no un dibujo | IA | aceptada | alta | Implementacion tecnica, Pitch y demo |
 | [ADR-007](#adr-007) | Los estados simulados se etiquetan como simulados dentro del producto | IA | aceptada | alta | Pitch y demo, Problema e impacto |
-| [ADR-008](#adr-008) | Dos categorías de reporte, ni una más | IA+Humano | aceptada | alta | Producto y UX, Problema e impacto |
+| [ADR-008](#adr-008) | Dos categorías de reporte, ni una más | IA+Humano | reemplazada | alta | Producto y UX, Problema e impacto |
 | [ADR-009](#adr-009) | Persistencia local en el dispositivo, sin base de datos | IA | aceptada | media | Implementacion tecnica, Producto y UX |
 | [ADR-010](#adr-010) | El escalamiento a autoridad es una ruta API real con destino simulado | IA | aceptada | alta | Problema e impacto, Implementacion tecnica |
 | [ADR-011](#adr-011) | Interfaz en español peruano y diseño mobile-first oscuro | IA | aceptada | alta | Producto y UX |
@@ -35,6 +38,11 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | [ADR-013](#adr-013) | Toda decisión de la IA queda registrada aquí antes de escribir el código | IA | aceptada | alta | Implementacion tecnica, Pitch y demo |
 | [ADR-014](#adr-014) | Prueba de presencia: la beta mide corroboración, no tiempo de app abierta | IA | aceptada | alta | Implementacion tecnica, Problema e impacto, Ecosistema Arbitrum |
 | [ADR-015](#adr-015) | El nombre del distrito se resuelve en el dispositivo, sin servicio de geocoding | IA | aceptada | alta | Producto y UX, Implementacion tecnica, Problema e impacto |
+| [ADR-016](#adr-016) | Cabeceras de seguridad en next.config.ts, con una CSP honesta sobre lo que no protege | IA | aceptada | alta | Implementacion tecnica, Producto y UX |
+| [ADR-017](#adr-017) | Sin analítica de terceros, aunque Vercel la ofrezca en un clic | IA | aceptada | alta | Problema e impacto, Pitch y demo, Implementacion tecnica |
+| [ADR-018](#adr-018) | Vercel se configura solo; lo que sí bloquea el build es un secreto expuesto | IA | aceptada | alta | Implementacion tecnica, Pitch y demo |
+| [ADR-019](#adr-019) | Tercera categoría: sismo sentido, como agregado comunitario y no como detector | IA+Humano | aceptada | alta | Problema e impacto, Producto y UX, Implementacion tecnica, Pitch y demo |
+| [ADR-020](#adr-020) | La detección de distrito afirmaba con seguridad un distrito equivocado | IA+Humano | aceptada | alta | Producto y UX, Problema e impacto, Implementacion tecnica |
 
 ---
 
@@ -246,7 +254,7 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 
 ### Dos categorías de reporte, ni una más
 
-`2026-08-06` · autor: **IA+Humano** · estado: **aceptada** · reversibilidad: **alta**
+`2026-08-06` · autor: **IA+Humano** · estado: **reemplazada** · reversibilidad: **alta**
 
 **Contexto.** El alcance fijado en CLAUDE.md limita el MVP a 2 categorías. La tentación de agregar más (sismos, accidentes) diluye el tiempo restante antes del 12 de agosto.
 
@@ -470,3 +478,162 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 **Sirve a.** Producto y UX, Implementacion tecnica, Problema e impacto
 
 **Evidencia en el codigo.** `src/lib/zonas.ts`
+
+---
+
+## ADR-016
+
+### Cabeceras de seguridad en next.config.ts, con una CSP honesta sobre lo que no protege
+
+`2026-08-07` · autor: **IA** · estado: **aceptada** · reversibilidad: **alta**
+
+**Contexto.** La app se despliega en Vercel y va a circular por WhatsApp. Sin cabeceras no hay ninguna política de seguridad. El riesgo real es el inverso al habitual: una directiva mal puesta rompe el mapa o el GPS delante del jurado, y eso cuesta más que la protección que aporta.
+
+**Alternativas descartadas.**
+
+- *Declarar las cabeceras en vercel.json* — Solo se verían en producción. En next.config.ts aplican también en `next start`, así que la política se prueba en local antes de desplegar — que es justo lo que permitió verificar que las teselas y la geolocalización siguen funcionando.
+- *CSP estricta con nonces por middleware* — Exige un middleware.ts que volvería dinámicas las 5 rutas hoy estáticas, a cambio de un endurecimiento que no cabe verificar antes del 12 de agosto.
+- *No poner CSP* — object-src 'none', base-uri 'self' y form-action 'self' valen aunque script-src lleve 'unsafe-inline'.
+
+**Decision.** CSP y cabeceras en `next.config.ts`, solo en producción. script-src y style-src llevan 'unsafe-inline' porque Next serializa el payload RSC en scripts inline y los marcadores del mapa se pintan con atributo style; img-src incluye data: y blob: por las miniaturas de canvas y la vista previa de la foto. Los orígenes de Arbitrum y Pinata ya están permitidos para que la integración del equipo no falle en silencio. Permissions-Policy declara geolocation=(self) y camera=(self): verificado en el navegador con document.featurePolicy.allowsFeature(), no asumido.
+
+**Consecuencias.**
+
+- Verificado contra el build real: teselas 4/4, los 12 marcadores conservan color, cero violaciones en consola.
+- Con 'unsafe-inline' la CSP no es defensa anti-XSS y hay que decirlo así en el pitch; lo que sí aporta es acotar orígenes, formularios y base URI.
+- Se omiten a propósito X-Frame-Options, COEP y HSTS manual: romperían el iframe de las plataformas de hackathon, las teselas y un futuro dominio propio.
+- Queda la válvula CSP_MODO=report-only para degradar sin tocar código si algo falla el 11 de agosto.
+
+**Costo de revertir.** Bajo: una variable de entorno pasa la CSP a solo-reporte, o se borra el bloque headers().
+
+**Sirve a.** Implementacion tecnica, Producto y UX
+
+**Evidencia en el codigo.** `next.config.ts`
+
+---
+
+## ADR-017
+
+### Sin analítica de terceros, aunque Vercel la ofrezca en un clic
+
+`2026-08-07` · autor: **IA** · estado: **aceptada** · reversibilidad: **alta**
+
+**Contexto.** Al configurar el despliegue, lo natural es añadir @vercel/analytics y @vercel/speed-insights: son de primera parte, pesan poco y se activan con una línea.
+
+**Alternativas descartadas.**
+
+- *Añadir Vercel Analytics y Speed Insights* — El producto promete que la ubicación del vecino no sale del dispositivo y que no hay servidor propio guardando nada. Incluir un script que reporta la navegación de cada usuario a un tercero contradice esa promesa, y es exactamente el tipo de detalle que un jurado atento encuentra revisando el bundle.
+- *Añadirla solo en preview* — Complica la configuración para medir a un público que son cuatro personas del equipo.
+
+**Decision.** No se instala analítica de terceros. Si en algún momento hace falta medir, se hace con métricas agregadas del lado del servidor, sin identificar sesiones, y se registra aquí antes.
+
+**Consecuencias.**
+
+- Coherencia entre lo que el pitch promete y lo que el bundle hace.
+- Dos dependencias menos que puedan romper el build.
+- No hay datos de uso de la demo: se acepta a cambio de no contradecir la propuesta de valor.
+
+**Costo de revertir.** Bajo, pero exigiría revisar el discurso de privacidad del pitch.
+
+**Sirve a.** Problema e impacto, Pitch y demo, Implementacion tecnica
+
+**Evidencia en el codigo.** `package.json`, `src/app/layout.tsx`
+
+> **Necesita decision humana:** Confirmar que el equipo está de acuerdo en renunciar a métricas de uso de la demo a cambio de coherencia con la promesa de privacidad.
+
+---
+
+## ADR-018
+
+### Vercel se configura solo; lo que sí bloquea el build es un secreto expuesto
+
+`2026-08-07` · autor: **IA** · estado: **aceptada** · reversibilidad: **alta**
+
+**Contexto.** Hay que decidir cuánto configurar en vercel.json, si CI debe bloquear el despliegue y qué debería impedir que un build salga a producción.
+
+**Alternativas descartadas.**
+
+- *vercel.json con buildCommand, installCommand y outputDirectory* — Vercel detecta Next.js solo. Fijar esos comandos a mano añade tres formas de que el deploy se rompa al cambiar algo del proyecto, sin ganar nada.
+- *Bloquear el despliegue con el resultado de GitHub Actions* — Un build roto ya no llega a producción: Vercel conserva el deployment anterior. Añadir un bloqueo es una vía más de fallo el día de la demo.
+- *No validar el entorno* — Un secreto con prefijo NEXT_PUBLIC_ se publica en el bundle sin que nadie se entere.
+
+**Decision.** `vercel.json` mínimo (solo `$schema` y `framework`). CI en GitHub Actions corre `npm run check` y `npm run build` como red de seguridad, sin bloquear el despliegue. Lo que sí aborta el build es `scripts/preflight-env.mjs`, y solo por dos motivos: un secreto con prefijo NEXT_PUBLIC_ o una NEXT_PUBLIC_SITE_URL malformada. Todo lo demás son avisos.
+
+**Consecuencias.**
+
+- El único build que se cae es el que publicaría un secreto o el que iba a fallar igual más adelante con un error peor.
+- La región de las funciones se elige en el panel, no en vercel.json: un valor no soportado allí tumbaría el deploy.
+- El equipo tiene los pasos del panel escritos en docs/DESPLIEGUE.md en vez de en un archivo que Vercel podría interpretar distinto.
+
+**Costo de revertir.** Bajo.
+
+**Sirve a.** Implementacion tecnica, Pitch y demo
+
+**Evidencia en el codigo.** `vercel.json`, `.github/workflows/ci.yml`, `scripts/preflight-env.mjs`, `docs/DESPLIEGUE.md`
+
+---
+
+## ADR-019
+
+### Tercera categoría: sismo sentido, como agregado comunitario y no como detector
+
+`2026-08-07` · autor: **IA+Humano** · estado: **aceptada** · reversibilidad: **alta**
+
+**Contexto.** El equipo pidió incorporar reporte de sismos. ADR-008 había cerrado el catálogo en dos categorías, pero docs/PROYECTO.md sección 6 ya identificaba una versión liviana como la única viable antes del 12 de agosto: reportar 'lo sentí' reutilizando la infraestructura existente, al estilo del 'Did You Feel It?' del USGS.
+
+**Alternativas descartadas.**
+
+- *Motor de detección propio con acelerómetros* — Es procesamiento de señal e infraestructura de sensores en tiempo real, un proyecto aparte que además no usa el ecosistema Arbitrum — diluiría dos criterios de la rúbrica a la vez. docs/PROYECTO.md ya lo descartaba.
+- *Ensanchar el radio de corroboración para sismos* — Un sismo lo siente toda la ciudad, así que el radio tendría que ser de decenas de kilómetros — y entonces dos cuentas cualesquiera de Lima se corroborarían entre sí. Sería un agujero anti-Sybil a cambio de nada, porque el panel comunitario no reparte tokens.
+- *Añadir un campo de intensidad al reporte* — Cambiaría el modelo de dominio y el payload canónico que el equipo de contratos está portando. La intensidad se captura con chips que rellenan la descripción: mismo valor de interfaz, cero cambios en el contrato.
+
+**Decision.** Se agrega `sismo_sentido` con `indiceContrato: 2` (los índices ya escritos en cadena no se reordenan). El panel 'lo sentiste' aparece cuando dos o más vecinos distintos reportan en 30 minutos y muestra el agregado por zona y la intensidad más repetida. Es informativo: la recompensa se calcula con las mismas reglas anti-Sybil que cualquier otra categoría, sin excepciones.
+
+**Consecuencias.**
+
+- Reutiliza mapa, hash, anclaje y recompensa sin código nuevo en la capa de cadena.
+- El texto dice siempre 'vecinos reportaron', nunca 'se detectó un sismo de magnitud X': la app no puede saber eso.
+- Los reportes de sismo rara vez alcanzarán el multiplicador, porque exige otro vecino a menos de 300 m. Es el precio consciente de no debilitar el anti-Sybil.
+- El pitch pasa de 'roadmap futuro' a 'ya funciona', con el límite declarado de que cuenta reportes, no mide sismos.
+- Reemplaza a ADR-008: el catálogo queda en tres categorías.
+
+**Costo de revertir.** Bajo: quitar la entrada del catálogo. El índice 2 quedaría reservado y no se reutiliza.
+
+**Sirve a.** Problema e impacto, Producto y UX, Implementacion tecnica, Pitch y demo
+
+**Evidencia en el codigo.** `src/lib/categorias.ts`, `src/lib/sismos.ts`, `src/lib/sismos.test.ts`, `src/components/sismos/AvisoSismo.tsx`
+
+> **Necesita decision humana:** Confirmar con el equipo de contratos que `uint8 category` acepta el índice 2 y que ReportRegistry no valida un máximo de 2 categorías.
+
+---
+
+## ADR-020
+
+### La detección de distrito afirmaba con seguridad un distrito equivocado
+
+`2026-08-07` · autor: **IA+Humano** · estado: **aceptada** · reversibilidad: **alta**
+
+**Contexto.** Un miembro del equipo reportó desde su ubicación real y la app lo ubicó en Miraflores. La causa estaba en la implementación de ADR-015: `nombreDeZona()` elegía el más cercano de solo 16 distritos de referencia, con un radio de tolerancia de 12 km. Desde casi cualquier punto de Lima hay un centroide de esa lista a menos de 12 km, así que la función nunca decía 'no sé' y siempre afirmaba un distrito — con frecuencia el equivocado. Quien estaba en Surquillo, Barranco, San Borja, Lince o Jesús María aparecía en Miraflores. No es un detalle estético: la etiqueta de zona viaja en el aviso que recibe la autoridad.
+
+**Alternativas descartadas.**
+
+- *Geocodificación inversa con un servicio externo* — Sigue vigente la razón de ADR-015: enviaría la coordenada exacta del vecino a un tercero en cada reporte, que es justo lo que el producto promete no hacer.
+- *Solo ampliar la lista de distritos* — Reduce el error pero no lo elimina: en distritos grandes el centroide queda lejos del borde. Sin admitir la incertidumbre, la app seguiría afirmando con seguridad algo que a veces es falso.
+- *Mostrar solo las coordenadas y quitar el nombre* — Un par de números no le sirve ni al vecino ni al serenazgo que recibe el aviso.
+
+**Decision.** Tres cambios juntos. (1) La lista pasa de 16 a 49 referencias, cubriendo Lima Metropolitana y el Callao. (2) El radio de confianza baja a 2.5 km y el máximo a 8 km: más allá el texto dice 'Cerca de X' o 'Zona sin referencia' en vez de afirmar. (3) La app muestra la precisión que reporta el navegador y avisa cuando supera los 200 m, porque en una laptop la ubicación viene por wifi y ningún catálogo de distritos puede arreglar un error de kilómetros. Además el vecino puede corregir el distrito a mano antes de publicar.
+
+**Consecuencias.**
+
+- Siete distritos que antes caían en Miraflores ahora resuelven bien, con tests de regresión que lo fijan.
+- La app admite cuando no está segura, en vez de inventar con confianza.
+- La corrección manual cambia solo la etiqueta que se muestra y se envía a la autoridad; `zonaId`, que alimenta el límite anti-Sybil por zona, se sigue derivando de la coordenada. Si fuera editable sería un modo trivial de saltarse el límite.
+- Queda un límite conocido: cerca del borde de un distrito grande la estimación puede seguir apuntando al vecino de al lado. Por eso lo que se envía a la autoridad es la coordenada, no el nombre.
+
+**Costo de revertir.** Bajo: es una función pura de un solo archivo con sus tests.
+
+**Sirve a.** Producto y UX, Problema e impacto, Implementacion tecnica
+
+**Evidencia en el codigo.** `src/lib/zonas.ts`, `src/lib/zonas.test.ts`, `src/components/reportar/FlujoReporte.tsx`
+
+> **Necesita decision humana:** Verificar en el celular, desde tu distrito real, que ahora aparece el correcto y que el margen de precisión que muestra es razonable. Si sigue fallando con ±20 m de precisión, avísame el distrito y la coordenada para ajustar el centroide.

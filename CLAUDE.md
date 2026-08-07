@@ -29,7 +29,9 @@ donde no llegan o no generan confianza — no los reemplaza.
   - Botón de escalamiento a autoridad (webhook/SMS/WhatsApp simulado para demo).
   - Pantalla conceptual de "revelación bajo orden judicial" (demo, no integración legal real).
 - **Storage**: IPFS/Pinata para evidencia multimedia.
-- **Despliegue**: Vercel, sin configuración especial. La beta arranca sin ninguna variable de entorno.
+- **Despliegue**: Vercel desde `main`. La beta arranca sin ninguna variable de entorno.
+  Cabeceras y CSP en `next.config.ts` (probables en local con `next start`). Runbook completo
+  y checklist previo a la demo: `docs/DESPLIEGUE.md`.
 
 ## Reparto de trabajo
 - **Este repo (frontend + producto)**: pantallas, dominio, reglas anti-Sybil, hash canónico,
@@ -39,12 +41,12 @@ donde no llegan o no generan confianza — no los reemplaza.
   Su lista de tareas está en `docs/SIGUIENTES-PASOS-ARBITRUM.md`.
 
 ## Alcance del MVP (no expandir sin justificación fuerte)
-- Máximo **2 categorías de reporte** (ej. actividad sospechosa + infraestructura/luminaria).
+- **3 categorías de reporte**, cerradas: actividad sospechosa, infraestructura, sismo sentido.
+  Los `indiceContrato` (0, 1, 2) nunca se reordenan: ya están escritos en la cadena.
 - Si el tiempo aprieta: priorizar que **una sola categoría** funcione end-to-end
   (reporte → token → mapa → escalamiento) antes que varias a medio terminar.
-- Sismos: **no** es funcionalidad núcleo. Solo mencionarlo como roadmap futuro en el pitch,
-  o como categoría de reporte liviana ("sismo sentido" tipo USGS "Did You Feel It?") si sobra tiempo
-  al final — nunca como motor de detección propio.
+- Sismos: es la versión liviana tipo USGS "Did You Feel It?" (ADR-019) — agrega reportes de
+  vecinos, **nunca** un motor de detección propio. No toca la economía del token.
 - **Cinco pestañas**: Inicio, Mapa, Reportar, Cuenta, Arquitectura. No agregar más.
 
 ## Riesgos a comunicar con transparencia (no ocultar en el pitch)
@@ -68,8 +70,9 @@ donde no llegan o no generan confianza — no los reemplaza.
 
 ## Comandos
 ```bash
-npm run dev      # desarrollo en localhost:3000
-npm run check    # validate + docs:check + typecheck + lint + test  ← antes de decir "listo"
-npm run docs     # regenera docs/ARQUITECTURA.md y docs/DECISIONES.md desde src/data
-npm run build    # build de produccion (lo mismo que corre Vercel)
+npm run dev       # desarrollo en localhost:3000
+npm run check     # preflight + validate + docs:check + typecheck + lint + test  ← antes de decir "listo"
+npm run docs      # regenera docs/ARQUITECTURA.md y docs/DECISIONES.md desde src/data
+npm run preflight # valida el entorno; aborta si un secreto lleva prefijo NEXT_PUBLIC_
+npm run build     # build de produccion (lo mismo que corre Vercel)
 ```

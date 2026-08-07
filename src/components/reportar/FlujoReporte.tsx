@@ -13,7 +13,7 @@ import { TEXTO_ETAPA, type EtapaFlujo, type ResultadoFlujo } from "@/lib/flujo-r
 import { abreviarHash, formatearUsd } from "@/lib/formato";
 import { formatearCoordenada } from "@/lib/geo";
 import type { Coordenada, IdCategoria } from "@/lib/tipos";
-import { nombreDeZona } from "@/lib/zonas";
+import { describirZona, listaDistritos } from "@/lib/zonas";
 
 /**
  * Flujo de reporte en tres pasos (ADR-011).
@@ -48,6 +48,9 @@ export function FlujoReporte() {
   const [archivo, setArchivo] = useState<File | null>(null);
   const [vistaPrevia, setVistaPrevia] = useState<string | null>(null);
   const [coordenada, setCoordenada] = useState<Coordenada | null>(null);
+  /** Radio de incertidumbre que reporta el navegador, en metros. */
+  const [precisionM, setPrecisionM] = useState<number | null>(null);
+  const [zonaManual, setZonaManual] = useState<string | null>(null);
   const [estadoGps, setEstadoGps] = useState<"inactivo" | "buscando" | "listo" | "error">(
     "inactivo",
   );
@@ -67,10 +70,16 @@ export function FlujoReporte() {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setCoordenada({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        // La precision la reporta el navegador. En un telefono con GPS son metros;
+        // en una laptop, que se ubica por wifi o IP, pueden ser kilometros — y ahi el
+        // distrito detectado no va a ser el correcto por mas fina que sea nuestra lista.
+        // Mostrarla es lo que permite al vecino saber si puede confiar en el resultado.
+        setPrecisionM(Number.isFinite(pos.coords.accuracy) ? pos.coords.accuracy : null);
         setEstadoGps("listo");
       },
       () => setEstadoGps("error"),
-      { enableHighAccuracy: true, timeout: 10000 },
+      // maximumAge: 0 evita que el navegador reutilice una posicion vieja y ya invalida.
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
     );
   }, []);
 
@@ -94,6 +103,8 @@ export function FlujoReporte() {
     setDescripcion("");
     setArchivo(null);
     setCoordenada(null);
+    setPrecisionM(null);
+    setZonaManual(null);
     setEstadoGps("inactivo");
     setResultado(null);
     setEscalamiento(null);
@@ -105,7 +116,10 @@ export function FlujoReporte() {
     setPaso("enviando");
     setEtapa("validando");
 
-    const res = await enviarReporte({ categoria, descripcion, coordenada, archivo }, setEtapa);
+    const res = await enviarReporte(
+      { categoria, descripcion, coordenada, archivo, zonaNombreManual: zonaManual },
+      setEtapa,
+    );
     setResultado(res);
     setPaso("resultado");
   };
@@ -260,15 +274,69 @@ export function FlujoReporte() {
             {estadoGps === "buscando" ? (
               <p className="text-sm text-suave">Buscando tu ubicacion…</p>
             ) : coordenada ? (
-              <>
-                <div className="flex items-center gap-2">
-                  <Icono nombre="ubicacion" className="h-4 w-4 text-marca" />
-                  <span className="text-sm text-texto">{nombreDeZona(coordenada)}</span>
-                </div>
-                <p className="mt-1 font-mono text-[11px] text-tenue">
-                  {formatearCoordenada(coordenada)} · truncada a ~11 m antes de salir del telefono
-                </p>
-              </>
+              (() => {
+                const zona = describirZona(coordenada);
+                const etiqueta = zonaManual ?? zona.etiqueta;
+                // El navegador se ubica por wifi o IP cuando no hay GPS: ahi el error puede
+                // ser de kilometros y ningun catalogo de distritos lo puede arreglar.
+                const precisionPobre = precisionM !== null && precisionM > 200;
+
+                return (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <Icono
+                        nombre="ubicacion"
+                        className={`h-4 w-4 ${zona.confiable && !precisionPobre ? "text-marca" : "text-ambar"}`}
+                      />
+                      <span className="text-sm text-texto">{etiqueta}</span>
+                      {zonaManual ? (
+                        <span className="rounded-full bg-superficie-alta px-2 py-0.5 text-[10px] text-tenue">
+                          corregido
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <p className="mt-1 font-mono text-[11px] text-tenue">
+                      {formatearCoordenada(coordenada)}
+                      {precisionM !== null ? ` · ±${Math.round(precisionM)} m` : ""}
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-tenue">
+                      Se trunca a ~11 m antes de salir del telefono.
+                    </p>
+
+                    {precisionPobre ? (
+                      <p className="mt-2 text-[11px] leading-relaxed text-ambar">
+                        Tu navegador te ubico con un margen de ±{Math.round(precisionM)} m
+                        (probablemente por wifi, no por GPS). El distrito de abajo puede estar
+                        mal: revisalo antes de publicar.
+                      </p>
+                    ) : null}
+
+                    {!zona.confiable && !zonaManual ? (
+                      <p className="mt-2 text-[11px] leading-relaxed text-ambar">
+                        Estas entre distritos. Lo detectado es una aproximacion.
+                      </p>
+                    ) : null}
+
+                    <label htmlFor="distrito" className="mt-3 block text-[11px] text-tenue">
+                      Distrito (corrigelo si no es el tuyo)
+                    </label>
+                    <select
+                      id="distrito"
+                      value={zonaManual ?? zona.distrito ?? ""}
+                      onChange={(e) => setZonaManual(e.target.value || null)}
+                      className="toque mt-1 w-full rounded-lg border border-borde bg-superficie-alta px-3 text-sm text-texto focus:border-marca/60 focus:outline-none"
+                    >
+                      <option value="">Sin especificar</option>
+                      {listaDistritos().map((d) => (
+                        <option key={d} value={d}>
+                          {d}
+                        </option>
+                      ))}
+                    </select>
+                  </>
+                );
+              })()
             ) : (
               <div className="space-y-2.5">
                 <p className="text-sm text-suave">

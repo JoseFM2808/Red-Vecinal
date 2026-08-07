@@ -75,6 +75,12 @@ Prioridad si el tiempo aprieta: que el flujo completo (reporte → token → map
 
 ## 6. ¿Se puede añadir lo de los sismos?
 
+> **Estado: ADOPTADO el 7 de agosto de 2026, en la versión liviana que describe esta sección.**
+> Ver `ADR-019` en `docs/DECISIONES.md`. Se agregó la categoría "sismo sentido" y un panel
+> comunitario que agrega los reportes por zona. **No** se construyó motor de detección alguno,
+> y la economía del token quedó intacta: los reportes de sismo se recompensan con las mismas
+> reglas anti-Sybil que cualquier otro, sin radio especial.
+
 **Evaluación honesta: no como funcionalidad núcleo, sí como categoría de reporte simple y opcional si sobra tiempo.**
 
 - La app **Sismo Detector** (Futura Innovation SRL) funciona detectando sismos en tiempo real correlacionando el movimiento simultáneo de miles de acelerómetros de teléfonos — es un problema de procesamiento de señales e infraestructura de sensores en tiempo real, no un problema de blockchain. Construir eso desde cero en 6 días es un proyecto aparte, y además no usa el ecosistema Arbitrum de forma significativa (criterio que vale 20% de la nota), por lo que dedicarle tiempo puede diluir el puntaje en "Implementación Técnica" y "Uso del Ecosistema Arbitrum".

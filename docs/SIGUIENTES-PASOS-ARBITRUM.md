@@ -46,8 +46,10 @@ event ReportSubmitted(
 
 - `contentHash` = SHA-256 del payload canónico (ver §4). Son 32 bytes exactos.
 - `latE6` / `lngE6` = grados × 1e6, ya truncados a 4 decimales por el cliente. Entran en `int32`.
-- `category`: `0` = actividad sospechosa, `1` = infraestructura. **Los índices no se reordenan nunca**:
-  los que ya están escritos en cadena no se pueden cambiar (`src/lib/categorias.ts`).
+- `category`: `0` = actividad sospechosa, `1` = infraestructura, `2` = sismo sentido.
+  **Los índices no se reordenan nunca**: los que ya están escritos en cadena no se pueden
+  cambiar (`src/lib/categorias.ts`). No pongan un máximo de 2 categorías en el contrato —
+  la tercera se agregó el 7 de agosto (ADR-019) y puede haber más después del hackathon.
 - `zoneId`: celda de ~550 m. Hoy el cliente la manda como string `z-2391_-15409`; decidan si la
   quieren como `keccak256(zoneId)` y avisen — es un cambio de una línea en `flujo-reporte.ts`.
 
