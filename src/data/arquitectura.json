@@ -1,0 +1,382 @@
+{
+  "meta": {
+    "nombre": "Vecino Seguro",
+    "version": "0.1.0-beta.1",
+    "actualizado": "2026-08-06",
+    "resumen": "Red vecinal de reporte de seguridad. El vecino reporta en 3 toques desde el celular; la evidencia se sube a IPFS, su hash se ancla en Arbitrum y la red vecinal se entera al instante. Un botón aparte escala a serenazgo o policía. Nadie ve quién reportó salvo que el propio usuario lo autorice o exista una orden judicial verificable."
+  },
+  "problema": {
+    "tesis": "Complementamos al serenazgo donde no llega o no genera confianza. No lo reemplazamos.",
+    "evidencia": [
+      {
+        "dato": "5,600 habitantes por agente de serenazgo en San Juan de Lurigancho",
+        "detalle": "Villa El Salvador, Comas, San Juan de Miraflores, Chorrillos, El Agustino, Carabayllo y San Martín de Porres superan los 2,000 hab/agente. En San Isidro o Miraflores la proporción es muchísimo menor.",
+        "fuente": "docs/PROYECTO.md — cobertura desigual de serenazgo"
+      },
+      {
+        "dato": "57% de peruanos desconfía del serenazgo",
+        "detalle": "Con casos documentados de corrupción dentro del propio servicio. Reportar a una sola institución no es una opción neutral para mucha gente.",
+        "fuente": "IEP, 2025 (citado en docs/PROYECTO.md)"
+      },
+      {
+        "dato": "Las apps municipales existentes dependen 100% del serenazgo",
+        "detalle": "Alerta Surco, Alerta Chorrillos, Alerta Pueblo Libre y similares usan al municipio para reportar, validar y responder. No cubren el vacío donde el serenazgo es débil.",
+        "fuente": "docs/PROYECTO.md — panorama competitivo"
+      },
+      {
+        "dato": "Ningún producto combina geolocalización + evidencia inmutable + validación sin institución única",
+        "detalle": "ResPública Seguridad (Argentina), AnonReport y las redes DePIN tipo Hivemapper resuelven piezas sueltas del problema.",
+        "fuente": "docs/PROYECTO.md — análisis de alternativas"
+      }
+    ],
+    "usuarios": [
+      {
+        "perfil": "Vecino de un distrito con cobertura débil",
+        "necesidad": "Avisar rápido y sin exponerse a represalias del denunciado."
+      },
+      {
+        "perfil": "Junta vecinal o directiva de condominio",
+        "necesidad": "Ver patrones por zona y coordinar respuesta sin depender de un grupo de WhatsApp caótico."
+      },
+      {
+        "perfil": "Serenazgo o comisaría",
+        "necesidad": "Recibir avisos georreferenciados con evidencia que sirva como prueba, no rumores."
+      },
+      {
+        "perfil": "Municipio, aseguradora u ONG",
+        "necesidad": "Mapas de riesgo agregados y anonimizados para decidir dónde invertir."
+      }
+    ]
+  },
+  "principios": [
+    "Pseudónimo por defecto: la identidad real nunca toca la cadena.",
+    "El reporte vale porque es verificable, no porque lo firme una institución.",
+    "Doble ruta: la red vecinal y la autoridad son caminos paralelos, no excluyentes.",
+    "Lo simulado se etiqueta como simulado, dentro del producto.",
+    "Toda pieza que otro equipo va a reemplazar vive detrás de una interfaz.",
+    "La recompensa premia presencia verificable, no tiempo de app abierta."
+  ],
+  "capas": [
+    {
+      "id": "ui",
+      "nombre": "Interfaz mobile-first",
+      "rol": "Cinco pestañas, flujo de reporte en 3 pasos, mapa y panel de arquitectura. Diseñada para una mano, de noche, con prisa.",
+      "estado": "listo",
+      "tecnologias": ["Next.js 15 (App Router)", "React 19", "Tailwind CSS 4"],
+      "archivos": ["src/app", "src/components"]
+    },
+    {
+      "id": "dominio",
+      "nombre": "Dominio y reglas",
+      "rol": "Tipos del reporte, catálogo de categorías, hash canónico, geometría de zonas y política anti-Sybil. Funciones puras, con tests, sin dependencias.",
+      "estado": "listo",
+      "tecnologias": ["TypeScript estricto", "Vitest"],
+      "archivos": ["src/lib/tipos.ts", "src/lib/hash.ts", "src/lib/geo.ts", "src/lib/antisybil.ts"]
+    },
+    {
+      "id": "estado",
+      "nombre": "Estado y persistencia",
+      "rol": "Repositorio de reportes con persistencia en el dispositivo y datos sembrados de Lima para que la red se vea activa desde el primer arranque.",
+      "estado": "simulado",
+      "tecnologias": ["React Context", "localStorage"],
+      "archivos": ["src/lib/repositorio.ts", "src/lib/seed.ts", "src/components/proveedores/AppProvider.tsx"]
+    },
+    {
+      "id": "cadena",
+      "nombre": "Capa de cadena (Arbitrum)",
+      "rol": "Interfaz ChainAdapter: anclar reporte, consultar recompensa, resolver enlaces al explorador. La beta corre el adaptador simulado; el adaptador de Arbitrum implementa la misma interfaz.",
+      "estado": "pendiente-equipo",
+      "tecnologias": ["Arbitrum Sepolia (421614)", "Arbitrum One (42161)", "ABIs tipadas", "viem (a integrar)"],
+      "archivos": ["src/lib/chain/types.ts", "src/lib/chain/mock-adapter.ts", "src/lib/chain/redes.ts", "src/lib/chain/abis.ts"]
+    },
+    {
+      "id": "storage",
+      "nombre": "Evidencia (IPFS)",
+      "rol": "Sube foto o video y devuelve un CID. La beta usa un adaptador local que produce un CID determinista desde el hash del archivo.",
+      "estado": "simulado",
+      "tecnologias": ["IPFS", "Pinata (a integrar)"],
+      "archivos": ["src/lib/storage/types.ts", "src/lib/storage/mock-adapter.ts"]
+    },
+    {
+      "id": "escalamiento",
+      "nombre": "Puente con la autoridad",
+      "rol": "Ruta API que valida el aviso y genera folio para serenazgo, policía o ambulancia. Reenvía a un webhook real si está configurado.",
+      "estado": "simulado",
+      "tecnologias": ["Next.js Route Handler"],
+      "archivos": ["src/app/api/escalamiento/route.ts"]
+    },
+    {
+      "id": "identidad",
+      "nombre": "Identidad y revelación selectiva",
+      "rol": "Pseudónimo generado en el dispositivo, sin seed phrase visible. Pantalla que demuestra el flujo de revelación 2-de-3 (usuario + plataforma + autoridad).",
+      "estado": "simulado",
+      "tecnologias": ["Privy o Web3Auth (a integrar)", "IdentityEscrow.sol"],
+      "archivos": ["src/lib/identidad.ts", "src/components/cuenta/RevelacionSelectiva.tsx"]
+    },
+    {
+      "id": "gobernanza",
+      "nombre": "Gobernanza del desarrollo con IA",
+      "rol": "Bitácora de decisiones validada en CI y renderizada dentro del producto. La arquitectura y los docs se generan del mismo JSON, así no pueden divergir.",
+      "estado": "listo",
+      "tecnologias": ["JSON validado", "scripts de Node"],
+      "archivos": ["src/data/decisiones.json", "src/data/arquitectura.json", "scripts/validate-data.mjs", "scripts/generate-docs.mjs"]
+    }
+  ],
+  "flujo": [
+    {
+      "n": 1,
+      "titulo": "El vecino elige categoría",
+      "detalle": "Dos opciones grandes: actividad sospechosa o infraestructura en riesgo. Un toque.",
+      "capa": "ui",
+      "onchain": false
+    },
+    {
+      "n": 2,
+      "titulo": "Adjunta evidencia y describe",
+      "detalle": "Foto opcional desde la cámara del teléfono; descripción corta. Nada obligatorio que frene el reporte urgente.",
+      "capa": "ui",
+      "onchain": false
+    },
+    {
+      "n": 3,
+      "titulo": "Se captura la ubicación",
+      "detalle": "GPS del navegador. Las coordenadas se truncan a ~11 m antes de salir del dispositivo: suficiente para el mapa, insuficiente para señalar una puerta.",
+      "capa": "dominio",
+      "onchain": false
+    },
+    {
+      "n": 4,
+      "titulo": "La evidencia va a IPFS",
+      "detalle": "El archivo se sube y devuelve un CID. La foto nunca pasa por un servidor nuestro.",
+      "capa": "storage",
+      "onchain": false
+    },
+    {
+      "n": 5,
+      "titulo": "Se calcula el hash canónico",
+      "detalle": "SHA-256 sobre el JSON canónico (CID + coordenadas en microgrados + categoría + timestamp). Es el bytes32 que verá el contrato.",
+      "capa": "dominio",
+      "onchain": false
+    },
+    {
+      "n": 6,
+      "titulo": "Se ancla en Arbitrum",
+      "detalle": "ReportRegistry.submitReport() guarda el hash y emite ReportSubmitted. Es lo único que toca la cadena: ni foto, ni nombre, ni dirección exacta.",
+      "capa": "cadena",
+      "onchain": true
+    },
+    {
+      "n": 7,
+      "titulo": "Se evalúa la recompensa",
+      "detalle": "La política anti-Sybil revisa límites por wallet y por zona. Si hay corroboración independiente cerca, la recompensa se multiplica; si no, queda pendiente.",
+      "capa": "dominio",
+      "onchain": true
+    },
+    {
+      "n": 8,
+      "titulo": "La red vecinal ve el reporte",
+      "detalle": "El mapa se actualiza con el marcador y el vecindario recibe el aviso.",
+      "capa": "ui",
+      "onchain": false
+    },
+    {
+      "n": 9,
+      "titulo": "Opcional: escalar a la autoridad",
+      "detalle": "Botón aparte. Genera un folio con las coordenadas y el enlace a la evidencia para serenazgo, policía o ambulancia.",
+      "capa": "escalamiento",
+      "onchain": false
+    }
+  ],
+  "contratos": [
+    {
+      "nombre": "ReportRegistry.sol",
+      "red": "Arbitrum Sepolia → Arbitrum One",
+      "estado": "pendiente-equipo",
+      "responsabilidad": "Registro inmutable de reportes: hash de contenido, coordenadas en microgrados, categoría y timestamp. Emite el evento que alimenta el mapa compartido.",
+      "funciones": [
+        {
+          "firma": "submitReport(bytes32 contentHash, int32 latE6, int32 lngE6, uint8 category, bytes32 zoneId)",
+          "nota": "El frontend ya construye exactamente este payload."
+        },
+        {
+          "firma": "event ReportSubmitted(uint256 indexed id, address indexed reporter, bytes32 contentHash, int32 latE6, int32 lngE6, uint8 category, uint64 timestamp)",
+          "nota": "Fuente de verdad del índice compartido entre dispositivos."
+        }
+      ]
+    },
+    {
+      "nombre": "TokenReward.sol",
+      "red": "Arbitrum Sepolia → Arbitrum One",
+      "estado": "pendiente-equipo",
+      "responsabilidad": "ERC-20 que mintea la recompensa con los límites anti-Sybil. La especificación ejecutable está en src/lib/antisybil.ts.",
+      "funciones": [
+        {
+          "firma": "claim(uint256 reportId)",
+          "nota": "Revalida en cadena los mismos límites que el cliente ya verificó."
+        },
+        {
+          "firma": "corroborate(uint256 reportId)",
+          "nota": "Un pseudónimo distinto confirma el hecho: activa el multiplicador de presencia."
+        }
+      ]
+    },
+    {
+      "nombre": "IdentityEscrow.sol",
+      "red": "Arbitrum Sepolia → Arbitrum One",
+      "estado": "pendiente-equipo",
+      "responsabilidad": "Custodia el vínculo cifrado wallet↔identidad. Libera solo con 2 de 3 firmas (usuario, plataforma, autoridad judicial).",
+      "funciones": [
+        {
+          "firma": "requestDisclosure(address subject, bytes32 caseHash)",
+          "nota": "Deja rastro público de que alguien pidió revelar una identidad."
+        },
+        {
+          "firma": "approveDisclosure(uint256 requestId)",
+          "nota": "Umbral 2-de-3 simplificado para el MVP; sin circuitos ZK."
+        }
+      ]
+    }
+  ],
+  "arbitrum": {
+    "porQue": "Un reporte por vecino por día solo cierra si anclar cuesta fracciones de centavo. En L1 el mismo gesto cuesta dólares y el producto no existe.",
+    "usos": [
+      {
+        "titulo": "Asentamiento de evidencia",
+        "detalle": "El hash del reporte vive en Arbitrum. Es lo que convierte un aviso en una prueba con fecha cierta que ninguna institución puede editar."
+      },
+      {
+        "titulo": "Economía del token",
+        "detalle": "El costo de gas por mint tiene que ser menor que el valor de la recompensa. Con Arbitrum lo es; con L1 no."
+      },
+      {
+        "titulo": "Índice compartido vía eventos",
+        "detalle": "El mapa multi-dispositivo se reconstruye leyendo ReportSubmitted, sin servidor propio ni base de datos."
+      },
+      {
+        "titulo": "Stylus (candidato de roadmap)",
+        "detalle": "La verificación geoespacial (distancia entre reportes, pertenencia a zona) es cómputo pesado para la EVM. En Stylus, con Rust, es barato. Anotado como siguiente paso, no como promesa cumplida."
+      }
+    ],
+    "redes": [
+      { "nombre": "Arbitrum Sepolia", "chainId": 421614, "uso": "Red del hackathon" },
+      { "nombre": "Arbitrum One", "chainId": 42161, "uso": "Destino de producción" }
+    ]
+  },
+  "limites": [
+    {
+      "tema": "Anclaje on-chain",
+      "queHacemos": "El adaptador simulado produce un hash de transacción y un enlace al explorador con el formato real.",
+      "queFaltaria": "Desplegar ReportRegistry y activar NEXT_PUBLIC_CHAIN_MODE=arbitrum."
+    },
+    {
+      "tema": "Anti-Sybil",
+      "queHacemos": "Límite por wallet y por zona, más multiplicador por corroboración independiente.",
+      "queFaltaria": "Un adversario con varios dispositivos todavía puede farmear. La prueba de presencia criptográfica es roadmap y así se dice en el pitch."
+    },
+    {
+      "tema": "Revelación selectiva",
+      "queHacemos": "Demostración del mecanismo 2-de-3 y del rastro público de cada solicitud.",
+      "queFaltaria": "Integración legal real con el Poder Judicial y custodia de claves por un tercero acreditado."
+    },
+    {
+      "tema": "Escalamiento a la autoridad",
+      "queHacemos": "Ruta API que valida y emite folio; reenvía a un webhook real si está configurado.",
+      "queFaltaria": "Convenio con un municipio y su endpoint de recepción."
+    },
+    {
+      "tema": "Índice compartido",
+      "queHacemos": "Los reportes persisten en el dispositivo; la app arranca con datos sembrados de Lima.",
+      "queFaltaria": "Leer eventos de ReportSubmitted por RPC para que dos teléfonos vean el mismo mapa."
+    },
+    {
+      "tema": "Evidencia en IPFS",
+      "queHacemos": "CID determinista calculado desde el hash del archivo.",
+      "queFaltaria": "Pinata con JWT en variables de entorno de Vercel."
+    }
+  ],
+  "siguientesPasos": [
+    {
+      "titulo": "Desplegar los tres contratos en Arbitrum Sepolia",
+      "responsable": "Equipo de contratos",
+      "detalle": "Publicar direcciones en las variables NEXT_PUBLIC_*_ADDRESS. Los ABIs esperados ya están en src/lib/chain/abis.ts.",
+      "bloquea": "Anclaje real, recompensa real, índice compartido"
+    },
+    {
+      "titulo": "Implementar ArbitrumChainAdapter",
+      "responsable": "Equipo de contratos",
+      "detalle": "Un archivo que implemente la interfaz ChainAdapter con viem. No hay que tocar ninguna pantalla.",
+      "bloquea": "Cambiar el modo de cadena"
+    },
+    {
+      "titulo": "Portar la política anti-Sybil a TokenReward.sol",
+      "responsable": "Equipo de contratos",
+      "detalle": "Las constantes de src/lib/antisybil.ts son la especificación. Los tests describen los casos límite.",
+      "bloquea": "Que la recompensa mostrada coincida con la que la cadena aprueba"
+    },
+    {
+      "titulo": "Hidratar el mapa desde eventos ReportSubmitted",
+      "responsable": "Equipo de contratos + frontend",
+      "detalle": "Sustituir la lectura del repositorio local por una lectura por RPC en el mismo punto de entrada.",
+      "bloquea": "Demo con varios teléfonos a la vez"
+    },
+    {
+      "titulo": "Conectar Privy o Web3Auth",
+      "responsable": "Frontend",
+      "detalle": "Reemplazar el proveedor de identidad local. La interfaz ya está aislada.",
+      "bloquea": "Firmar transacciones reales sin seed phrase"
+    },
+    {
+      "titulo": "Evaluar Stylus para verificación geoespacial",
+      "responsable": "Equipo de contratos",
+      "detalle": "Medir el costo en gas del cálculo de distancia en Solidity contra Rust/Stylus antes de prometerlo en el pitch.",
+      "bloquea": "Nada del MVP; es argumento de escalabilidad"
+    }
+  ],
+  "rubrica": [
+    {
+      "criterio": "Problema e impacto",
+      "peso": 20,
+      "evidencia": [
+        "Pantalla de inicio con las cifras de cobertura y desconfianza, cada una con su fuente.",
+        "Cuatro perfiles de usuario declarados con su necesidad concreta.",
+        "Posicionamiento explícito: complementa al serenazgo, no lo reemplaza."
+      ]
+    },
+    {
+      "criterio": "Producto y experiencia de usuario",
+      "peso": 20,
+      "evidencia": [
+        "Reporte en 3 pasos, sin campos obligatorios que frenen la urgencia.",
+        "Mobile-first real: barra inferior, áreas táctiles grandes, safe-area, tema oscuro.",
+        "Sin wallet ni seed phrase para empezar a usarla."
+      ]
+    },
+    {
+      "criterio": "Implementación técnica",
+      "peso": 25,
+      "evidencia": [
+        "Adaptadores con interfaz para cadena, storage e identidad.",
+        "Reglas de dominio como funciones puras con tests en Vitest.",
+        "npm run check: validación de datos, docs sincronizados, tipos, lint y tests."
+      ]
+    },
+    {
+      "criterio": "Uso del ecosistema Arbitrum",
+      "peso": 20,
+      "evidencia": [
+        "Argumento económico de por qué el producto solo existe en L2.",
+        "Redes, ABIs y formato de enlaces al explorador ya cableados.",
+        "Stylus evaluado con criterio, no mencionado por moda."
+      ]
+    },
+    {
+      "criterio": "Pitch y demo",
+      "peso": 15,
+      "evidencia": [
+        "Pestaña Arquitectura que expone el estado real de cada módulo ante el jurado.",
+        "Límites de la beta declarados dentro del producto.",
+        "docs/PITCH.md con guion, tiempos y respuestas a las preguntas difíciles."
+      ]
+    }
+  ]
+}

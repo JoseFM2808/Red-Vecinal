@@ -1,0 +1,422 @@
+{
+  "$schema": "./decisiones.schema.md",
+  "proyecto": "Vecino Seguro",
+  "descripcion": "Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o por el equipo se registra aquí ANTES o AL MOMENTO de escribir el código que la implementa. `docs/DECISIONES.md` se genera desde este archivo (npm run docs) y la pestaña Arquitectura de la app lo renderiza.",
+  "decisiones": [
+    {
+      "id": "ADR-001",
+      "titulo": "La beta se construye como app Next.js sin dependencia de red blockchain",
+      "fecha": "2026-08-06",
+      "autor": "IA",
+      "estado": "aceptada",
+      "contexto": "El equipo de contratos trabaja en paralelo sobre Arbitrum. Si el frontend depende de contratos desplegados para arrancar, ninguna de las dos mitades puede demostrarse hasta el final y el riesgo se concentra el día de la demo.",
+      "opciones": [
+        {
+          "nombre": "Esperar a que los contratos estén desplegados",
+          "descartada_porque": "Bloquea el frontend varios días y deja la demo sin plan B."
+        },
+        {
+          "nombre": "Escribir el frontend contra un mock desechable",
+          "descartada_porque": "El mock se tira a la basura y la integración real se escribe dos veces bajo presión."
+        }
+      ],
+      "decision": "El frontend habla con una interfaz `ChainAdapter`. La beta usa `MockChainAdapter` (local, determinista); el equipo de contratos implementa `ArbitrumChainAdapter` contra la MISMA interfaz. Se cambia con la variable NEXT_PUBLIC_CHAIN_MODE.",
+      "consecuencias": [
+        "La demo funciona siempre, aun sin RPC ni faucet.",
+        "La integración con Arbitrum es un archivo nuevo, no una reescritura.",
+        "Hay que mantener el mock fiel a la semántica de los contratos (mismos límites, mismos errores)."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Bajo: borrar el adaptador simulado y dejar solo el real.",
+      "criterios_rubrica": ["tecnica", "arbitrum", "pitch"],
+      "evidencia": ["src/lib/chain/types.ts", "src/lib/chain/mock-adapter.ts", "src/lib/chain/index.ts"],
+      "requiere_validacion_humana": false
+    },
+    {
+      "id": "ADR-002",
+      "titulo": "Las reglas anti-Sybil viven en TypeScript puro y son la especificación del contrato",
+      "fecha": "2026-08-06",
+      "autor": "IA",
+      "estado": "aceptada",
+      "contexto": "`TokenReward.sol` necesita reglas anti-farmeo. Si el frontend y el contrato implementan reglas distintas, el usuario ve una recompensa que la cadena rechaza.",
+      "opciones": [
+        {
+          "nombre": "Reglas solo en Solidity",
+          "descartada_porque": "El frontend no puede avisar antes de gastar gas y la UX se degrada."
+        },
+        {
+          "nombre": "Reglas duplicadas a mano en ambos lados",
+          "descartada_porque": "Divergen en el primer cambio."
+        }
+      ],
+      "decision": "`src/lib/antisybil.ts` es una función pura, sin dependencias, con tests. Sus constantes (`POLITICA_RECOMPENSA`) son la especificación literal que el equipo de contratos porta a Solidity. El frontend valida antes de enviar; el contrato revalida en cadena.",
+      "consecuencias": [
+        "Los límites son testeables sin desplegar nada.",
+        "El equipo de contratos recibe una spec ejecutable, no un párrafo en prosa.",
+        "Duplicación consciente: validar dos veces es correcto, la cadena es la autoridad final."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Bajo.",
+      "criterios_rubrica": ["tecnica", "arbitrum"],
+      "evidencia": ["src/lib/antisybil.ts", "src/lib/antisybil.test.ts"],
+      "requiere_validacion_humana": true,
+      "nota_para_humano": "El equipo de contratos debe confirmar que los límites (3 reportes/hora, 1 por zona cada 15 min) son los que se codifican en TokenReward.sol."
+    },
+    {
+      "id": "ADR-003",
+      "titulo": "El hash on-chain es SHA-256 sobre JSON canónico",
+      "fecha": "2026-08-06",
+      "autor": "IA",
+      "estado": "aceptada",
+      "contexto": "`ReportRegistry.sol` guarda un `bytes32 contentHash`. Hay que decidir qué se hashea y cómo, o dos clientes producirán hashes distintos para el mismo reporte.",
+      "opciones": [
+        {
+          "nombre": "keccak256 (nativo de EVM)",
+          "descartada_porque": "Requiere una librería extra en el navegador; SHA-256 está en Web Crypto sin dependencias y también son 32 bytes."
+        },
+        {
+          "nombre": "Hashear el JSON tal como salga",
+          "descartada_porque": "El orden de las claves cambia el hash. No es reproducible."
+        }
+      ],
+      "decision": "Serialización canónica (claves ordenadas, coordenadas en microgrados enteros) y SHA-256 vía Web Crypto. El resultado es un `0x…` de 32 bytes que entra directo como `bytes32`.",
+      "consecuencias": [
+        "Cualquiera puede recomputar el hash desde la evidencia y verificar el reporte.",
+        "Coordenadas truncadas a ~11 m: privacidad y determinismo en el mismo paso.",
+        "Si el equipo prefiere keccak256, se cambia una sola función."
+      ],
+      "reversibilidad": "media",
+      "costo_de_revertir": "Medio: cambia el hash de los reportes ya anclados.",
+      "criterios_rubrica": ["tecnica", "arbitrum"],
+      "evidencia": ["src/lib/hash.ts", "src/lib/hash.test.ts"],
+      "requiere_validacion_humana": true,
+      "nota_para_humano": "Confirmar con el equipo de contratos: ¿SHA-256 o keccak256 en ReportRegistry.sol?"
+    },
+    {
+      "id": "ADR-004",
+      "titulo": "Mapa con Leaflet + OpenStreetMap, sin API key",
+      "fecha": "2026-08-06",
+      "autor": "IA",
+      "estado": "aceptada",
+      "contexto": "El MVP necesita mapa en tiempo real. Mapbox exige token y cuota; una key vencida o ausente rompe la demo delante del jurado.",
+      "opciones": [
+        {
+          "nombre": "Mapbox GL",
+          "descartada_porque": "Depende de una API key que puede faltar en Vercel el día de la demo."
+        }
+      ],
+      "decision": "Leaflet + teselas de OpenStreetMap, cargado con import dinámico y `ssr: false`. Cero variables de entorno para que el mapa funcione.",
+      "consecuencias": [
+        "El mapa funciona en un deploy limpio sin configurar nada.",
+        "Estética menos pulida que Mapbox; se compensa con marcadores propios (divIcon).",
+        "Migrar a Mapbox después es un cambio localizado en un componente."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Bajo.",
+      "criterios_rubrica": ["ux", "pitch"],
+      "evidencia": ["src/components/mapa/MapaLeaflet.tsx", "src/components/mapa/MapaReportes.tsx"],
+      "requiere_validacion_humana": false
+    },
+    {
+      "id": "ADR-005",
+      "titulo": "Identidad pseudónima local en la beta; wallet abstraction queda como costura",
+      "fecha": "2026-08-06",
+      "autor": "IA",
+      "estado": "aceptada",
+      "contexto": "El diseño acordado exige pseudonimato por wallet sin seed phrases visibles (Privy/Web3Auth). Integrar Privy hoy añade una dependencia con configuración de dashboard que el equipo aún no tiene.",
+      "opciones": [
+        {
+          "nombre": "Integrar Privy ya",
+          "descartada_porque": "Requiere App ID y configuración externa; bloquea la beta desplegable."
+        },
+        {
+          "nombre": "Pedir wallet tipo MetaMask",
+          "descartada_porque": "Contradice la decisión de producto: el vecino no maneja seed phrases."
+        }
+      ],
+      "decision": "La beta genera un pseudónimo determinista en el dispositivo (`vecino-####` + dirección derivada) guardado en localStorage, detrás de la interfaz `IdentidadProvider`. Privy entra reemplazando ese proveedor, sin tocar pantallas.",
+      "consecuencias": [
+        "La experiencia 'sin seed phrase' se puede demostrar hoy.",
+        "Hay que decir con transparencia que la wallet de la beta no firma transacciones reales.",
+        "El punto de integración está aislado en un archivo."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Bajo.",
+      "criterios_rubrica": ["ux", "tecnica"],
+      "evidencia": ["src/lib/identidad.ts", "src/components/proveedores/AppProvider.tsx"],
+      "requiere_validacion_humana": false
+    },
+    {
+      "id": "ADR-006",
+      "titulo": "La arquitectura es un dato, no un dibujo",
+      "fecha": "2026-08-06",
+      "autor": "IA",
+      "estado": "aceptada",
+      "contexto": "Se pide una pestaña 'Arquitectura' que exhiba cómo está construido el programa. Un diagrama estático se desactualiza en el primer commit y el jurado lo detecta.",
+      "opciones": [
+        {
+          "nombre": "Imagen o diagrama estático",
+          "descartada_porque": "Se desincroniza del código y no es verificable."
+        },
+        {
+          "nombre": "Documento Markdown a mano",
+          "descartada_porque": "Se duplica con la pantalla de la app."
+        }
+      ],
+      "decision": "`src/data/arquitectura.json` es la única fuente de verdad. La pestaña Arquitectura lo renderiza y `docs/ARQUITECTURA.md` se genera desde él con `npm run docs`. `npm run docs:check` falla si el doc quedó desactualizado.",
+      "consecuencias": [
+        "Imposible que la documentación y la app digan cosas distintas.",
+        "El jurado ve, dentro del producto, el estado real de cada módulo (listo / simulado / pendiente).",
+        "Editar arquitectura obliga a editar un JSON validado, no prosa suelta."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Bajo.",
+      "criterios_rubrica": ["tecnica", "pitch"],
+      "evidencia": ["src/data/arquitectura.json", "scripts/generate-docs.mjs", "src/app/arquitectura/page.tsx"],
+      "requiere_validacion_humana": false
+    },
+    {
+      "id": "ADR-007",
+      "titulo": "Los estados simulados se etiquetan como simulados dentro del producto",
+      "fecha": "2026-08-06",
+      "autor": "IA",
+      "estado": "aceptada",
+      "contexto": "El pitch exige transparencia sobre qué es MVP y qué sería producto real. Un jurado que descubre por su cuenta que algo es falso castiga más que uno al que se lo advierten.",
+      "opciones": [
+        {
+          "nombre": "Ocultar el modo simulado para que la demo se vea completa",
+          "descartada_porque": "Riesgo reputacional alto y contradice la decisión de comunicación del equipo."
+        }
+      ],
+      "decision": "Todo lo simulado lleva una etiqueta visible en la UI (`Simulado`) y aparece en la pestaña Arquitectura bajo 'Límites honestos de la beta': anclaje on-chain, escalamiento a autoridad, revelación selectiva y storage IPFS.",
+      "consecuencias": [
+        "El jurado ve honestidad como característica, no como debilidad.",
+        "El equipo tiene una lista exacta de lo que falta conectar."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Bajo: la etiqueta desaparece sola cuando el adaptador real entra.",
+      "criterios_rubrica": ["pitch", "problema"],
+      "evidencia": ["src/components/ui/EtiquetaSimulado.tsx", "src/data/arquitectura.json"],
+      "requiere_validacion_humana": false
+    },
+    {
+      "id": "ADR-008",
+      "titulo": "Dos categorías de reporte, ni una más",
+      "fecha": "2026-08-06",
+      "autor": "IA+Humano",
+      "estado": "aceptada",
+      "contexto": "El alcance fijado en CLAUDE.md limita el MVP a 2 categorías. La tentación de agregar más (sismos, accidentes) diluye el tiempo restante antes del 12 de agosto.",
+      "opciones": [
+        {
+          "nombre": "Agregar 'sismo sentido'",
+          "descartada_porque": "Está marcado como roadmap en docs/PROYECTO.md, no como núcleo."
+        }
+      ],
+      "decision": "Solo `actividad_sospechosa` e `infraestructura`. Las categorías viven en un catálogo tipado; agregar una es un objeto nuevo, pero requiere una entrada en esta bitácora.",
+      "consecuencias": [
+        "El flujo completo funciona end-to-end antes de ampliar.",
+        "El catálogo tipado impide categorías inventadas en tiempo de ejecución."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Bajo.",
+      "criterios_rubrica": ["ux", "problema"],
+      "evidencia": ["src/lib/categorias.ts"],
+      "requiere_validacion_humana": false
+    },
+    {
+      "id": "ADR-009",
+      "titulo": "Persistencia local en el dispositivo, sin base de datos",
+      "fecha": "2026-08-06",
+      "autor": "IA",
+      "estado": "aceptada",
+      "contexto": "La beta necesita que los reportes sobrevivan a recargar la página durante la demo. Montar Postgres o Supabase añade infraestructura, credenciales y un punto de fallo.",
+      "opciones": [
+        {
+          "nombre": "Base de datos gestionada (Supabase/Neon)",
+          "descartada_porque": "Infraestructura y credenciales que el MVP no necesita: la fuente de verdad final es la cadena, no un servidor."
+        }
+      ],
+      "decision": "localStorage detrás de un repositorio (`src/lib/repositorio.ts`). El deploy en Vercel es estático + rutas API sin estado.",
+      "consecuencias": [
+        "Cero credenciales, cero costo, despliegue inmediato.",
+        "Los reportes no se comparten entre dispositivos: en la demo se explica que el índice compartido lo dan los eventos del contrato.",
+        "Los datos sembrados dan la sensación de red activa desde el primer arranque."
+      ],
+      "reversibilidad": "media",
+      "costo_de_revertir": "Medio: cambiar la implementación del repositorio, no las pantallas.",
+      "criterios_rubrica": ["tecnica", "ux"],
+      "evidencia": ["src/lib/repositorio.ts", "src/lib/seed.ts"],
+      "requiere_validacion_humana": true,
+      "nota_para_humano": "Para la demo en vivo con varios teléfonos hace falta un índice compartido. Opción recomendada: leer eventos de ReportRegistry vía RPC de Arbitrum Sepolia (lo cubre el equipo de contratos)."
+    },
+    {
+      "id": "ADR-010",
+      "titulo": "El escalamiento a autoridad es una ruta API real con destino simulado",
+      "fecha": "2026-08-06",
+      "autor": "IA",
+      "estado": "aceptada",
+      "contexto": "La doble ruta de respuesta (red vecinal + autoridad) es parte central de la propuesta. No hay convenio con ningún serenazgo para el hackathon.",
+      "opciones": [
+        {
+          "nombre": "Botón que solo cambia el estado en pantalla",
+          "descartada_porque": "No demuestra que la costura de integración exista."
+        },
+        {
+          "nombre": "Integrar WhatsApp/SMS real",
+          "descartada_porque": "Requiere proveedor, número verificado y costo; no aporta puntaje adicional."
+        }
+      ],
+      "decision": "`POST /api/escalamiento` valida el payload, genera un ticket con folio y responde con el destino que recibiría el municipio. Si existe `ESCALATION_WEBHOOK_URL`, reenvía de verdad; si no, responde en modo simulado y lo declara en la respuesta.",
+      "consecuencias": [
+        "El contrato de integración con el municipio ya está escrito y documentado.",
+        "Conectar un serenazgo real es configurar una variable de entorno."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Bajo.",
+      "criterios_rubrica": ["problema", "tecnica"],
+      "evidencia": ["src/app/api/escalamiento/route.ts"],
+      "requiere_validacion_humana": false
+    },
+    {
+      "id": "ADR-011",
+      "titulo": "Interfaz en español peruano y diseño mobile-first oscuro",
+      "fecha": "2026-08-06",
+      "autor": "IA",
+      "estado": "aceptada",
+      "contexto": "El usuario es un vecino de Lima usando el teléfono, muchas veces de noche y con una mano.",
+      "opciones": [
+        {
+          "nombre": "Interfaz bilingüe",
+          "descartada_porque": "Duplica trabajo sin sumar en la rúbrica."
+        }
+      ],
+      "decision": "Español, tema oscuro por defecto, barra de pestañas inferior con área táctil ≥44 px, respeto de safe-area en iPhone, y un botón de reporte destacado al centro. Sin scroll horizontal en 360 px de ancho.",
+      "consecuencias": [
+        "Coherente con el contexto de uso real (noche, urgencia, una mano).",
+        "El jurado prueba la demo desde su propio teléfono sin fricción."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Bajo.",
+      "criterios_rubrica": ["ux"],
+      "evidencia": ["src/app/globals.css", "src/components/navegacion/BarraPestanas.tsx"],
+      "requiere_validacion_humana": false
+    },
+    {
+      "id": "ADR-012",
+      "titulo": "Arbitrum como capa de asentamiento, no como adorno",
+      "fecha": "2026-08-06",
+      "autor": "IA",
+      "estado": "aceptada",
+      "contexto": "El criterio 'Uso del ecosistema Arbitrum' pesa 20% y exige que la tecnología sea parte esencial, no decorativa. Esa integración la ejecuta el equipo de contratos.",
+      "opciones": [
+        {
+          "nombre": "Anclar en L1 Ethereum",
+          "descartada_porque": "El costo por reporte hace inviable el volumen vecinal."
+        },
+        {
+          "nombre": "Solo base de datos centralizada",
+          "descartada_porque": "Elimina la razón de ser: prueba inmutable sin depender de una institución."
+        }
+      ],
+      "decision": "Arbitrum es la razón por la que el modelo cierra: un reporte por vecino por día a costo de L1 es inviable; en Arbitrum el anclaje cuesta fracciones de centavo. La beta deja preparado: chainId 421614/42161, formato de enlaces al explorador, ABIs y el costo estimado por reporte visible en la UI. Stylus queda anotado como candidato para la verificación geoespacial por su costo de cómputo.",
+      "consecuencias": [
+        "El argumento de por qué Arbitrum es defendible con números, no con adjetivos.",
+        "El equipo de contratos hereda direcciones, ABIs y red ya cableadas."
+      ],
+      "reversibilidad": "baja",
+      "costo_de_revertir": "Alto: es la premisa del proyecto.",
+      "criterios_rubrica": ["arbitrum", "pitch", "tecnica"],
+      "evidencia": ["src/lib/chain/redes.ts", "src/lib/chain/abis.ts", "docs/SIGUIENTES-PASOS-ARBITRUM.md"],
+      "requiere_validacion_humana": true,
+      "nota_para_humano": "Validar con el equipo de contratos el costo real por reporte medido en Arbitrum Sepolia para reemplazar la estimación de la UI por un dato medido."
+    },
+    {
+      "id": "ADR-013",
+      "titulo": "Toda decisión de la IA queda registrada aquí antes de escribir el código",
+      "fecha": "2026-08-06",
+      "autor": "IA",
+      "estado": "aceptada",
+      "contexto": "El proyecto se desarrolla con asistencia de IA a alta velocidad. Sin un registro, en tres días nadie recuerda por qué algo está así y el equipo revierte decisiones buenas o repite las malas.",
+      "opciones": [
+        {
+          "nombre": "Documentar al final",
+          "descartada_porque": "Al final no hay tiempo y se escribe una racionalización, no la decisión real."
+        },
+        {
+          "nombre": "Confiar en los mensajes de commit",
+          "descartada_porque": "No capturan las alternativas descartadas ni la reversibilidad."
+        }
+      ],
+      "decision": "Cada decisión no trivial se agrega a `src/data/decisiones.json` con alternativas descartadas, reversibilidad y a qué criterio de la rúbrica sirve. `npm run validate` rechaza entradas incompletas. Las que llevan `requiere_validacion_humana: true` se muestran destacadas para que una persona las apruebe.",
+      "consecuencias": [
+        "El equipo puede auditar el criterio de la IA sin leer todo el código.",
+        "Las decisiones que necesitan aprobación humana no se pierden entre commits.",
+        "Cuesta un minuto por decisión."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Bajo.",
+      "criterios_rubrica": ["tecnica", "pitch"],
+      "evidencia": ["src/data/decisiones.json", "scripts/validate-data.mjs", "docs/REGLAS-IA.md"],
+      "requiere_validacion_humana": false
+    },
+    {
+      "id": "ADR-014",
+      "titulo": "Prueba de presencia: la beta mide corroboración, no tiempo de app abierta",
+      "fecha": "2026-08-06",
+      "autor": "IA",
+      "estado": "aceptada",
+      "contexto": "docs/PROYECTO.md descarta explícitamente recompensar 'tiempo de app abierta'. Hay que traducir 'prueba de presencia' a algo implementable en días.",
+      "opciones": [
+        {
+          "nombre": "Prueba de presencia criptográfica completa",
+          "descartada_porque": "Es un proyecto de investigación en sí mismo; no cabe antes del 12 de agosto."
+        },
+        {
+          "nombre": "Recompensa fija por reporte",
+          "descartada_porque": "Es exactamente lo que el equipo decidió evitar: farmeable sin salir de casa."
+        }
+      ],
+      "decision": "La recompensa base se multiplica por corroboración independiente: otro pseudónimo distinto reportando la misma categoría a menos de 300 m dentro de 30 minutos. Sin corroboración, la recompensa queda en estado 'pendiente de corroboración'.",
+      "consecuencias": [
+        "El incentivo premia estar donde pasan las cosas, no tener la app abierta.",
+        "Sigue siendo atacable por un adversario con varios dispositivos: se declara como límite conocido.",
+        "La regla es una función pura testeada, lista para portar a Solidity."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Bajo.",
+      "criterios_rubrica": ["tecnica", "problema", "arbitrum"],
+      "evidencia": ["src/lib/antisybil.ts", "src/lib/antisybil.test.ts"],
+      "requiere_validacion_humana": true,
+      "nota_para_humano": "Decidir con el equipo si la recompensa se mintea al reportar (optimista) o solo tras corroborarse (conservador). La beta implementa el conservador."
+    },
+    {
+      "id": "ADR-015",
+      "titulo": "El nombre del distrito se resuelve en el dispositivo, sin servicio de geocoding",
+      "fecha": "2026-08-06",
+      "autor": "IA",
+      "estado": "aceptada",
+      "contexto": "El mapa y las tarjetas necesitan mostrar 'San Juan de Lurigancho' en vez de un par de números. Lo natural sería llamar a un servicio de geocoding inverso.",
+      "opciones": [
+        {
+          "nombre": "Geocoding inverso (Nominatim, Google, Mapbox)",
+          "descartada_porque": "Enviaría la coordenada del vecino a un tercero en cada reporte, que es exactamente lo que el producto promete no hacer. Además añade una dependencia de red en el momento más crítico del flujo."
+        },
+        {
+          "nombre": "Mostrar solo las coordenadas",
+          "descartada_porque": "Un par de números no le dice nada al vecino ni al jurado."
+        }
+      ],
+      "decision": "Una lista corta de 16 distritos de referencia con sus centroides, y se elige el más cercano. No es geocodificación y no se presenta como tal: si el punto queda a más de 12 km de todos, dice 'Zona sin referencia'.",
+      "consecuencias": [
+        "La coordenada nunca sale del dispositivo para resolver un nombre.",
+        "Funciona sin conexión y sin latencia.",
+        "La precisión es de distrito, no de calle: suficiente para la interfaz, y se declara como aproximación."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Bajo: es una función pura de un solo archivo.",
+      "criterios_rubrica": ["ux", "tecnica", "problema"],
+      "evidencia": ["src/lib/zonas.ts"],
+      "requiere_validacion_humana": false
+    }
+  ]
+}

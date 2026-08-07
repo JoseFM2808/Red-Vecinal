@@ -1,6 +1,7 @@
 # Vecino Seguro — Contexto del proyecto (Claude Code)
 
 > Este archivo se carga automáticamente cuando trabajas en este repo con Claude Code.
+> **Reglas de trabajo con IA (obligatorias): `docs/REGLAS-IA.md`**
 > Contexto completo (problema, decisiones, arquitectura, monetización, roadmap, riesgos): **`docs/PROYECTO.md`**
 
 ## Qué es
@@ -21,13 +22,21 @@ donde no llegan o no generan confianza — no los reemplaza.
   - `ReportRegistry.sol` — hash IPFS + coordenadas + categoría + timestamp, emite evento.
   - `TokenReward.sol` (ERC-20) — mint con rate-limit por wallet/zona/tiempo.
   - `IdentityEscrow.sol` — vínculo wallet↔identidad cifrado, multisig simplificado 2-de-3 para el MVP.
-- **Frontend**: React/Next.js, mobile-first.
+- **Frontend** (este repo): Next.js 15 App Router + React 19 + Tailwind 4, TypeScript estricto, mobile-first.
   - Wallet abstraction: Privy o Web3Auth (nada de seed phrases visibles al usuario).
-  - Mapa en tiempo real: Mapbox/Leaflet.
+  - Mapa en tiempo real: Leaflet + OpenStreetMap (sin API key — ver ADR-004).
   - Flujo: categoría → foto/video → geolocalización automática → confirmar → recompensa.
   - Botón de escalamiento a autoridad (webhook/SMS/WhatsApp simulado para demo).
   - Pantalla conceptual de "revelación bajo orden judicial" (demo, no integración legal real).
 - **Storage**: IPFS/Pinata para evidencia multimedia.
+- **Despliegue**: Vercel, sin configuración especial. La beta arranca sin ninguna variable de entorno.
+
+## Reparto de trabajo
+- **Este repo (frontend + producto)**: pantallas, dominio, reglas anti-Sybil, hash canónico,
+  adaptadores simulados, pestaña Arquitectura, documentación.
+- **Equipo de contratos**: los tres `.sol`, su despliegue en Arbitrum Sepolia y el
+  `ArbitrumChainAdapter` que implementa la interfaz ya definida en `src/lib/chain/types.ts`.
+  Su lista de tareas está en `docs/SIGUIENTES-PASOS-ARBITRUM.md`.
 
 ## Alcance del MVP (no expandir sin justificación fuerte)
 - Máximo **2 categorías de reporte** (ej. actividad sospechosa + infraestructura/luminaria).
@@ -36,13 +45,31 @@ donde no llegan o no generan confianza — no los reemplaza.
 - Sismos: **no** es funcionalidad núcleo. Solo mencionarlo como roadmap futuro en el pitch,
   o como categoría de reporte liviana ("sismo sentido" tipo USGS "Did You Feel It?") si sobra tiempo
   al final — nunca como motor de detección propio.
+- **Cinco pestañas**: Inicio, Mapa, Reportar, Cuenta, Arquitectura. No agregar más.
 
 ## Riesgos a comunicar con transparencia (no ocultar en el pitch)
-- Anti-Sybil del MVP es básico (rate-limit), no prueba de presencia completa.
+- Anti-Sybil del MVP es básico (rate-limit + corroboración), no prueba de presencia completa.
 - Revelación selectiva es demo conceptual del mecanismo, no integración legal real.
+- Lo simulado se etiqueta **dentro del producto** (`EtiquetaSimulado`), no solo en el pitch.
 
 ## Convenciones de trabajo
 - Antes de tocar el alcance o las decisiones de diseño de arriba, confirmar que el cambio no
   compromete la entrega del 12 de agosto.
-- Cualquier decisión nueva de arquitectura o alcance que se tome durante el desarrollo debe
-  añadirse a `docs/PROYECTO.md` para que quede como fuente de verdad.
+- **Toda decisión no trivial se registra en `src/data/decisiones.json`** antes o al momento de
+  implementarla, con alternativas descartadas y reversibilidad. Formato y criterios: `docs/REGLAS-IA.md`.
+  Las que necesitan aprobación de una persona van con `requiere_validacion_humana: true`.
+- `docs/ARQUITECTURA.md` y `docs/DECISIONES.md` **son generados**. Se edita el JSON en `src/data/`
+  y se corre `npm run docs`. Editarlos a mano es trabajo perdido.
+- Todo lo que el equipo de contratos va a reemplazar vive detrás de una interfaz (`src/lib/chain`,
+  `src/lib/storage`). Las pantallas nunca importan un adaptador concreto.
+- Las reglas de negocio (`src/lib/antisybil.ts`, `src/lib/hash.ts`, `src/lib/geo.ts`) son funciones
+  puras con tests: reciben `ahora` como parámetro, no tocan React ni `window`.
+- Sin dependencias nuevas sin su ADR. Cada paquete es algo más que puede romper el build el 12 de agosto.
+
+## Comandos
+```bash
+npm run dev      # desarrollo en localhost:3000
+npm run check    # validate + docs:check + typecheck + lint + test  ← antes de decir "listo"
+npm run docs     # regenera docs/ARQUITECTURA.md y docs/DECISIONES.md desde src/data
+npm run build    # build de produccion (lo mismo que corre Vercel)
+```

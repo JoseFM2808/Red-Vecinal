@@ -1,0 +1,448 @@
+"use client";
+
+/* eslint-disable @next/next/no-img-element */
+
+import Link from "next/link";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useApp } from "@/components/proveedores/AppProvider";
+import { Icono } from "@/components/ui/Icono";
+import { Aviso, Dato, EtiquetaSimulado } from "@/components/ui/primitivos";
+import { CATEGORIAS, obtenerCategoria } from "@/lib/categorias";
+import { TEXTO_ETAPA, type EtapaFlujo, type ResultadoFlujo } from "@/lib/flujo-reporte";
+import { abreviarHash, formatearUsd } from "@/lib/formato";
+import { formatearCoordenada } from "@/lib/geo";
+import type { Coordenada, IdCategoria } from "@/lib/tipos";
+import { nombreDeZona } from "@/lib/zonas";
+
+/**
+ * Flujo de reporte en tres pasos (ADR-011).
+ *
+ * Regla de diseno: nada obligatorio salvo la categoria y la ubicacion. Si alguien
+ * esta reportando algo que esta pasando ahora, cada campo obligatorio de mas es
+ * una razon para cerrar la app.
+ *
+ * Las etapas que se muestran mientras se envia son las reales del pipeline
+ * (validar, IPFS, hash, anclaje), no una animacion de relleno.
+ */
+
+type Paso = "categoria" | "detalle" | "enviando" | "resultado";
+
+/** Punto de respaldo para probar la demo en un escritorio sin GPS. */
+const UBICACION_DEMO: Coordenada = { lat: -11.9762, lng: -76.9941 };
+
+export function FlujoReporte() {
+  const { enviarReporte, escalar } = useApp();
+
+  const [paso, setPaso] = useState<Paso>("categoria");
+  const [categoria, setCategoria] = useState<IdCategoria | null>(null);
+  const [descripcion, setDescripcion] = useState("");
+  const [archivo, setArchivo] = useState<File | null>(null);
+  const [vistaPrevia, setVistaPrevia] = useState<string | null>(null);
+  const [coordenada, setCoordenada] = useState<Coordenada | null>(null);
+  const [estadoGps, setEstadoGps] = useState<"inactivo" | "buscando" | "listo" | "error">(
+    "inactivo",
+  );
+  const [etapa, setEtapa] = useState<EtapaFlujo>("validando");
+  const [resultado, setResultado] = useState<ResultadoFlujo | null>(null);
+  const [folio, setFolio] = useState<string | null>(null);
+
+  const inputArchivo = useRef<HTMLInputElement>(null);
+
+  const pedirUbicacion = useCallback(() => {
+    if (!("geolocation" in navigator)) {
+      setEstadoGps("error");
+      return;
+    }
+    setEstadoGps("buscando");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setCoordenada({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setEstadoGps("listo");
+      },
+      () => setEstadoGps("error"),
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  }, []);
+
+  useEffect(() => {
+    if (paso === "detalle" && estadoGps === "inactivo") pedirUbicacion();
+  }, [estadoGps, paso, pedirUbicacion]);
+
+  useEffect(() => {
+    if (!archivo) {
+      setVistaPrevia(null);
+      return;
+    }
+    const url = URL.createObjectURL(archivo);
+    setVistaPrevia(url);
+    return () => URL.revokeObjectURL(url);
+  }, [archivo]);
+
+  const reiniciar = () => {
+    setPaso("categoria");
+    setCategoria(null);
+    setDescripcion("");
+    setArchivo(null);
+    setCoordenada(null);
+    setEstadoGps("inactivo");
+    setResultado(null);
+    setFolio(null);
+  };
+
+  const enviar = async () => {
+    if (!categoria || !coordenada) return;
+    setPaso("enviando");
+    setEtapa("validando");
+
+    const res = await enviarReporte({ categoria, descripcion, coordenada, archivo }, setEtapa);
+    setResultado(res);
+    setPaso("resultado");
+  };
+
+  // --- Paso 1: categoria ----------------------------------------------------
+
+  if (paso === "categoria") {
+    return (
+      <div className="space-y-3 px-4">
+        <p className="text-sm text-suave">Que esta pasando?</p>
+        {CATEGORIAS.map((c) => (
+          <button
+            key={c.id}
+            type="button"
+            onClick={() => {
+              setCategoria(c.id);
+              setPaso("detalle");
+            }}
+            className="tarjeta flex w-full items-start gap-3.5 p-4 text-left transition active:scale-[0.99]"
+          >
+            <span
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-xl"
+              style={{ backgroundColor: `${c.color}1f`, color: c.color }}
+            >
+              <Icono nombre={c.icono} className="h-6 w-6" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-base font-semibold text-texto">{c.nombre}</span>
+              <span className="mt-0.5 block text-xs leading-relaxed text-suave">
+                {c.descripcionCorta}
+              </span>
+              <span className="mt-1.5 block text-[11px] leading-relaxed text-tenue">
+                {c.ejemplos}
+              </span>
+            </span>
+          </button>
+        ))}
+
+        <Aviso tono="info" icono="candado">
+          Reportas con un alias. Tu identidad real no sale de este dispositivo y no se escribe en
+          la cadena.
+        </Aviso>
+      </div>
+    );
+  }
+
+  // --- Paso 2: detalle ------------------------------------------------------
+
+  if (paso === "detalle" && categoria) {
+    const cat = obtenerCategoria(categoria);
+    const listoParaEnviar = coordenada !== null;
+
+    return (
+      <div className="space-y-4 px-4">
+        <button
+          type="button"
+          onClick={() => setPaso("categoria")}
+          className="toque -ml-1 inline-flex items-center gap-1.5 text-xs text-tenue"
+        >
+          <Icono nombre="flecha" className="h-3.5 w-3.5 rotate-180" />
+          Cambiar categoria
+        </button>
+
+        <div
+          className="flex items-center gap-3 rounded-xl border p-3"
+          style={{ borderColor: `${cat.color}55`, backgroundColor: `${cat.color}12` }}
+        >
+          <Icono nombre={cat.icono} className="h-5 w-5" />
+          <span className="text-sm font-medium">{cat.nombre}</span>
+        </div>
+
+        <div>
+          <label htmlFor="descripcion" className="etiqueta-seccion mb-1.5 block">
+            Que viste (opcional)
+          </label>
+          <textarea
+            id="descripcion"
+            value={descripcion}
+            onChange={(e) => setDescripcion(e.target.value.slice(0, 280))}
+            rows={3}
+            placeholder="Dos personas en moto dando vueltas a la cuadra…"
+            className="w-full resize-none rounded-xl border border-borde bg-superficie px-3.5 py-3 text-sm text-texto placeholder:text-tenue focus:border-marca/60 focus:outline-none"
+          />
+          <p className="mt-1 text-right text-[11px] text-tenue">{descripcion.length}/280</p>
+        </div>
+
+        <div>
+          <span className="etiqueta-seccion mb-1.5 block">Evidencia (opcional)</span>
+          <input
+            ref={inputArchivo}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={(e) => setArchivo(e.target.files?.[0] ?? null)}
+          />
+          {vistaPrevia ? (
+            <div className="relative">
+              <img
+                src={vistaPrevia}
+                alt="Vista previa de la evidencia"
+                className="w-full rounded-xl border border-borde object-cover"
+              />
+              <button
+                type="button"
+                onClick={() => setArchivo(null)}
+                aria-label="Quitar foto"
+                className="toque absolute right-2 top-2 grid place-items-center rounded-full bg-fondo/85 text-texto"
+              >
+                <Icono nombre="cerrar" className="h-4 w-4" />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => inputArchivo.current?.click()}
+              className="toque flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-borde bg-superficie py-5 text-sm text-suave transition active:scale-[0.99]"
+            >
+              <Icono nombre="camara" className="h-5 w-5" />
+              Tomar o elegir una foto
+            </button>
+          )}
+        </div>
+
+        <div>
+          <span className="etiqueta-seccion mb-1.5 block">Ubicacion</span>
+          <div className="tarjeta p-3.5">
+            {estadoGps === "buscando" ? (
+              <p className="text-sm text-suave">Buscando tu ubicacion…</p>
+            ) : coordenada ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <Icono nombre="ubicacion" className="h-4 w-4 text-marca" />
+                  <span className="text-sm text-texto">{nombreDeZona(coordenada)}</span>
+                </div>
+                <p className="mt-1 font-mono text-[11px] text-tenue">
+                  {formatearCoordenada(coordenada)} · truncada a ~11 m antes de salir del telefono
+                </p>
+              </>
+            ) : (
+              <div className="space-y-2.5">
+                <p className="text-sm text-suave">
+                  {estadoGps === "error"
+                    ? "No se pudo obtener el GPS (permiso denegado o navegador sin ubicacion)."
+                    : "Hace falta la ubicacion para publicar el reporte."}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={pedirUbicacion}
+                    className="toque rounded-lg border border-borde bg-superficie-alta px-3 py-2 text-xs font-medium text-texto"
+                  >
+                    Reintentar GPS
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCoordenada(UBICACION_DEMO);
+                      setEstadoGps("listo");
+                    }}
+                    className="toque inline-flex items-center gap-1.5 rounded-lg border border-ambar/40 bg-ambar/10 px-3 py-2 text-xs font-medium text-ambar"
+                  >
+                    Usar ubicacion de demo
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <button
+          type="button"
+          disabled={!listoParaEnviar}
+          onClick={() => void enviar()}
+          className="toque flex w-full items-center justify-center gap-2 rounded-2xl bg-alerta py-4 text-base font-semibold text-white shadow-lg shadow-alerta/20 transition active:scale-[0.98] disabled:opacity-40 disabled:shadow-none"
+        >
+          <Icono nombre="reportar" className="h-5 w-5" />
+          Publicar reporte
+        </button>
+      </div>
+    );
+  }
+
+  // --- Paso 3: enviando -----------------------------------------------------
+
+  if (paso === "enviando") {
+    const etapas: EtapaFlujo[] = archivo
+      ? ["validando", "subiendo_evidencia", "calculando_hash", "anclando"]
+      : ["validando", "calculando_hash", "anclando"];
+    const indiceActual = etapas.indexOf(etapa);
+
+    return (
+      <div className="space-y-4 px-4 pt-6">
+        <p className="text-sm text-suave">Publicando tu reporte…</p>
+        <ol className="space-y-2.5">
+          {etapas.map((e, i) => {
+            const hecha = indiceActual > i || etapa === "listo";
+            const activa = indiceActual === i && etapa !== "listo";
+            return (
+              <li key={e} className="flex items-center gap-3">
+                <span
+                  className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border text-[10px] ${
+                    hecha
+                      ? "border-marca bg-marca text-fondo"
+                      : activa
+                        ? "border-marca text-marca"
+                        : "border-borde text-tenue"
+                  }`}
+                >
+                  {hecha ? <Icono nombre="check" className="h-3.5 w-3.5" /> : i + 1}
+                </span>
+                <span className={`text-sm ${activa || hecha ? "text-texto" : "text-tenue"}`}>
+                  {TEXTO_ETAPA[e]}
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
+    );
+  }
+
+  // --- Paso 4: resultado ----------------------------------------------------
+
+  if (paso === "resultado" && resultado) {
+    if (!resultado.ok) {
+      return (
+        <div className="space-y-4 px-4 pt-2">
+          <Aviso tono="alerta" icono="alerta">
+            {resultado.mensaje}
+          </Aviso>
+          {resultado.codigo !== "error" ? (
+            <p className="text-xs leading-relaxed text-tenue">
+              Este limite es la defensa anti-Sybil del MVP: evita que una sola cuenta inunde la red
+              para farmear tokens. Se aplica igual en el contrato, no solo en la app.
+            </p>
+          ) : null}
+          <button
+            type="button"
+            onClick={reiniciar}
+            className="toque w-full rounded-xl border border-borde bg-superficie-alta py-3 text-sm font-medium text-texto"
+          >
+            Volver a empezar
+          </button>
+        </div>
+      );
+    }
+
+    const { reporte } = resultado;
+    const cat = obtenerCategoria(reporte.categoria);
+
+    return (
+      <div className="aparecer space-y-5 px-4 pt-2">
+        <div className="flex items-center gap-3 rounded-2xl border border-marca/40 bg-marca/10 p-4">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-marca text-fondo">
+            <Icono nombre="check" className="h-6 w-6" />
+          </span>
+          <div>
+            <p className="text-sm font-semibold text-texto">Reporte publicado</p>
+            <p className="text-xs text-suave">
+              La red vecinal de {reporte.zonaNombre} ya lo puede ver.
+            </p>
+          </div>
+        </div>
+
+        <section>
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="etiqueta-seccion">Comprobante</h2>
+            {reporte.cadena?.simulado ? <EtiquetaSimulado /> : null}
+          </div>
+          <div className="tarjeta divide-y divide-borde px-4 py-1">
+            <Dato etiqueta="Categoria" valor={cat.nombre} />
+            <Dato etiqueta="Hash del reporte" valor={abreviarHash(reporte.contentHash)} mono />
+            {reporte.cadena ? (
+              <>
+                <Dato etiqueta="Transaccion" valor={abreviarHash(reporte.cadena.txHash)} mono />
+                <Dato etiqueta="Costo del anclaje" valor={formatearUsd(reporte.cadena.costoGasUsd)} />
+              </>
+            ) : null}
+            {reporte.evidencia ? (
+              <Dato etiqueta="Evidencia IPFS" valor={abreviarHash(reporte.evidencia.cid, 5)} mono />
+            ) : null}
+          </div>
+        </section>
+
+        <section>
+          <h2 className="etiqueta-seccion mb-2">Recompensa</h2>
+          <div className="tarjeta p-4">
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-semibold tabular-nums text-marca">
+                {reporte.recompensa.monto}
+              </span>
+              <span className="text-sm text-suave">{reporte.recompensa.simbolo}</span>
+              {reporte.recompensa.multiplicador > 1 ? (
+                <span className="rounded-full bg-marca/12 px-2 py-0.5 text-[10px] font-semibold text-marca">
+                  x{reporte.recompensa.multiplicador}
+                </span>
+              ) : null}
+            </div>
+            <p className="mt-1.5 text-xs leading-relaxed text-suave">{reporte.recompensa.motivo}</p>
+          </div>
+        </section>
+
+        {cat.urgente && !folio ? (
+          <section>
+            <h2 className="etiqueta-seccion mb-2">Necesitas ayuda ahora?</h2>
+            <div className="grid grid-cols-3 gap-2">
+              {(["serenazgo", "policia", "ambulancia"] as const).map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={async () => setFolio(await escalar(reporte.id, d))}
+                  className="toque rounded-xl border border-borde bg-superficie-alta px-2 py-3 text-xs font-medium capitalize text-texto transition active:scale-[0.98]"
+                >
+                  {d}
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 text-[11px] leading-relaxed text-tenue">
+              La red vecinal ya fue avisada. Esto agrega la ruta institucional.
+            </p>
+          </section>
+        ) : null}
+
+        {folio ? (
+          <Aviso tono="info" icono="megafono">
+            Aviso escalado con folio <span className="font-mono">{folio}</span>.
+          </Aviso>
+        ) : null}
+
+        <div className="flex gap-2">
+          <Link
+            href="/mapa"
+            className="toque flex flex-1 items-center justify-center rounded-xl bg-superficie-alta py-3 text-sm font-medium text-texto"
+          >
+            Ver en el mapa
+          </Link>
+          <button
+            type="button"
+            onClick={reiniciar}
+            className="toque flex-1 rounded-xl border border-borde py-3 text-sm font-medium text-suave"
+          >
+            Otro reporte
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}

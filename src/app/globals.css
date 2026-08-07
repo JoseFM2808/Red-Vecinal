@@ -1,0 +1,171 @@
+@import "tailwindcss";
+
+/**
+ * Sistema visual de Vecino Seguro (ADR-011).
+ *
+ * Tema oscuro por defecto porque el contexto de uso real es la calle de noche.
+ * Todo esta dimensionado para una mano: area tactil minima 44 px, barra de
+ * navegacion abajo, y respeto del safe-area del iPhone.
+ */
+
+@theme {
+  --color-fondo: #0a0c0f;
+  --color-superficie: #14181e;
+  --color-superficie-alta: #1c222a;
+  --color-borde: #272e38;
+  --color-texto: #e9eef4;
+  --color-suave: #96a1b0;
+  --color-tenue: #5d6875;
+
+  --color-marca: #2fe6a8;
+  --color-marca-oscura: #0f5c44;
+  --color-alerta: #ff5c5c;
+  --color-ambar: #f5b544;
+  --color-info: #62a8ff;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+
+  --radius-tarjeta: 1rem;
+}
+
+:root {
+  color-scheme: dark;
+  --alto-barra: 4.25rem;
+}
+
+html,
+body {
+  background-color: var(--color-fondo);
+  color: var(--color-texto);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
+}
+
+body {
+  /* Sin scroll horizontal en 360 px, pase lo que pase. */
+  overflow-x: hidden;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@layer components {
+  .tarjeta {
+    background-color: var(--color-superficie);
+    border: 1px solid var(--color-borde);
+    border-radius: var(--radius-tarjeta);
+  }
+
+  .toque {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .etiqueta-seccion {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-tenue);
+  }
+}
+
+/* Deja libre la barra inferior de navegacion mas el safe-area del dispositivo. */
+.espacio-barra {
+  padding-bottom: calc(var(--alto-barra) + env(safe-area-inset-bottom, 0px) + 1rem);
+}
+
+.safe-abajo {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* --- Mapa ---------------------------------------------------------------- */
+/* Las teselas de OpenStreetMap son claras; se invierten para que el mapa
+   acompane el tema oscuro sin depender de un proveedor de teselas con API key. */
+.mapa-oscuro .leaflet-tile {
+  filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.92) saturate(0.7);
+}
+
+.mapa-oscuro .leaflet-container {
+  background: #0a0c0f;
+  font-family: var(--font-sans);
+}
+
+.mapa-oscuro .leaflet-control-attribution {
+  background: rgba(10, 12, 15, 0.75);
+  color: #6b7684;
+  font-size: 9px;
+}
+
+.mapa-oscuro .leaflet-control-attribution a {
+  color: #8b96a5;
+}
+
+.mapa-oscuro .leaflet-control-zoom a {
+  background: #14181e;
+  color: #e9eef4;
+  border-color: #272e38;
+}
+
+.marcador-reporte {
+  display: grid;
+  place-items: center;
+}
+
+.marcador-reporte span {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  border: 2px solid rgba(10, 12, 15, 0.9);
+  box-shadow: 0 0 0 2px currentColor;
+}
+
+.pulso-yo {
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: var(--color-info);
+  border: 3px solid rgba(10, 12, 15, 0.9);
+  box-shadow: 0 0 0 6px rgba(98, 168, 255, 0.18);
+}
+
+/* --- Animaciones --------------------------------------------------------- */
+
+@keyframes aparecer {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.aparecer {
+  animation: aparecer 0.22s ease-out both;
+}
+
+@keyframes subir-hoja {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.subir-hoja {
+  animation: subir-hoja 0.24s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aparecer,
+  .subir-hoja {
+    animation: none;
+  }
+}
