@@ -3,7 +3,15 @@
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useEffect, useMemo } from "react";
-import { Circle, MapContainer, Marker, TileLayer, Tooltip, useMap } from "react-leaflet";
+import {
+  Circle,
+  MapContainer,
+  Marker,
+  TileLayer,
+  Tooltip,
+  useMap,
+  useMapEvents,
+} from "react-leaflet";
 import { obtenerCategoria } from "@/lib/categorias";
 import type { Coordenada, Reporte } from "@/lib/tipos";
 
@@ -34,6 +42,9 @@ interface Props {
   contactos?: ContactoEnMapa[];
   /** Radio de incertidumbre del GPS, para dibujarlo en vez de fingir precision. */
   precisionUsuarioM?: number | null;
+  /** Cambia para forzar un nuevo vuelo aunque el destino sea el mismo. */
+  intento: number;
+  onMover: (centro: Coordenada, zoom: number) => void;
   onSeleccionar: (id: string) => void;
 }
 
@@ -66,12 +77,90 @@ function iconoContacto(nombre: string, enRiesgo: boolean): L.DivIcon {
   });
 }
 
-/** Sigue al reporte seleccionado sin recrear el mapa. */
-function Seguir({ lat, lng, zoom }: { lat: number; lng: number; zoom: number }) {
+/**
+ * Avisa a Leaflet cuando su contenedor cambia de tamano.
+ *
+ * Leaflet calcula el tamano del mapa UNA vez, al montarse, y no vuelve a mirarlo. Si el
+ * contenedor cambia despues, sigue pintando teselas para el tamano viejo y aparece una
+ * banda gris en el borde. Pasa mas de lo que parece:
+ *
+ *   - al rotar el telefono
+ *   - al redimensionar la ventana en escritorio
+ *   - y sobre todo al hacer scroll en un movil: la barra de direcciones se oculta, cambia
+ *     el valor de dvh y con el la altura del contenedor, que es h-[46dvh]
+ *
+ * Medido antes de este arreglo: contenedor de 512 px con teselas cubriendo solo hasta 457.
+ */
+function AjustarTamano() {
+  const map = useMap();
+
+  useEffect(() => {
+    const contenedor = map.getContainer();
+    if (typeof ResizeObserver === "undefined") return;
+
+    const observador = new ResizeObserver(() => {
+      // Sin animacion: es una correccion, no un movimiento que el usuario deba ver.
+      map.invalidateSize({ animate: false });
+    });
+    observador.observe(contenedor);
+
+    return () => observador.disconnect();
+  }, [map]);
+
+  return null;
+}
+
+/**
+ * Avisa hacia arriba de donde dejo el usuario el mapa.
+ *
+ * Sin esto, arrastrar el mapa no se recuerda en ningun sitio: al cerrar la hoja de un
+ * reporte o al cambiar de filtro, el encuadre volaba de vuelta al punto calculado y se
+ * perdia lo que la persona estaba mirando.
+ *
+ * No hay bucle: tras un flyTo programatico esto guarda exactamente el mismo centro y
+ * zoom al que se acaba de volar, asi que las dependencias del efecto de `Seguir` no
+ * cambian y no se vuelve a volar.
+ */
+function Encuadre({
+  onMover,
+}: {
+  onMover: (centro: Coordenada, zoom: number) => void;
+}) {
+  const map = useMapEvents({
+    dragend: () => {
+      const c = map.getCenter();
+      onMover({ lat: c.lat, lng: c.lng }, map.getZoom());
+    },
+    zoomend: () => {
+      const c = map.getCenter();
+      onMover({ lat: c.lat, lng: c.lng }, map.getZoom());
+    },
+  });
+  return null;
+}
+
+/**
+ * Sigue al reporte seleccionado sin recrear el mapa.
+ *
+ * `intento` permite forzar el vuelo aunque las coordenadas sean identicas: el boton de
+ * "centrar en mi ubicacion" pasaba la misma referencia y a partir del segundo toque no
+ * pasaba nada.
+ */
+function Seguir({
+  lat,
+  lng,
+  zoom,
+  intento,
+}: {
+  lat: number;
+  lng: number;
+  zoom: number;
+  intento: number;
+}) {
   const map = useMap();
   useEffect(() => {
     map.flyTo([lat, lng], zoom, { duration: 0.6 });
-  }, [lat, lng, map, zoom]);
+  }, [intento, lat, lng, map, zoom]);
   return null;
 }
 
@@ -83,6 +172,8 @@ export default function MapaLeaflet({
   posicionUsuario,
   contactos,
   precisionUsuarioM,
+  intento,
+  onMover,
   onSeleccionar,
 }: Props) {
   const marcadores = useMemo(
@@ -111,7 +202,9 @@ export default function MapaLeaflet({
         maxZoom={19}
       />
 
-      <Seguir lat={centro.lat} lng={centro.lng} zoom={zoom} />
+      <AjustarTamano />
+      <Encuadre onMover={onMover} />
+      <Seguir lat={centro.lat} lng={centro.lng} zoom={zoom} intento={intento} />
 
       {marcadores.map(({ reporte, icono }) => (
         <Marker

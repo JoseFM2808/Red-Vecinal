@@ -698,6 +698,41 @@
       "requiere_validacion_humana": false
     },
     {
+      "id": "ADR-024",
+      "titulo": "El mapa se aísla del resto de la interfaz y la app fija su escala de z-index",
+      "fecha": "2026-08-07",
+      "autor": "IA+Humano",
+      "estado": "aceptada",
+      "contexto": "El equipo reportó errores de compatibilidad entre pantallas, sobre todo en el mapa. La auditoría encontró la causa común: Leaflet trae su propia escala de z-index (paneles 200-700, controles 800-1000) y su contenedor no crea contexto de apilamiento, así que convivía en el mismo plano que la barra de pestañas (50), la hoja de detalle (60) y la bienvenida (100). Además, dos reglas del tema oscuro apuntaban a `.mapa-oscuro .leaflet-container` con combinador descendiente, pero react-leaflet pone ambas clases en el MISMO div: nunca aplicaron, y el mapa se veía con el gris #ddd de Leaflet y la atribución en blanco sobre fondo oscuro.",
+      "opciones": [
+        {
+          "nombre": "Subir los overlays de la app por encima de 1000",
+          "descartada_porque": "Es una carrera armamentística: cada librería que se agregue vuelve a competir. Aislar el mapa resuelve la clase entera de una vez."
+        },
+        {
+          "nombre": "Sobrescribir los z-index de Leaflet uno por uno",
+          "descartada_porque": "Frágil ante cualquier actualización de la librería y difícil de razonar seis días antes de una demo."
+        },
+        {
+          "nombre": "Dejarlo como estaba porque en portrait no se notaba",
+          "descartada_porque": "El recorte por overflow ocultaba el problema, no lo resolvía. Bastaba una hoja a pantalla completa o un cambio de alto para que apareciera."
+        }
+      ],
+      "decision": "El contenedor del mapa lleva `isolate`, así que todo lo de Leaflet queda encerrado en su caja y no puede competir con el chrome de la app. La escala de la app (10 / 50 / 60 / 100) queda documentada en globals.css. Los selectores del tema pasan a `.mapa-oscuro.leaflet-container` sin espacio. Se añade un ResizeObserver que llama a `invalidateSize()`, porque Leaflet mide su contenedor una sola vez y `h-[46dvh]` cambia cuando se oculta la barra del navegador móvil.",
+      "consecuencias": [
+        "Verificado: el fondo del mapa pasó de rgb(221,221,221) a rgb(10,12,15) y la atribución de blanco a oscuro.",
+        "Cualquier overlay futuro solo tiene que respetar la escala documentada; ya no hay que pensar en Leaflet.",
+        "Se corrigieron además dos fallos que dejaban la app inutilizable: la pantalla de bienvenida sin scroll (en horizontal el botón de entrar quedaba fuera y no había salida) y la píldora de estado saliéndose de su tarjeta en Arquitectura.",
+        "El mapa ahora recuerda el encuadre del usuario: filtrar o cerrar un reporte ya no lo devuelve de un salto a otro sitio.",
+        "Lección para el equipo: con react-leaflet, el className que se le pasa aterriza en el mismo elemento que `.leaflet-container`. Nunca usar combinador descendiente para estilarlo."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Bajo: son clases y selectores, sin cambios de arquitectura.",
+      "criterios_rubrica": ["ux", "tecnica"],
+      "evidencia": ["src/app/globals.css", "src/components/mapa/MapaReportes.tsx", "src/components/mapa/MapaLeaflet.tsx", "src/components/bienvenida/PantallaBienvenida.tsx", "src/components/arquitectura/PanelArquitectura.tsx"],
+      "requiere_validacion_humana": false
+    },
+    {
       "id": "ADR-101",
       "titulo": "Círculo de cuidado: aviso cuando pasa algo cerca de alguien de tu familia",
       "fecha": "2026-08-07",

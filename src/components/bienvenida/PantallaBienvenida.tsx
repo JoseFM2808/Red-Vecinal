@@ -79,9 +79,20 @@ export function PantallaBienvenida() {
 
   if (!visible) return null;
 
+  // `overflow-y-auto` no es opcional: sin el, en un movil en horizontal el contenido no
+  // cabe, y como el desbordamiento de un elemento fixed no genera scroll de documento, el
+  // boton "Entrar sin cuenta" queda fuera de la pantalla y la app entera se bloquea en la
+  // primera pantalla que ve cualquiera.
+  //
+  // El padding inferior va calculado en vez de con `safe-abajo` porque esa clase esta
+  // fuera de @layer y anulaba el pb-8, dejando el boton pegado al borde.
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col bg-fondo" role="dialog" aria-modal="true">
-      <div className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-between px-6 pb-8 pt-16 safe-abajo">
+    <div
+      className="fixed inset-0 z-[100] flex flex-col overflow-y-auto bg-fondo"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-between px-6 pt-16 pb-[calc(2rem+env(safe-area-inset-bottom,0px))]">
         <div>
           <span className="grid h-14 w-14 place-items-center rounded-2xl bg-marca/15 text-marca">
             <Icono nombre="escudo" className="h-8 w-8" />

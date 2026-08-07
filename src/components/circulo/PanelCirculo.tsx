@@ -122,7 +122,7 @@ function FichaContacto({ contacto }: { contacto: ContactoCirculo }) {
               onClick={() => alternarCompartir(contacto.id)}
               role="switch"
               aria-checked={contacto.compartiendo}
-              className={`relative h-6 w-11 shrink-0 rounded-full transition ${
+              className={`relative h-6 w-11 shrink-0 rounded-full transition before:absolute before:inset-x-0 before:-inset-y-2.5 before:content-[""] ${
                 contacto.compartiendo ? "bg-marca" : "bg-superficie-alta"
               }`}
             >

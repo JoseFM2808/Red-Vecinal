@@ -402,7 +402,7 @@ export function FlujoReporte() {
     const indiceActual = etapas.indexOf(etapa);
 
     return (
-      <div className="space-y-4 px-4 pt-6">
+      <div className="space-y-4 px-4">
         <p className="text-sm text-suave">Publicando tu reporte…</p>
         <ol className="space-y-2.5">
           {etapas.map((e, i) => {
