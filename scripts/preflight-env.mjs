@@ -132,7 +132,28 @@ if (definida("NEXT_PUBLIC_SITE_URL")) {
   }
 }
 
-// --- 3. coherencia de la configuracion de cadena (AVISOS) --------------------
+// --- 3. login con Google -----------------------------------------------------
+
+const googleId = definida("AUTH_GOOGLE_ID");
+const googleSecret = definida("AUTH_GOOGLE_SECRET");
+
+if (googleId !== googleSecret) {
+  avisos.push(
+    `Falta ${googleId ? "AUTH_GOOGLE_SECRET" : "AUTH_GOOGLE_ID"}: el login con Google necesita ` +
+      `las dos. Sin ambas, el boton no se muestra y todos usan su seudonimo local.`,
+  );
+}
+
+if (googleId && googleSecret && !definida("AUTH_SECRET")) {
+  errores.push(
+    "El login con Google esta configurado pero falta AUTH_SECRET.\n" +
+      "      Es la clave con la que se firma la cookie de sesion. Sin ella NextAuth no arranca,\n" +
+      "      y con un valor conocido cualquiera podria falsificar sesiones.\n" +
+      "      Generala con: npx auth secret   (o openssl rand -base64 32)",
+  );
+}
+
+// --- 4. coherencia de la configuracion de cadena (AVISOS) --------------------
 
 const modo = (entorno.NEXT_PUBLIC_CHAIN_MODE ?? "simulado").trim();
 

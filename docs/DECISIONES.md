@@ -4,7 +4,7 @@
 
 Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o por el equipo se registra aquí ANTES o AL MOMENTO de escribir el código que la implementa. `docs/DECISIONES.md` se genera desde este archivo (npm run docs) y la pestaña Arquitectura de la app lo renderiza.
 
-**20 decisiones registradas · 8 esperan validacion humana**
+**21 decisiones registradas · 9 esperan validacion humana**
 
 ## Esperan que una persona decida
 
@@ -18,6 +18,7 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | ADR-017 | Sin analítica de terceros, aunque Vercel la ofrezca en un clic | Confirmar que el equipo está de acuerdo en renunciar a métricas de uso de la demo a cambio de coherencia con la promesa de privacidad. |
 | ADR-019 | Tercera categoría: sismo sentido, como agregado comunitario y no como detector | Confirmar con el equipo de contratos que `uint8 category` acepta el índice 2 y que ReportRegistry no valida un máximo de 2 categorías. |
 | ADR-020 | La detección de distrito afirmaba con seguridad un distrito equivocado | Verificar en el celular, desde tu distrito real, que ahora aparece el correcto y que el margen de precisión que muestra es razonable. Si sigue fallando con ±20 m de precisión, avísame el distrito y la coordenada para ajustar el centroide. |
+| ADR-021 | Login con Google opcional: da continuidad entre dispositivos, no identidad pública | Falta lo único que no puedo hacer yo: crear el cliente OAuth en Google Cloud Console y cargar AUTH_SECRET, AUTH_GOOGLE_ID y AUTH_GOOGLE_SECRET en Vercel. Pasos exactos en docs/DESPLIEGUE.md. Hasta entonces el login queda invisible y la app funciona igual. Confirmar también que al equipo le parece bien que la cuenta de Google sea privada y no el identificador público. |
 
 ## Indice
 
@@ -43,6 +44,7 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | [ADR-018](#adr-018) | Vercel se configura solo; lo que sí bloquea el build es un secreto expuesto | IA | aceptada | alta | Implementacion tecnica, Pitch y demo |
 | [ADR-019](#adr-019) | Tercera categoría: sismo sentido, como agregado comunitario y no como detector | IA+Humano | aceptada | alta | Problema e impacto, Producto y UX, Implementacion tecnica, Pitch y demo |
 | [ADR-020](#adr-020) | La detección de distrito afirmaba con seguridad un distrito equivocado | IA+Humano | aceptada | alta | Producto y UX, Problema e impacto, Implementacion tecnica |
+| [ADR-021](#adr-021) | Login con Google opcional: da continuidad entre dispositivos, no identidad pública | IA+Humano | aceptada | alta | Producto y UX, Implementacion tecnica, Problema e impacto |
 
 ---
 
@@ -637,3 +639,39 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 **Evidencia en el codigo.** `src/lib/zonas.ts`, `src/lib/zonas.test.ts`, `src/components/reportar/FlujoReporte.tsx`
 
 > **Necesita decision humana:** Verificar en el celular, desde tu distrito real, que ahora aparece el correcto y que el margen de precisión que muestra es razonable. Si sigue fallando con ±20 m de precisión, avísame el distrito y la coordenada para ajustar el centroide.
+
+---
+
+## ADR-021
+
+### Login con Google opcional: da continuidad entre dispositivos, no identidad pública
+
+`2026-08-07` · autor: **IA+Humano** · estado: **aceptada** · reversibilidad: **alta**
+
+**Contexto.** El equipo pidió incorporar login de usuario, con Google como método suficiente. El riesgo evidente es contradecir la promesa central del producto: identidad pseudónima por defecto. Un login mal planteado convertiría a Vecino Seguro en una app más que sabe quién eres.
+
+**Alternativas descartadas.**
+
+- *Que la cuenta de Google sea la identidad pública del vecino* — Rompe el diseño acordado en ADR-005 y la razón de ser del proyecto. Nadie reporta a un vecino peligroso con su nombre y foto al lado.
+- *Login obligatorio* — Cada paso previo al primer reporte cuesta usuarios, y el producto presume de no pedir registro. Reportar tiene que seguir funcionando sin cuenta.
+- *Integrar Privy o Web3Auth ahora* — Es lo correcto para producción y sigue en el roadmap, pero exige configuración de dashboard que el equipo aún no tiene. Google resuelve hoy lo que se pidió.
+- *Guardar las cuentas en una base de datos* — Crearía justo lo que el producto promete no tener: un servidor con los datos de los vecinos, que alguien puede pedir o filtrar.
+
+**Decision.** Auth.js v5 con Google, opcional. La sesión es un JWT en cookie firmada, sin base de datos. El alias público se deriva por SHA-256 del identificador de la cuenta, así que entrar desde otro teléfono devuelve el MISMO seudónimo y los mismos reportes propios — que es lo que resuelve el login. La cuenta de Google nunca se muestra a la red ni toca la cadena: es exactamente la identidad real que IdentityEscrow custodiaría bajo 2-de-3.
+
+**Consecuencias.**
+
+- Wallet abstraction demostrable hoy: continuidad entre dispositivos sin que nadie vea una seed phrase.
+- La app sigue funcionando sin credenciales configuradas: el botón no aparece y todos usan su seudónimo local.
+- La disponibilidad del proveedor se consulta a /api/auth/providers en runtime. Leer process.env en el layout no bastaba: las páginas son estáticas y el valor quedaba horneado en el build — verificado fallando antes de corregirlo.
+- Las 12 rutas siguen estáticas: no se usa middleware ni auth() en server components.
+- La derivación del alias es de demostración, no una KDF: produce un identificador estable, no una llave con la que firmar.
+- Quien opera la plataforma podría vincular cuenta y alias, porque la derivación es pública. Es el mismo supuesto que ya asume IdentityEscrow, y hay que decirlo así.
+
+**Costo de revertir.** Bajo: quitar el proveedor deja a todos con su seudónimo local, que es el camino por defecto y nunca se retiró.
+
+**Sirve a.** Producto y UX, Implementacion tecnica, Problema e impacto
+
+**Evidencia en el codigo.** `src/auth.ts`, `src/lib/identidad.ts`, `src/lib/identidad.test.ts`, `src/components/cuenta/AccesoGoogle.tsx`, `src/components/proveedores/SesionProvider.tsx`
+
+> **Necesita decision humana:** Falta lo único que no puedo hacer yo: crear el cliente OAuth en Google Cloud Console y cargar AUTH_SECRET, AUTH_GOOGLE_ID y AUTH_GOOGLE_SECRET en Vercel. Pasos exactos en docs/DESPLIEGUE.md. Hasta entonces el login queda invisible y la app funciona igual. Confirmar también que al equipo le parece bien que la cuenta de Google sea privada y no el identificador público.

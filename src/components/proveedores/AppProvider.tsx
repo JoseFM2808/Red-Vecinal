@@ -9,10 +9,11 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useSession } from "next-auth/react";
 import { POLITICA_RECOMPENSA, recompensaTrasCorroborar } from "@/lib/antisybil";
 import { obtenerAdaptadorDeCadena } from "@/lib/chain";
 import { distanciaMetros } from "@/lib/geo";
-import { cargarOCrearIdentidad } from "@/lib/identidad";
+import { cargarOCrearIdentidad, derivarIdentidadDeCuenta } from "@/lib/identidad";
 import {
   crearReporte,
   type EtapaFlujo,
@@ -51,8 +52,17 @@ export interface ResultadoEscalamiento {
 /** El servidor ya se corta a los 4 s; el cliente espera un poco mas por el arranque en frio. */
 const TIMEOUT_ESCALAMIENTO_MS = 10_000;
 
+/** Cuenta de Google vinculada. Privada: nunca se muestra a la red ni toca la cadena. */
+export interface CuentaVinculada {
+  nombre: string | null;
+  correo: string | null;
+  imagen: string | null;
+}
+
 interface EstadoApp {
   identidad: Identidad | null;
+  /** null cuando el vecino usa solo su seudonimo local, sin haber entrado con Google. */
+  cuenta: CuentaVinculada | null;
   reportes: Reporte[];
   cargando: boolean;
   saldo: number;
@@ -97,20 +107,22 @@ function agregarCorroboracion(reporte: Reporte, direccion: string): Reporte {
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
+  const { data: sesion, status } = useSession();
   const [identidad, setIdentidad] = useState<Identidad | null>(null);
   const [reportes, setReportes] = useState<Reporte[]>([]);
   const [cargando, setCargando] = useState(true);
 
+  const idCuenta = sesion?.user?.id ?? null;
+
+  // Carga de reportes: independiente de la sesion.
   useEffect(() => {
     let vigente = true;
 
     const iniciar = async () => {
-      const id = cargarOCrearIdentidad();
       const guardados = cargarReportes();
       const iniciales = guardados ?? (await construirReportesSembrados(Date.now()));
 
       if (!vigente) return;
-      setIdentidad(id);
       setReportes(iniciales);
       setCargando(false);
       if (!guardados) guardarReportes(iniciales);
@@ -121,6 +133,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
       vigente = false;
     };
   }, []);
+
+  // Identidad: derivada de la cuenta si entro con Google, local si no (ADR-021).
+  // Entrar desde otro telefono devuelve el mismo alias y los mismos reportes propios.
+  useEffect(() => {
+    if (status === "loading") return;
+    let vigente = true;
+
+    const resolver = async () => {
+      const id = idCuenta
+        ? await derivarIdentidadDeCuenta(idCuenta, Date.now())
+        : cargarOCrearIdentidad();
+      if (vigente) setIdentidad(id);
+    };
+
+    void resolver();
+    return () => {
+      vigente = false;
+    };
+  }, [idCuenta, status]);
 
   const persistir = useCallback((siguiente: Reporte[]) => {
     setReportes(siguiente);
@@ -277,8 +308,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
         .filter((r) => r.recompensa.estado === estado)
         .reduce((total, r) => total + r.recompensa.monto, 0);
 
+    const cuenta: CuentaVinculada | null = sesion?.user
+      ? {
+          nombre: sesion.user.name ?? null,
+          correo: sesion.user.email ?? null,
+          imagen: sesion.user.image ?? null,
+        }
+      : null;
+
     return {
       identidad,
+      cuenta,
       reportes,
       cargando,
       saldo: sumar("otorgada"),
@@ -289,7 +329,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       escalar,
       reiniciarDemo,
     };
-  }, [cargando, corroborar, enviarReporte, escalar, identidad, reiniciarDemo, reportes]);
+  }, [cargando, corroborar, enviarReporte, escalar, identidad, reiniciarDemo, reportes, sesion]);
 
   return <Contexto.Provider value={valor}>{children}</Contexto.Provider>;
 }

@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { BarraPestanas } from "@/components/navegacion/BarraPestanas";
 import { AppProvider } from "@/components/proveedores/AppProvider";
+import { SesionProvider } from "@/components/proveedores/SesionProvider";
+import { googleConfigurado } from "@/lib/auth/config";
 import { urlBase } from "@/lib/url-base";
 
 const DESCRIPCION =
@@ -50,12 +52,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es">
       <body className="min-h-dvh bg-fondo text-texto antialiased">
-        <AppProvider>
-          <div className="mx-auto flex min-h-dvh max-w-lg flex-col">
-            <main className="flex-1 espacio-barra">{children}</main>
-          </div>
-          <BarraPestanas />
-        </AppProvider>
+        {/* El layout es server component: aqui se decide si hay login sin exponer credenciales. */}
+        <SesionProvider googleDisponible={googleConfigurado()}>
+          <AppProvider>
+            <div className="mx-auto flex min-h-dvh max-w-lg flex-col">
+              <main className="flex-1 espacio-barra">{children}</main>
+            </div>
+            <BarraPestanas />
+          </AppProvider>
+        </SesionProvider>
       </body>
     </html>
   );

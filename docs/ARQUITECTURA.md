@@ -81,12 +81,12 @@ Ruta API que valida el aviso y genera folio para serenazgo, policía o ambulanci
 - Tecnologias: Next.js Route Handler
 - Codigo: `src/app/api/escalamiento/route.ts`
 
-### Identidad y revelación selectiva `identidad` — Simulado
+### Identidad, acceso y revelación selectiva `identidad` — Simulado
 
-Pseudónimo generado en el dispositivo, sin seed phrase visible. Pantalla que demuestra el flujo de revelación 2-de-3 (usuario + plataforma + autoridad).
+Alias público generado en el dispositivo, sin seed phrase visible. Login opcional con Google que devuelve el MISMO alias en otro teléfono: la cuenta nunca se muestra a la red ni toca la cadena, es la identidad real que IdentityEscrow custodiaría bajo 2-de-3.
 
-- Tecnologias: Privy o Web3Auth (a integrar), IdentityEscrow.sol
-- Codigo: `src/lib/identidad.ts`, `src/components/cuenta/RevelacionSelectiva.tsx`
+- Tecnologias: Auth.js v5 (Google), JWT en cookie, sin base de datos, Privy o Web3Auth (a integrar), IdentityEscrow.sol
+- Codigo: `src/auth.ts`, `src/lib/identidad.ts`, `src/components/cuenta/AccesoGoogle.tsx`, `src/components/cuenta/RevelacionSelectiva.tsx`
 
 ### Agregado comunitario de sismos `sismos` — Listo
 
@@ -178,6 +178,7 @@ Red: Arbitrum Sepolia → Arbitrum One
 | --- | --- | --- |
 | Anclaje on-chain | El adaptador simulado produce un hash de transacción y un enlace al explorador con el formato real. | Desplegar ReportRegistry y activar NEXT_PUBLIC_CHAIN_MODE=arbitrum. |
 | Anti-Sybil | Límite por wallet y por zona, más multiplicador por corroboración independiente. | Un adversario con varios dispositivos todavía puede farmear. La prueba de presencia criptográfica es roadmap y así se dice en el pitch. |
+| Acceso con Google | Login opcional con Auth.js. El alias se deriva de la cuenta, así que entrar desde otro teléfono devuelve el mismo seudónimo y los mismos reportes. Sin base de datos: la sesión es una cookie firmada en el dispositivo. | Crear el cliente OAuth en Google Cloud y cargar las credenciales en Vercel. Hasta entonces el botón no aparece y todos usan su seudónimo local. La derivación del alias es de demostración, no una KDF. |
 | Revelación selectiva | Demostración del mecanismo 2-de-3 y del rastro público de cada solicitud. | Integración legal real con el Poder Judicial y custodia de claves por un tercero acreditado. |
 | Escalamiento a la autoridad | Ruta API que valida y emite folio; reenvía a un webhook real si está configurado. | Convenio con un municipio y su endpoint de recepción. |
 | Índice compartido | Los reportes persisten en el dispositivo; la app arranca con datos sembrados de Lima. | Leer eventos de ReportSubmitted por RPC para que dos teléfonos vean el mismo mapa. |

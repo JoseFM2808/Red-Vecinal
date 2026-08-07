@@ -85,6 +85,62 @@ de cada variable.
 
 ---
 
+## 3.b Login con Google
+
+El login es **opcional** y está construido, pero necesita credenciales que solo puede crear
+alguien con acceso a la cuenta de Google del equipo. Sin ellas la app funciona igual: el botón
+no aparece y todos usan su seudónimo local.
+
+> Qué hace y qué no: entrar **no** te identifica ante la red vecinal. Tu alias público sigue
+> siendo `vecino-1234` y es lo único que ven los demás y lo único que toca la cadena. Google
+> sirve para recuperar el mismo alias desde otro teléfono (ADR-021).
+
+### Crear el cliente OAuth
+
+1. [Google Cloud Console](https://console.cloud.google.com/) → crear o elegir un proyecto.
+2. **APIs y servicios → Pantalla de consentimiento de OAuth**: tipo **Externo**, nombre de la
+   app "Vecino Seguro", correo de soporte. Los scopes por defecto (`email`, `profile`) bastan.
+3. **APIs y servicios → Credenciales → Crear credenciales → ID de cliente de OAuth**, tipo
+   **Aplicación web**.
+4. **Orígenes autorizados de JavaScript**:
+   - `https://<tu-proyecto>.vercel.app`
+   - `http://localhost:3000` (para desarrollo)
+5. **URIs de redirección autorizados** — la ruta exacta importa:
+   - `https://<tu-proyecto>.vercel.app/api/auth/callback/google`
+   - `http://localhost:3000/api/auth/callback/google`
+6. Copiar el **ID de cliente** y el **Secreto de cliente**.
+
+### Cargar en Vercel
+
+```bash
+npx auth secret   # genera AUTH_SECRET
+```
+
+En **Settings > Environment Variables**:
+
+| Variable | Ámbito | Notas |
+| --- | --- | --- |
+| `AUTH_SECRET` | Production, Preview · **Sensitive** | Firma la cookie de sesión. **Obligatoria** si defines las dos de abajo: el preflight aborta el build si falta. |
+| `AUTH_GOOGLE_ID` | Production, Preview | El ID de cliente. |
+| `AUTH_GOOGLE_SECRET` | Production, Preview · **Sensitive** | El secreto de cliente. |
+
+Después: **Redeploy**. El botón aparece solo — la app consulta `/api/auth/providers` en runtime,
+así que no depende de que el build supiera de las credenciales.
+
+> Si usas un dominio propio o una URL de preview, hay que añadir **esa** URL a los orígenes y
+> redirecciones autorizados en Google, o el login devuelve `redirect_uri_mismatch`.
+
+### Comprobar que quedó bien
+
+```bash
+curl -s https://<tu-proyecto>.vercel.app/api/auth/providers
+```
+
+Debe responder con un objeto que contenga `"google"`. Si responde `{}`, faltan las credenciales
+o no se hizo Redeploy.
+
+---
+
 ## 4. Publicar un cambio
 
 Vercel despliega automáticamente en cada push a `main`.

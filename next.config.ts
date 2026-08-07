@@ -38,10 +38,12 @@ const CSP = [
   "default-src 'self'",
   "base-uri 'self'",
   "object-src 'none'",
-  "form-action 'self'",
+  // accounts.google.com: el login redirige alli tras el POST a /api/auth/signin.
+  "form-action 'self' https://accounts.google.com",
   "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.openstreetmap.org https://gateway.pinata.cloud https://*.mypinata.cloud",
+  // lh3.googleusercontent.com: foto de perfil de quien entra con Google.
+  "img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.openstreetmap.org https://gateway.pinata.cloud https://*.mypinata.cloud https://lh3.googleusercontent.com",
   "font-src 'self' data:",
   // Arbitrum Sepolia y One, mas los gateways de Pinata: preparados para el siguiente paso.
   "connect-src 'self' https://sepolia-rollup.arbitrum.io https://arb1.arbitrum.io https://*.arbitrum.io https://api.pinata.cloud https://gateway.pinata.cloud https://*.mypinata.cloud",

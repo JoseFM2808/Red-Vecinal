@@ -585,6 +585,47 @@
       "evidencia": ["src/lib/zonas.ts", "src/lib/zonas.test.ts", "src/components/reportar/FlujoReporte.tsx"],
       "requiere_validacion_humana": true,
       "nota_para_humano": "Verificar en el celular, desde tu distrito real, que ahora aparece el correcto y que el margen de precisión que muestra es razonable. Si sigue fallando con ±20 m de precisión, avísame el distrito y la coordenada para ajustar el centroide."
+    },
+    {
+      "id": "ADR-021",
+      "titulo": "Login con Google opcional: da continuidad entre dispositivos, no identidad pública",
+      "fecha": "2026-08-07",
+      "autor": "IA+Humano",
+      "estado": "aceptada",
+      "contexto": "El equipo pidió incorporar login de usuario, con Google como método suficiente. El riesgo evidente es contradecir la promesa central del producto: identidad pseudónima por defecto. Un login mal planteado convertiría a Vecino Seguro en una app más que sabe quién eres.",
+      "opciones": [
+        {
+          "nombre": "Que la cuenta de Google sea la identidad pública del vecino",
+          "descartada_porque": "Rompe el diseño acordado en ADR-005 y la razón de ser del proyecto. Nadie reporta a un vecino peligroso con su nombre y foto al lado."
+        },
+        {
+          "nombre": "Login obligatorio",
+          "descartada_porque": "Cada paso previo al primer reporte cuesta usuarios, y el producto presume de no pedir registro. Reportar tiene que seguir funcionando sin cuenta."
+        },
+        {
+          "nombre": "Integrar Privy o Web3Auth ahora",
+          "descartada_porque": "Es lo correcto para producción y sigue en el roadmap, pero exige configuración de dashboard que el equipo aún no tiene. Google resuelve hoy lo que se pidió."
+        },
+        {
+          "nombre": "Guardar las cuentas en una base de datos",
+          "descartada_porque": "Crearía justo lo que el producto promete no tener: un servidor con los datos de los vecinos, que alguien puede pedir o filtrar."
+        }
+      ],
+      "decision": "Auth.js v5 con Google, opcional. La sesión es un JWT en cookie firmada, sin base de datos. El alias público se deriva por SHA-256 del identificador de la cuenta, así que entrar desde otro teléfono devuelve el MISMO seudónimo y los mismos reportes propios — que es lo que resuelve el login. La cuenta de Google nunca se muestra a la red ni toca la cadena: es exactamente la identidad real que IdentityEscrow custodiaría bajo 2-de-3.",
+      "consecuencias": [
+        "Wallet abstraction demostrable hoy: continuidad entre dispositivos sin que nadie vea una seed phrase.",
+        "La app sigue funcionando sin credenciales configuradas: el botón no aparece y todos usan su seudónimo local.",
+        "La disponibilidad del proveedor se consulta a /api/auth/providers en runtime. Leer process.env en el layout no bastaba: las páginas son estáticas y el valor quedaba horneado en el build — verificado fallando antes de corregirlo.",
+        "Las 12 rutas siguen estáticas: no se usa middleware ni auth() en server components.",
+        "La derivación del alias es de demostración, no una KDF: produce un identificador estable, no una llave con la que firmar.",
+        "Quien opera la plataforma podría vincular cuenta y alias, porque la derivación es pública. Es el mismo supuesto que ya asume IdentityEscrow, y hay que decirlo así."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Bajo: quitar el proveedor deja a todos con su seudónimo local, que es el camino por defecto y nunca se retiró.",
+      "criterios_rubrica": ["ux", "tecnica", "problema"],
+      "evidencia": ["src/auth.ts", "src/lib/identidad.ts", "src/lib/identidad.test.ts", "src/components/cuenta/AccesoGoogle.tsx", "src/components/proveedores/SesionProvider.tsx"],
+      "requiere_validacion_humana": true,
+      "nota_para_humano": "Falta lo único que no puedo hacer yo: crear el cliente OAuth en Google Cloud Console y cargar AUTH_SECRET, AUTH_GOOGLE_ID y AUTH_GOOGLE_SECRET en Vercel. Pasos exactos en docs/DESPLIEGUE.md. Hasta entonces el login queda invisible y la app funciona igual. Confirmar también que al equipo le parece bien que la cuenta de Google sea privada y no el identificador público."
     }
   ]
 }

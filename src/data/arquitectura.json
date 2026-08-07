@@ -107,11 +107,11 @@
     },
     {
       "id": "identidad",
-      "nombre": "Identidad y revelación selectiva",
-      "rol": "Pseudónimo generado en el dispositivo, sin seed phrase visible. Pantalla que demuestra el flujo de revelación 2-de-3 (usuario + plataforma + autoridad).",
+      "nombre": "Identidad, acceso y revelación selectiva",
+      "rol": "Alias público generado en el dispositivo, sin seed phrase visible. Login opcional con Google que devuelve el MISMO alias en otro teléfono: la cuenta nunca se muestra a la red ni toca la cadena, es la identidad real que IdentityEscrow custodiaría bajo 2-de-3.",
       "estado": "simulado",
-      "tecnologias": ["Privy o Web3Auth (a integrar)", "IdentityEscrow.sol"],
-      "archivos": ["src/lib/identidad.ts", "src/components/cuenta/RevelacionSelectiva.tsx"]
+      "tecnologias": ["Auth.js v5 (Google)", "JWT en cookie, sin base de datos", "Privy o Web3Auth (a integrar)", "IdentityEscrow.sol"],
+      "archivos": ["src/auth.ts", "src/lib/identidad.ts", "src/components/cuenta/AccesoGoogle.tsx", "src/components/cuenta/RevelacionSelectiva.tsx"]
     },
     {
       "id": "sismos",
@@ -288,6 +288,11 @@
       "tema": "Anti-Sybil",
       "queHacemos": "Límite por wallet y por zona, más multiplicador por corroboración independiente.",
       "queFaltaria": "Un adversario con varios dispositivos todavía puede farmear. La prueba de presencia criptográfica es roadmap y así se dice en el pitch."
+    },
+    {
+      "tema": "Acceso con Google",
+      "queHacemos": "Login opcional con Auth.js. El alias se deriva de la cuenta, así que entrar desde otro teléfono devuelve el mismo seudónimo y los mismos reportes. Sin base de datos: la sesión es una cookie firmada en el dispositivo.",
+      "queFaltaria": "Crear el cliente OAuth en Google Cloud y cargar las credenciales en Vercel. Hasta entonces el botón no aparece y todos usan su seudónimo local. La derivación del alias es de demostración, no una KDF."
     },
     {
       "tema": "Revelación selectiva",

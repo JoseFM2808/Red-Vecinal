@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useApp } from "@/components/proveedores/AppProvider";
+import { AccesoGoogle } from "@/components/cuenta/AccesoGoogle";
 import { RevelacionSelectiva } from "@/components/cuenta/RevelacionSelectiva";
 import { HojaDetalle } from "@/components/reportes/HojaDetalle";
 import { TarjetaReporte } from "@/components/reportes/TarjetaReporte";
@@ -17,7 +18,8 @@ import type { Reporte } from "@/lib/tipos";
  * el mecanismo que protege tu identidad.
  */
 export function PanelCuenta() {
-  const { identidad, misReportes, saldo, saldoPendiente, reiniciarDemo, cargando } = useApp();
+  const { identidad, cuenta, misReportes, saldo, saldoPendiente, reiniciarDemo, cargando } =
+    useApp();
   const [detalle, setDetalle] = useState<Reporte | null>(null);
   const [reiniciando, setReiniciando] = useState(false);
   const cadena = obtenerAdaptadorDeCadena();
@@ -52,11 +54,14 @@ export function PanelCuenta() {
             </div>
           </div>
           <p className="mt-3 text-xs leading-relaxed text-suave">
-            Nunca pediste correo, telefono ni nombre. Tampoco viste una seed phrase: la wallet se
-            creo sola en este dispositivo.
+            {cuenta
+              ? "Este es tu alias publico y es lo unico que ve la red. Se deriva de tu cuenta, asi que entrar desde otro telefono te devuelve el mismo. Nunca viste una seed phrase."
+              : "Nunca pediste correo, telefono ni nombre. Tampoco viste una seed phrase: la wallet se creo sola en este dispositivo."}
           </p>
         </div>
       </section>
+
+      <AccesoGoogle />
 
       <section>
         <h2 className="etiqueta-seccion mb-2">Recompensas</h2>

@@ -13,6 +13,9 @@ import type { Identidad } from "./tipos";
 
 const CLAVE = "vecino-seguro:identidad:v1";
 
+/** Prefijo de dominio para que el hash no coincida con el de ningun otro sistema. */
+const SAL_DERIVACION = "vecino-seguro:identidad:v1:";
+
 function hexAleatorio(bytes: number): string {
   const buffer = new Uint8Array(bytes);
   crypto.getRandomValues(buffer);
@@ -21,13 +24,50 @@ function hexAleatorio(bytes: number): string {
     .join("");
 }
 
+/** Alias legible a partir de una direccion. Mismo formato para todas las identidades. */
+export function seudonimoDeDireccion(direccion: string): string {
+  const bruto = parseInt(direccion.slice(-4), 16);
+  const numero = Number.isNaN(bruto) ? 0 : bruto % 10000;
+  return `vecino-${numero.toString().padStart(4, "0")}`;
+}
+
 function crearIdentidad(): Identidad {
   const direccion = `0x${hexAleatorio(20)}`;
-  const numero = parseInt(direccion.slice(-4), 16) % 10000;
   return {
-    seudonimo: `vecino-${numero.toString().padStart(4, "0")}`,
+    seudonimo: seudonimoDeDireccion(direccion),
     direccion,
     creadoEn: Date.now(),
+    simulado: true,
+  };
+}
+
+/**
+ * Identidad derivada de la cuenta de Google (ADR-021).
+ *
+ * Entrar desde otro telefono devuelve el MISMO alias y la misma direccion, asi que
+ * los reportes siguen siendo del mismo vecino. Es lo que resuelve el login: continuidad
+ * entre dispositivos sin pedirle a nadie que copie una seed phrase.
+ *
+ * Limite declarado: esto es una derivacion de demostracion, no una funcion de derivacion
+ * de claves. No produce una llave con la que firmar — produce un identificador estable.
+ * La version de produccion usa wallet abstraction (Privy/Web3Auth) y el vinculo cifrado
+ * lo custodia IdentityEscrow.
+ */
+export async function derivarIdentidadDeCuenta(
+  idCuenta: string,
+  creadoEn: number,
+): Promise<Identidad> {
+  const datos = new TextEncoder().encode(`${SAL_DERIVACION}${idCuenta}`);
+  const digest = await crypto.subtle.digest("SHA-256", datos);
+  const hex = Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  const direccion = `0x${hex.slice(0, 40)}`;
+
+  return {
+    seudonimo: seudonimoDeDireccion(direccion),
+    direccion,
+    creadoEn,
     simulado: true,
   };
 }
