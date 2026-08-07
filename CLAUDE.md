@@ -48,7 +48,8 @@ donde no llegan o no generan confianza — no los reemplaza.
   (reporte → token → mapa → escalamiento) antes que varias a medio terminar.
 - Sismos: es la versión liviana tipo USGS "Did You Feel It?" (ADR-019) — agrega reportes de
   vecinos, **nunca** un motor de detección propio. No toca la economía del token.
-- **Cinco pestañas**: Inicio, Mapa, Reportar, Cuenta, Arquitectura. No agregar más.
+- **Seis pestañas**: Inicio, Mapa, Reportar, Círculo, Cuenta, Arquitectura. La de Círculo
+  solo aparece con sesión de Google iniciada (ADR-102). No agregar más.
 
 ## Riesgos a comunicar con transparencia (no ocultar en el pitch)
 - Anti-Sybil del MVP es básico (rate-limit + corroboración), no prueba de presencia completa.

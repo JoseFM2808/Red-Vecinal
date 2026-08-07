@@ -23,6 +23,9 @@ export type NombreIcono =
   | "candado"
   | "personas"
   | "megafono"
+  | "telefono"
+  | "campana"
+  | "circulo"
   | "flecha";
 
 const TRAZOS: Record<NombreIcono, React.ReactNode> = {
@@ -125,6 +128,22 @@ const TRAZOS: Record<NombreIcono, React.ReactNode> = {
     <>
       <path d="M4 10.5v3a1.5 1.5 0 0 0 1.5 1.5H8l7 4.5V6L8 10.5H5.5A1.5 1.5 0 0 0 4 12Z" />
       <path d="M18.5 9.5a4 4 0 0 1 0 5" />
+    </>
+  ),
+  telefono: (
+    <path d="M6.5 3.5h3l1.5 4-2 1.4a12 12 0 0 0 6.1 6.1l1.4-2 4 1.5v3a2 2 0 0 1-2.2 2A16.5 16.5 0 0 1 4.5 5.7a2 2 0 0 1 2-2.2Z" />
+  ),
+  campana: (
+    <>
+      <path d="M18 9a6 6 0 1 0-12 0c0 4.5-1.5 6-1.5 6h15S18 13.5 18 9Z" />
+      <path d="M10.3 19a2 2 0 0 0 3.4 0" />
+    </>
+  ),
+  circulo: (
+    <>
+      <circle cx="12" cy="10" r="3" />
+      <path d="M6.5 19.5a5.5 5.5 0 0 1 11 0" />
+      <circle cx="12" cy="12" r="9.5" strokeDasharray="3 3" />
     </>
   ),
   flecha: <path d="M5 12h13m-5-5.5L18.5 12 13 17.5" />,

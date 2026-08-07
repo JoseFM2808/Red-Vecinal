@@ -168,6 +168,42 @@ body {
   box-shadow: 0 0 0 2px currentColor;
 }
 
+/* Contacto del circulo de cuidado (ADR-101, promovido a produccion en ADR-025). */
+.marcador-contacto {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--color-contacto) 22%, #0a0c0f);
+  border: 2px solid var(--color-contacto);
+  color: var(--color-contacto);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.marcador-contacto-alerta {
+  animation: latido-contacto 1.6s ease-in-out infinite;
+}
+
+@keyframes latido-contacto {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 92, 92, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(255, 92, 92, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marcador-contacto-alerta {
+    animation: none;
+  }
+}
+
 .pulso-yo {
   width: 16px;
   height: 16px;

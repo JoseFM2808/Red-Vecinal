@@ -60,82 +60,173 @@
     {
       "id": "ui",
       "nombre": "Interfaz mobile-first",
-      "rol": "Cinco pestañas, flujo de reporte en 3 pasos, mapa y panel de arquitectura. Diseñada para una mano, de noche, con prisa.",
+      "rol": "Seis pestañas (la de Círculo solo con sesión iniciada), flujo de reporte en 3 pasos, mapa y panel de arquitectura. Diseñada para una mano, de noche, con prisa.",
       "estado": "listo",
-      "tecnologias": ["Next.js 15 (App Router)", "React 19", "Tailwind CSS 4"],
-      "archivos": ["src/app", "src/components"]
+      "tecnologias": [
+        "Next.js 15 (App Router)",
+        "React 19",
+        "Tailwind CSS 4"
+      ],
+      "archivos": [
+        "src/app",
+        "src/components"
+      ]
     },
     {
       "id": "dominio",
       "nombre": "Dominio y reglas",
       "rol": "Tipos del reporte, catálogo de categorías, hash canónico, geometría de zonas y política anti-Sybil. Funciones puras, con tests, sin dependencias.",
       "estado": "listo",
-      "tecnologias": ["TypeScript estricto", "Vitest"],
-      "archivos": ["src/lib/tipos.ts", "src/lib/hash.ts", "src/lib/geo.ts", "src/lib/antisybil.ts"]
+      "tecnologias": [
+        "TypeScript estricto",
+        "Vitest"
+      ],
+      "archivos": [
+        "src/lib/tipos.ts",
+        "src/lib/hash.ts",
+        "src/lib/geo.ts",
+        "src/lib/antisybil.ts"
+      ]
     },
     {
       "id": "estado",
       "nombre": "Estado y persistencia",
       "rol": "Repositorio de reportes con persistencia en el dispositivo y datos sembrados de Lima para que la red se vea activa desde el primer arranque.",
       "estado": "simulado",
-      "tecnologias": ["React Context", "localStorage"],
-      "archivos": ["src/lib/repositorio.ts", "src/lib/seed.ts", "src/components/proveedores/AppProvider.tsx"]
+      "tecnologias": [
+        "React Context",
+        "localStorage"
+      ],
+      "archivos": [
+        "src/lib/repositorio.ts",
+        "src/lib/seed.ts",
+        "src/components/proveedores/AppProvider.tsx"
+      ]
     },
     {
       "id": "cadena",
       "nombre": "Capa de cadena (Arbitrum)",
       "rol": "Interfaz ChainAdapter: anclar reporte, consultar recompensa, resolver enlaces al explorador. La beta corre el adaptador simulado; el adaptador de Arbitrum implementa la misma interfaz.",
       "estado": "pendiente-equipo",
-      "tecnologias": ["Arbitrum Sepolia (421614)", "Arbitrum One (42161)", "ABIs tipadas", "viem (a integrar)"],
-      "archivos": ["src/lib/chain/types.ts", "src/lib/chain/mock-adapter.ts", "src/lib/chain/redes.ts", "src/lib/chain/abis.ts"]
+      "tecnologias": [
+        "Arbitrum Sepolia (421614)",
+        "Arbitrum One (42161)",
+        "ABIs tipadas",
+        "viem (a integrar)"
+      ],
+      "archivos": [
+        "src/lib/chain/types.ts",
+        "src/lib/chain/mock-adapter.ts",
+        "src/lib/chain/redes.ts",
+        "src/lib/chain/abis.ts"
+      ]
     },
     {
       "id": "storage",
       "nombre": "Evidencia (IPFS)",
       "rol": "Sube foto o video y devuelve un CID. La beta usa un adaptador local que produce un CID determinista desde el hash del archivo.",
       "estado": "simulado",
-      "tecnologias": ["IPFS", "Pinata (a integrar)"],
-      "archivos": ["src/lib/storage/types.ts", "src/lib/storage/mock-adapter.ts"]
+      "tecnologias": [
+        "IPFS",
+        "Pinata (a integrar)"
+      ],
+      "archivos": [
+        "src/lib/storage/types.ts",
+        "src/lib/storage/mock-adapter.ts"
+      ]
     },
     {
       "id": "escalamiento",
       "nombre": "Puente con la autoridad",
       "rol": "Ruta API que valida el aviso y genera folio para serenazgo, policía o ambulancia. Reenvía a un webhook real si está configurado.",
       "estado": "simulado",
-      "tecnologias": ["Next.js Route Handler"],
-      "archivos": ["src/app/api/escalamiento/route.ts"]
+      "tecnologias": [
+        "Next.js Route Handler"
+      ],
+      "archivos": [
+        "src/app/api/escalamiento/route.ts"
+      ]
     },
     {
       "id": "identidad",
       "nombre": "Identidad, acceso y revelación selectiva",
       "rol": "Alias público generado en el dispositivo, sin seed phrase visible. Login opcional con Google que devuelve el MISMO alias en otro teléfono: la cuenta nunca se muestra a la red ni toca la cadena, es la identidad real que IdentityEscrow custodiaría bajo 2-de-3.",
       "estado": "simulado",
-      "tecnologias": ["Auth.js v5 (Google)", "JWT en cookie, sin base de datos", "Privy o Web3Auth (a integrar)", "IdentityEscrow.sol"],
-      "archivos": ["src/auth.ts", "src/lib/identidad.ts", "src/components/cuenta/AccesoGoogle.tsx", "src/components/cuenta/RevelacionSelectiva.tsx"]
+      "tecnologias": [
+        "Auth.js v5 (Google)",
+        "JWT en cookie, sin base de datos",
+        "Privy o Web3Auth (a integrar)",
+        "IdentityEscrow.sol"
+      ],
+      "archivos": [
+        "src/auth.ts",
+        "src/lib/identidad.ts",
+        "src/components/cuenta/AccesoGoogle.tsx",
+        "src/components/cuenta/RevelacionSelectiva.tsx"
+      ]
     },
     {
       "id": "sismos",
       "nombre": "Agregado comunitario de sismos",
       "rol": "Cuando dos o más vecinos distintos reportan un sismo en 30 minutos, se muestra el agregado por zona y la intensidad más repetida. Cuenta reportes, no mide sismos: no hay acelerómetros ni detección propia.",
       "estado": "listo",
-      "tecnologias": ["Función pura con tests", "Vitest"],
-      "archivos": ["src/lib/sismos.ts", "src/components/sismos/AvisoSismo.tsx"]
+      "tecnologias": [
+        "Función pura con tests",
+        "Vitest"
+      ],
+      "archivos": [
+        "src/lib/sismos.ts",
+        "src/components/sismos/AvisoSismo.tsx"
+      ]
+    },
+    {
+      "id": "circulo",
+      "nombre": "Círculo de cuidado",
+      "rol": "Si alguien comparte su ubicación contigo, avisa cuando ocurre un reporte cerca de esa persona y deja su teléfono a un toque. Es la única parte de la app que exige cuenta, porque maneja teléfonos y ubicaciones de terceros.",
+      "estado": "simulado",
+      "tecnologias": [
+        "Funciones puras con tests",
+        "Notification API",
+        "localStorage"
+      ],
+      "archivos": [
+        "src/lib/circulo.ts",
+        "src/lib/circulo-simulacion.ts",
+        "src/components/circulo/PanelCirculo.tsx"
+      ]
     },
     {
       "id": "despliegue",
       "nombre": "Despliegue y cabeceras",
       "rol": "Vercel con detección automática de Next.js. Cabeceras de seguridad y CSP declaradas en next.config.ts para poder probarlas en local. Un preflight aborta el build si alguien expone un secreto con prefijo NEXT_PUBLIC_.",
       "estado": "listo",
-      "tecnologias": ["Vercel", "GitHub Actions", "Content-Security-Policy"],
-      "archivos": ["next.config.ts", "vercel.json", "scripts/preflight-env.mjs", ".github/workflows/ci.yml"]
+      "tecnologias": [
+        "Vercel",
+        "GitHub Actions",
+        "Content-Security-Policy"
+      ],
+      "archivos": [
+        "next.config.ts",
+        "vercel.json",
+        "scripts/preflight-env.mjs",
+        ".github/workflows/ci.yml"
+      ]
     },
     {
       "id": "gobernanza",
       "nombre": "Gobernanza del desarrollo con IA",
       "rol": "Bitácora de decisiones validada en CI y renderizada dentro del producto. La arquitectura y los docs se generan del mismo JSON, así no pueden divergir.",
       "estado": "listo",
-      "tecnologias": ["JSON validado", "scripts de Node"],
-      "archivos": ["src/data/decisiones.json", "src/data/arquitectura.json", "scripts/validate-data.mjs", "scripts/generate-docs.mjs"]
+      "tecnologias": [
+        "JSON validado",
+        "scripts de Node"
+      ],
+      "archivos": [
+        "src/data/decisiones.json",
+        "src/data/arquitectura.json",
+        "scripts/validate-data.mjs",
+        "scripts/generate-docs.mjs"
+      ]
     }
   ],
   "flujo": [
@@ -274,8 +365,16 @@
       }
     ],
     "redes": [
-      { "nombre": "Arbitrum Sepolia", "chainId": 421614, "uso": "Red del hackathon" },
-      { "nombre": "Arbitrum One", "chainId": 42161, "uso": "Destino de producción" }
+      {
+        "nombre": "Arbitrum Sepolia",
+        "chainId": 421614,
+        "uso": "Red del hackathon"
+      },
+      {
+        "nombre": "Arbitrum One",
+        "chainId": 42161,
+        "uso": "Destino de producción"
+      }
     ]
   },
   "limites": [
@@ -288,6 +387,11 @@
       "tema": "Anti-Sybil",
       "queHacemos": "Límite por wallet y por zona, más multiplicador por corroboración independiente.",
       "queFaltaria": "Un adversario con varios dispositivos todavía puede farmear. La prueba de presencia criptográfica es roadmap y así se dice en el pitch."
+    },
+    {
+      "tema": "Círculo de cuidado",
+      "queHacemos": "Geometría, frescura de la ubicación, evaluación de cercanía y deduplicación de avisos, todo real y con tests. Avisos con la Notification API del navegador.",
+      "queFaltaria": "El transporte: hoy la ubicación del contacto se mueve localmente. El tiempo real entre dispositivos necesita servidor, y eso choca con la promesa de no guardar datos de nadie. Tampoco hay avisos con la app cerrada."
     },
     {
       "tema": "Acceso con Google",

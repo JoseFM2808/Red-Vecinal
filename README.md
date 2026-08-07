@@ -10,6 +10,20 @@ orden judicial verificable.
 
 > **Complementa al serenazgo donde no llega o no genera confianza. No lo reemplaza.**
 
+### Círculo de cuidado
+
+Si alguien comparte su ubicación contigo, recibes un aviso cuando ocurre un reporte cerca de
+esa persona, con su teléfono a un toque para llamarla.
+
+Es la **única parte de la app que exige cuenta de Google** (`ADR-102`): aquí viven los
+teléfonos de tu familia y las posiciones que te comparten. Sin sesión la pestaña no aparece,
+la ruta explica por qué, y el proveedor no carga nada ni emite avisos. Todo lo demás
+—reportar, mapa, ubicación— sigue funcionando sin cuenta.
+
+Lo único simulado es el transporte de la ubicación del contacto; la geometría, los avisos y
+la deduplicación son reales y tienen 20 tests. Las dos preguntas de producto que siguen
+abiertas están en `ADR-101` y `ADR-025` de [`docs/DECISIONES.md`](docs/DECISIONES.md).
+
 ---
 
 ## Arrancar
@@ -64,7 +78,7 @@ en `localhost` también. Si el GPS falla, el flujo ofrece una ubicación de demo
 ```bash
 npm run dev       # desarrollo
 npm run check     # preflight + validate + docs:check + typecheck + lint + test  ← antes de "listo"
-npm run test      # solo los tests del dominio (59)
+npm run test      # solo los tests del dominio (88)
 npm run docs      # regenera docs/ARQUITECTURA.md y docs/DECISIONES.md desde src/data
 npm run preflight # valida el entorno; aborta si un secreto lleva prefijo NEXT_PUBLIC_
 npm run build     # build de produccion (lo mismo que corre Vercel)
@@ -76,13 +90,15 @@ npm run build     # build de produccion (lo mismo que corre Vercel)
 
 ```
 src/
-├─ app/                    5 pestañas + la ruta API de escalamiento
+├─ app/                    6 pestañas + rutas API de escalamiento y de sesión
 │  ├─ page.tsx             Inicio — problema, impacto y estado de la red
 │  ├─ mapa/                Mapa vecinal (Leaflet + OpenStreetMap, sin API key)
 │  ├─ reportar/            Flujo de reporte en 3 pasos
-│  ├─ cuenta/              Alias, recompensas y revelación selectiva
+│  ├─ circulo/             Círculo de cuidado (requiere sesión)
+│  ├─ cuenta/              Alias, acceso con Google, recompensas y revelación selectiva
 │  ├─ arquitectura/        Cómo está construido esto, dentro del producto
-│  └─ api/escalamiento/    Puente con serenazgo / policía / ambulancia
+│  ├─ api/escalamiento/    Puente con serenazgo / policía / ambulancia
+│  └─ api/auth/            NextAuth (Google), sesión en cookie, sin base de datos
 ├─ components/             UI, toda mobile-first
 ├─ data/                   FUENTES DE VERDAD (arquitectura.json, decisiones.json)
 └─ lib/
@@ -91,6 +107,7 @@ src/
    ├─ geo.ts               Truncado de coordenadas y celdas de zona
    ├─ zonas.ts             Distrito estimado en el dispositivo, sin geocoding externo
    ├─ sismos.ts            Agregado comunitario "lo sentiste" (cuenta reportes, no mide)
+   ├─ circulo.ts           Cercanía a contactos y deduplicación de avisos
    ├─ flujo-reporte.ts     Orquestador: validar → IPFS → hash → anclar
    ├─ chain/               Interfaz con Arbitrum + adaptador simulado
    └─ storage/             Interfaz con IPFS + adaptador simulado

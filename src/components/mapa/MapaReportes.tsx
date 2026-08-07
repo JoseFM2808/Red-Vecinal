@@ -6,9 +6,12 @@ import { useApp } from "@/components/proveedores/AppProvider";
 import { useUbicacion } from "@/components/proveedores/UbicacionProvider";
 import { HojaDetalle } from "@/components/reportes/HojaDetalle";
 import { TarjetaReporte } from "@/components/reportes/TarjetaReporte";
+import { useCirculo } from "@/components/proveedores/CirculoProvider";
 import { AvisoSismo } from "@/components/sismos/AvisoSismo";
 import { Icono } from "@/components/ui/Icono";
 import { CATEGORIAS } from "@/lib/categorias";
+import { estadoDeContacto, reporteMasCercano } from "@/lib/circulo";
+import type { ContactoEnMapa } from "./MapaLeaflet";
 import type { Coordenada, IdCategoria, Reporte } from "@/lib/tipos";
 
 /**
@@ -29,6 +32,7 @@ const CENTRO_LIMA: Coordenada = { lat: -12.05, lng: -77.03 };
 
 export function MapaReportes() {
   const { reportes, cargando } = useApp();
+  const { contactos } = useCirculo();
   const [filtro, setFiltro] = useState<IdCategoria | null>(null);
   const [seleccionado, setSeleccionado] = useState<string | null>(null);
   /** Ultimo encuadre que dejo el usuario. Se respeta al cerrar la hoja o cambiar filtro. */
@@ -49,6 +53,24 @@ export function MapaReportes() {
     () => reportes.find((r) => r.id === seleccionado) ?? null,
     [reportes, seleccionado],
   );
+
+  // Contactos que estan compartiendo ubicacion, con su radio de aviso.
+  const contactosEnMapa = useMemo<ContactoEnMapa[]>(() => {
+    const ahora = Date.now();
+    return contactos.flatMap((contacto) => {
+      if (estadoDeContacto(contacto, ahora) !== "en_linea" || !contacto.coordenada) return [];
+      const cercano = reporteMasCercano(contacto, reportes, ahora);
+      return [
+        {
+          id: contacto.id,
+          nombre: contacto.nombre,
+          coordenada: contacto.coordenada,
+          enRiesgo: cercano !== null && cercano.distanciaM <= contacto.radioAvisoM,
+          radioAvisoM: contacto.radioAvisoM,
+        },
+      ];
+    });
+  }, [contactos, reportes]);
 
   const centro = useMemo<Coordenada>(() => {
     if (detalle) return detalle.coordenada;
@@ -92,6 +114,7 @@ export function MapaReportes() {
           zoom={zoom}
           seleccionado={seleccionado}
           posicionUsuario={posicionUsuario}
+          contactos={contactosEnMapa}
           precisionUsuarioM={precisionM}
           intento={intento}
           onMover={(c, z) => setVista({ centro: c, zoom: z })}

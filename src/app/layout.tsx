@@ -3,6 +3,7 @@ import "./globals.css";
 import { PantallaBienvenida } from "@/components/bienvenida/PantallaBienvenida";
 import { BarraPestanas } from "@/components/navegacion/BarraPestanas";
 import { AppProvider } from "@/components/proveedores/AppProvider";
+import { CirculoProvider } from "@/components/proveedores/CirculoProvider";
 import { SesionProvider } from "@/components/proveedores/SesionProvider";
 import { UbicacionProvider } from "@/components/proveedores/UbicacionProvider";
 import { googleConfigurado } from "@/lib/auth/config";
@@ -59,12 +60,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {/* Fuera de la sesion a proposito: la ubicacion no depende de tener cuenta. */}
           <UbicacionProvider>
             <AppProvider>
-              <div className="mx-auto flex min-h-dvh max-w-lg flex-col">
-                <main className="flex-1 espacio-barra">{children}</main>
-              </div>
-              <BarraPestanas />
-              {/* Solo la primera vez que se abre la app. No bloquea nada (ADR-022). */}
-              <PantallaBienvenida />
+              {/* El circulo necesita los reportes, por eso va dentro de AppProvider. */}
+              <CirculoProvider>
+                <div className="mx-auto flex min-h-dvh max-w-lg flex-col">
+                  <main className="flex-1 espacio-barra">{children}</main>
+                </div>
+                <BarraPestanas />
+                {/* Solo la primera vez que se abre la app. No bloquea nada (ADR-022). */}
+                <PantallaBienvenida />
+              </CirculoProvider>
             </AppProvider>
           </UbicacionProvider>
         </SesionProvider>

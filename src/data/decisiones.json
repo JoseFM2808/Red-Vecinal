@@ -28,8 +28,16 @@
       ],
       "reversibilidad": "alta",
       "costo_de_revertir": "Bajo: borrar el adaptador simulado y dejar solo el real.",
-      "criterios_rubrica": ["tecnica", "arbitrum", "pitch"],
-      "evidencia": ["src/lib/chain/types.ts", "src/lib/chain/mock-adapter.ts", "src/lib/chain/index.ts"],
+      "criterios_rubrica": [
+        "tecnica",
+        "arbitrum",
+        "pitch"
+      ],
+      "evidencia": [
+        "src/lib/chain/types.ts",
+        "src/lib/chain/mock-adapter.ts",
+        "src/lib/chain/index.ts"
+      ],
       "requiere_validacion_humana": false
     },
     {
@@ -57,8 +65,14 @@
       ],
       "reversibilidad": "alta",
       "costo_de_revertir": "Bajo.",
-      "criterios_rubrica": ["tecnica", "arbitrum"],
-      "evidencia": ["src/lib/antisybil.ts", "src/lib/antisybil.test.ts"],
+      "criterios_rubrica": [
+        "tecnica",
+        "arbitrum"
+      ],
+      "evidencia": [
+        "src/lib/antisybil.ts",
+        "src/lib/antisybil.test.ts"
+      ],
       "requiere_validacion_humana": true,
       "nota_para_humano": "El equipo de contratos debe confirmar que los límites (3 reportes/hora, 1 por zona cada 15 min) son los que se codifican en TokenReward.sol."
     },
@@ -87,8 +101,14 @@
       ],
       "reversibilidad": "media",
       "costo_de_revertir": "Medio: cambia el hash de los reportes ya anclados.",
-      "criterios_rubrica": ["tecnica", "arbitrum"],
-      "evidencia": ["src/lib/hash.ts", "src/lib/hash.test.ts"],
+      "criterios_rubrica": [
+        "tecnica",
+        "arbitrum"
+      ],
+      "evidencia": [
+        "src/lib/hash.ts",
+        "src/lib/hash.test.ts"
+      ],
       "requiere_validacion_humana": true,
       "nota_para_humano": "Confirmar con el equipo de contratos: ¿SHA-256 o keccak256 en ReportRegistry.sol?"
     },
@@ -113,8 +133,14 @@
       ],
       "reversibilidad": "alta",
       "costo_de_revertir": "Bajo.",
-      "criterios_rubrica": ["ux", "pitch"],
-      "evidencia": ["src/components/mapa/MapaLeaflet.tsx", "src/components/mapa/MapaReportes.tsx"],
+      "criterios_rubrica": [
+        "ux",
+        "pitch"
+      ],
+      "evidencia": [
+        "src/components/mapa/MapaLeaflet.tsx",
+        "src/components/mapa/MapaReportes.tsx"
+      ],
       "requiere_validacion_humana": false
     },
     {
@@ -142,8 +168,14 @@
       ],
       "reversibilidad": "alta",
       "costo_de_revertir": "Bajo.",
-      "criterios_rubrica": ["ux", "tecnica"],
-      "evidencia": ["src/lib/identidad.ts", "src/components/proveedores/AppProvider.tsx"],
+      "criterios_rubrica": [
+        "ux",
+        "tecnica"
+      ],
+      "evidencia": [
+        "src/lib/identidad.ts",
+        "src/components/proveedores/AppProvider.tsx"
+      ],
       "requiere_validacion_humana": false
     },
     {
@@ -171,8 +203,15 @@
       ],
       "reversibilidad": "alta",
       "costo_de_revertir": "Bajo.",
-      "criterios_rubrica": ["tecnica", "pitch"],
-      "evidencia": ["src/data/arquitectura.json", "scripts/generate-docs.mjs", "src/app/arquitectura/page.tsx"],
+      "criterios_rubrica": [
+        "tecnica",
+        "pitch"
+      ],
+      "evidencia": [
+        "src/data/arquitectura.json",
+        "scripts/generate-docs.mjs",
+        "src/app/arquitectura/page.tsx"
+      ],
       "requiere_validacion_humana": false
     },
     {
@@ -195,8 +234,14 @@
       ],
       "reversibilidad": "alta",
       "costo_de_revertir": "Bajo: la etiqueta desaparece sola cuando el adaptador real entra.",
-      "criterios_rubrica": ["pitch", "problema"],
-      "evidencia": ["src/components/ui/EtiquetaSimulado.tsx", "src/data/arquitectura.json"],
+      "criterios_rubrica": [
+        "pitch",
+        "problema"
+      ],
+      "evidencia": [
+        "src/components/ui/EtiquetaSimulado.tsx",
+        "src/data/arquitectura.json"
+      ],
       "requiere_validacion_humana": false
     },
     {
@@ -219,8 +264,13 @@
       ],
       "reversibilidad": "alta",
       "costo_de_revertir": "Bajo.",
-      "criterios_rubrica": ["ux", "problema"],
-      "evidencia": ["src/lib/categorias.ts"],
+      "criterios_rubrica": [
+        "ux",
+        "problema"
+      ],
+      "evidencia": [
+        "src/lib/categorias.ts"
+      ],
       "requiere_validacion_humana": false
     },
     {
@@ -244,8 +294,14 @@
       ],
       "reversibilidad": "media",
       "costo_de_revertir": "Medio: cambiar la implementación del repositorio, no las pantallas.",
-      "criterios_rubrica": ["tecnica", "ux"],
-      "evidencia": ["src/lib/repositorio.ts", "src/lib/seed.ts"],
+      "criterios_rubrica": [
+        "tecnica",
+        "ux"
+      ],
+      "evidencia": [
+        "src/lib/repositorio.ts",
+        "src/lib/seed.ts"
+      ],
       "requiere_validacion_humana": true,
       "nota_para_humano": "Para la demo en vivo con varios teléfonos hace falta un índice compartido. Opción recomendada: leer eventos de ReportRegistry vía RPC de Arbitrum Sepolia (lo cubre el equipo de contratos)."
     },
@@ -273,8 +329,13 @@
       ],
       "reversibilidad": "alta",
       "costo_de_revertir": "Bajo.",
-      "criterios_rubrica": ["problema", "tecnica"],
-      "evidencia": ["src/app/api/escalamiento/route.ts"],
+      "criterios_rubrica": [
+        "problema",
+        "tecnica"
+      ],
+      "evidencia": [
+        "src/app/api/escalamiento/route.ts"
+      ],
       "requiere_validacion_humana": false
     },
     {
@@ -297,8 +358,13 @@
       ],
       "reversibilidad": "alta",
       "costo_de_revertir": "Bajo.",
-      "criterios_rubrica": ["ux"],
-      "evidencia": ["src/app/globals.css", "src/components/navegacion/BarraPestanas.tsx"],
+      "criterios_rubrica": [
+        "ux"
+      ],
+      "evidencia": [
+        "src/app/globals.css",
+        "src/components/navegacion/BarraPestanas.tsx"
+      ],
       "requiere_validacion_humana": false
     },
     {
@@ -325,8 +391,16 @@
       ],
       "reversibilidad": "baja",
       "costo_de_revertir": "Alto: es la premisa del proyecto.",
-      "criterios_rubrica": ["arbitrum", "pitch", "tecnica"],
-      "evidencia": ["src/lib/chain/redes.ts", "src/lib/chain/abis.ts", "docs/SIGUIENTES-PASOS-ARBITRUM.md"],
+      "criterios_rubrica": [
+        "arbitrum",
+        "pitch",
+        "tecnica"
+      ],
+      "evidencia": [
+        "src/lib/chain/redes.ts",
+        "src/lib/chain/abis.ts",
+        "docs/SIGUIENTES-PASOS-ARBITRUM.md"
+      ],
       "requiere_validacion_humana": true,
       "nota_para_humano": "Validar con el equipo de contratos el costo real por reporte medido en Arbitrum Sepolia para reemplazar la estimación de la UI por un dato medido."
     },
@@ -355,8 +429,15 @@
       ],
       "reversibilidad": "alta",
       "costo_de_revertir": "Bajo.",
-      "criterios_rubrica": ["tecnica", "pitch"],
-      "evidencia": ["src/data/decisiones.json", "scripts/validate-data.mjs", "docs/REGLAS-IA.md"],
+      "criterios_rubrica": [
+        "tecnica",
+        "pitch"
+      ],
+      "evidencia": [
+        "src/data/decisiones.json",
+        "scripts/validate-data.mjs",
+        "docs/REGLAS-IA.md"
+      ],
       "requiere_validacion_humana": false
     },
     {
@@ -384,8 +465,15 @@
       ],
       "reversibilidad": "alta",
       "costo_de_revertir": "Bajo.",
-      "criterios_rubrica": ["tecnica", "problema", "arbitrum"],
-      "evidencia": ["src/lib/antisybil.ts", "src/lib/antisybil.test.ts"],
+      "criterios_rubrica": [
+        "tecnica",
+        "problema",
+        "arbitrum"
+      ],
+      "evidencia": [
+        "src/lib/antisybil.ts",
+        "src/lib/antisybil.test.ts"
+      ],
       "requiere_validacion_humana": true,
       "nota_para_humano": "Decidir con el equipo si la recompensa se mintea al reportar (optimista) o solo tras corroborarse (conservador). La beta implementa el conservador."
     },
@@ -414,8 +502,14 @@
       ],
       "reversibilidad": "alta",
       "costo_de_revertir": "Bajo: es una función pura de un solo archivo.",
-      "criterios_rubrica": ["ux", "tecnica", "problema"],
-      "evidencia": ["src/lib/zonas.ts"],
+      "criterios_rubrica": [
+        "ux",
+        "tecnica",
+        "problema"
+      ],
+      "evidencia": [
+        "src/lib/zonas.ts"
+      ],
       "requiere_validacion_humana": false
     },
     {
@@ -448,8 +542,13 @@
       ],
       "reversibilidad": "alta",
       "costo_de_revertir": "Bajo: una variable de entorno pasa la CSP a solo-reporte, o se borra el bloque headers().",
-      "criterios_rubrica": ["tecnica", "ux"],
-      "evidencia": ["next.config.ts"],
+      "criterios_rubrica": [
+        "tecnica",
+        "ux"
+      ],
+      "evidencia": [
+        "next.config.ts"
+      ],
       "requiere_validacion_humana": false
     },
     {
@@ -477,8 +576,15 @@
       ],
       "reversibilidad": "alta",
       "costo_de_revertir": "Bajo, pero exigiría revisar el discurso de privacidad del pitch.",
-      "criterios_rubrica": ["problema", "pitch", "tecnica"],
-      "evidencia": ["package.json", "src/app/layout.tsx"],
+      "criterios_rubrica": [
+        "problema",
+        "pitch",
+        "tecnica"
+      ],
+      "evidencia": [
+        "package.json",
+        "src/app/layout.tsx"
+      ],
       "requiere_validacion_humana": true,
       "nota_para_humano": "Confirmar que el equipo está de acuerdo en renunciar a métricas de uso de la demo a cambio de coherencia con la promesa de privacidad."
     },
@@ -511,8 +617,16 @@
       ],
       "reversibilidad": "alta",
       "costo_de_revertir": "Bajo.",
-      "criterios_rubrica": ["tecnica", "pitch"],
-      "evidencia": ["vercel.json", ".github/workflows/ci.yml", "scripts/preflight-env.mjs", "docs/DESPLIEGUE.md"],
+      "criterios_rubrica": [
+        "tecnica",
+        "pitch"
+      ],
+      "evidencia": [
+        "vercel.json",
+        ".github/workflows/ci.yml",
+        "scripts/preflight-env.mjs",
+        "docs/DESPLIEGUE.md"
+      ],
       "requiere_validacion_humana": false
     },
     {
@@ -546,8 +660,18 @@
       ],
       "reversibilidad": "alta",
       "costo_de_revertir": "Bajo: quitar la entrada del catálogo. El índice 2 quedaría reservado y no se reutiliza.",
-      "criterios_rubrica": ["problema", "ux", "tecnica", "pitch"],
-      "evidencia": ["src/lib/categorias.ts", "src/lib/sismos.ts", "src/lib/sismos.test.ts", "src/components/sismos/AvisoSismo.tsx"],
+      "criterios_rubrica": [
+        "problema",
+        "ux",
+        "tecnica",
+        "pitch"
+      ],
+      "evidencia": [
+        "src/lib/categorias.ts",
+        "src/lib/sismos.ts",
+        "src/lib/sismos.test.ts",
+        "src/components/sismos/AvisoSismo.tsx"
+      ],
       "requiere_validacion_humana": true,
       "nota_para_humano": "Confirmar con el equipo de contratos que `uint8 category` acepta el índice 2 y que ReportRegistry no valida un máximo de 2 categorías."
     },
@@ -581,8 +705,16 @@
       ],
       "reversibilidad": "alta",
       "costo_de_revertir": "Bajo: es una función pura de un solo archivo con sus tests.",
-      "criterios_rubrica": ["ux", "problema", "tecnica"],
-      "evidencia": ["src/lib/zonas.ts", "src/lib/zonas.test.ts", "src/components/reportar/FlujoReporte.tsx"],
+      "criterios_rubrica": [
+        "ux",
+        "problema",
+        "tecnica"
+      ],
+      "evidencia": [
+        "src/lib/zonas.ts",
+        "src/lib/zonas.test.ts",
+        "src/components/reportar/FlujoReporte.tsx"
+      ],
       "requiere_validacion_humana": true,
       "nota_para_humano": "Verificar en el celular, desde tu distrito real, que ahora aparece el correcto y que el margen de precisión que muestra es razonable. Si sigue fallando con ±20 m de precisión, avísame el distrito y la coordenada para ajustar el centroide."
     },
@@ -622,8 +754,18 @@
       ],
       "reversibilidad": "alta",
       "costo_de_revertir": "Bajo: quitar el proveedor deja a todos con su seudónimo local, que es el camino por defecto y nunca se retiró.",
-      "criterios_rubrica": ["ux", "tecnica", "problema"],
-      "evidencia": ["src/auth.ts", "src/lib/identidad.ts", "src/lib/identidad.test.ts", "src/components/cuenta/AccesoGoogle.tsx", "src/components/proveedores/SesionProvider.tsx"],
+      "criterios_rubrica": [
+        "ux",
+        "tecnica",
+        "problema"
+      ],
+      "evidencia": [
+        "src/auth.ts",
+        "src/lib/identidad.ts",
+        "src/lib/identidad.test.ts",
+        "src/components/cuenta/AccesoGoogle.tsx",
+        "src/components/proveedores/SesionProvider.tsx"
+      ],
       "requiere_validacion_humana": true,
       "nota_para_humano": "Falta lo único que no puedo hacer yo: crear el cliente OAuth en Google Cloud Console y cargar AUTH_SECRET, AUTH_GOOGLE_ID y AUTH_GOOGLE_SECRET en Vercel. Pasos exactos en docs/DESPLIEGUE.md. Hasta entonces el login queda invisible y la app funciona igual. Confirmar también que al equipo le parece bien que la cuenta de Google sea privada y no el identificador público."
     },
@@ -658,8 +800,14 @@
       ],
       "reversibilidad": "alta",
       "costo_de_revertir": "Bajo: se quita un componente del layout.",
-      "criterios_rubrica": ["ux", "pitch"],
-      "evidencia": ["src/components/bienvenida/PantallaBienvenida.tsx", "src/app/layout.tsx"],
+      "criterios_rubrica": [
+        "ux",
+        "pitch"
+      ],
+      "evidencia": [
+        "src/components/bienvenida/PantallaBienvenida.tsx",
+        "src/app/layout.tsx"
+      ],
       "requiere_validacion_humana": false
     },
     {
@@ -693,8 +841,15 @@
       ],
       "reversibilidad": "alta",
       "costo_de_revertir": "Bajo: es un proveedor y dos componentes de presentación.",
-      "criterios_rubrica": ["ux", "problema"],
-      "evidencia": ["src/components/proveedores/UbicacionProvider.tsx", "src/components/ubicacion/TarjetaUbicacion.tsx", "src/components/mapa/MapaReportes.tsx"],
+      "criterios_rubrica": [
+        "ux",
+        "problema"
+      ],
+      "evidencia": [
+        "src/components/proveedores/UbicacionProvider.tsx",
+        "src/components/ubicacion/TarjetaUbicacion.tsx",
+        "src/components/mapa/MapaReportes.tsx"
+      ],
       "requiere_validacion_humana": false
     },
     {
@@ -728,9 +883,154 @@
       ],
       "reversibilidad": "alta",
       "costo_de_revertir": "Bajo: son clases y selectores, sin cambios de arquitectura.",
-      "criterios_rubrica": ["ux", "tecnica"],
-      "evidencia": ["src/app/globals.css", "src/components/mapa/MapaReportes.tsx", "src/components/mapa/MapaLeaflet.tsx", "src/components/bienvenida/PantallaBienvenida.tsx", "src/components/arquitectura/PanelArquitectura.tsx"],
+      "criterios_rubrica": [
+        "ux",
+        "tecnica"
+      ],
+      "evidencia": [
+        "src/app/globals.css",
+        "src/components/mapa/MapaReportes.tsx",
+        "src/components/mapa/MapaLeaflet.tsx",
+        "src/components/bienvenida/PantallaBienvenida.tsx",
+        "src/components/arquitectura/PanelArquitectura.tsx"
+      ],
       "requiere_validacion_humana": false
+    },
+    {
+      "id": "ADR-101",
+      "titulo": "Círculo de cuidado: aviso cuando pasa algo cerca de alguien de tu familia",
+      "fecha": "2026-08-07",
+      "autor": "IA+Humano",
+      "estado": "aceptada",
+      "contexto": "El equipo quiere probar una idea que no estaba contemplada: si alguien comparte su ubicación contigo, recibir un aviso cuando ocurre un reporte cerca de ESA persona, con su teléfono a un toque para llamarla. Tipo family care. Nació como exploración en la rama Lab_Dai; ADR-025 registra su promoción a producción. La numeración 1xx marca decisiones de ramas experimentales.",
+      "opciones": [
+        {
+          "nombre": "Backend en tiempo real (Supabase, Pusher, Firebase)",
+          "descartada_porque": "Es lo que haría falta para que la ubicación viaje de verdad entre dispositivos, pero contradice ADR-009 (sin base de datos) y crearía justo lo que el producto promete no tener: un servidor con las ubicaciones de las familias. Para un experimento no se justifica; si la idea prospera, esa es la conversación seria que hay que tener."
+        },
+        {
+          "nombre": "Compartir la ubicación en cadena",
+          "descartada_porque": "Publicar dónde está tu madre en un registro inmutable y público es exactamente lo contrario de lo que la app defiende."
+        },
+        {
+          "nombre": "Radio de aviso fijo",
+          "descartada_porque": "No es lo mismo cuidar a alguien en una avenida que en un pasaje. El radio lo elige quien recibe el aviso: 200 m, 500 m, 1 km o 2 km."
+        }
+      ],
+      "decision": "Se implementa completo salvo el transporte. La geometría, la frescura de la ubicación, la evaluación de cercanía y la deduplicación de avisos son funciones puras con 20 tests. Lo único simulado es que la posición del contacto se mueve localmente con una trayectoria determinista; en la versión real llegaría desde su dispositivo y ese archivo desaparece. Los avisos usan la Notification API real del navegador más un panel dentro de la app. Los teléfonos se guardan solo en el dispositivo.",
+      "consecuencias": [
+        "Sexta pestaña 'Círculo': es la excepción declarada al límite de cinco de CLAUDE.md, y solo en esta rama. Verificado que las seis entran en 360 px sin truncarse.",
+        "Compartir nace desactivado: es decisión del contacto, no de quien lo agrega. Coherente con el resto del producto.",
+        "El mapa muestra a los contactos con su radio de aviso dibujado, y late en rojo cuando tienen un reporte dentro.",
+        "Un mismo reporte avisa una sola vez por contacto: la clave contacto+reporte se recuerda entre recargas.",
+        "Los avisos no llegan con la app cerrada. Para eso harían falta push notifications con service worker y un servidor que las envíe.",
+        "Riesgo de producto que hay que discutir antes de sacarlo del laboratorio: una app que muestra dónde está tu familia es también una herramienta de control. El consentimiento revocable por el contacto es el mínimo, y probablemente no basta."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Bajo: la rama se descarta o se quitan la pestaña y el proveedor. Nada de main depende de esto.",
+      "criterios_rubrica": [
+        "problema",
+        "ux",
+        "tecnica"
+      ],
+      "evidencia": [
+        "src/lib/circulo.ts",
+        "src/lib/circulo.test.ts",
+        "src/lib/circulo-simulacion.ts",
+        "src/components/circulo/PanelCirculo.tsx",
+        "src/components/proveedores/CirculoProvider.tsx"
+      ],
+      "requiere_validacion_humana": true,
+      "nota_para_humano": "Dos preguntas que SIGUEN ABIERTAS aunque la funcionalidad ya esté en producción (ver ADR-025). (1) Producto: ¿cómo se evita que se use para controlar a una pareja o a un hijo adolescente en vez de para cuidarlos? Sin una respuesta, la funcionalidad puede hacer más daño que bien. (2) Técnica: el tiempo real de verdad necesita servidor, y eso rompe la promesa de 'no hay servidor con tus datos'. Hay que decidir si se acepta ese costo o si se busca algo peer-to-peer."
+    },
+    {
+      "id": "ADR-102",
+      "titulo": "El círculo es la única parte de la app que exige cuenta",
+      "fecha": "2026-08-07",
+      "autor": "IA+Humano",
+      "estado": "aceptada",
+      "contexto": "El equipo pidió que la pestaña Círculo solo se vea con la autenticación de Google activa. Choca de frente con la regla del producto —todo funciona sin registro— así que hacía falta una razón que no fuera 'porque sí'.",
+      "opciones": [
+        {
+          "nombre": "Mostrar el círculo siempre, como el resto",
+          "descartada_porque": "Es lo que había, y guardaba teléfonos de familiares en un dispositivo sin ninguna cuenta detrás que permitiera revocarlos."
+        },
+        {
+          "nombre": "Ocultar solo la pestaña y dejar la ruta accesible",
+          "descartada_porque": "Seguridad por oscuridad: la URL sigue funcionando y el proveedor seguiría emitiendo avisos en segundo plano."
+        },
+        {
+          "nombre": "Extender el requisito de cuenta al resto de la app",
+          "descartada_porque": "Rompería la promesa central. La excepción se justifica por el dato que maneja el círculo, no por comodidad de implementación."
+        }
+      ],
+      "decision": "Sin sesión de Google: la pestaña no aparece (la barra vuelve a cinco), `/circulo` muestra una pantalla que explica por qué se pide la cuenta y ofrece entrar, y el proveedor no carga contactos, no corre el latido y no emite ningún aviso. La razón se dice en pantalla: aquí viven los teléfonos de tu familia y las posiciones que te comparten, y una cuenta detrás es lo que permite revocarlo.",
+      "consecuencias": [
+        "La excepción a 'todo sin registro' queda acotada a la funcionalidad que maneja datos de terceros, y explicada al usuario en vez de impuesta.",
+        "Le da al login un propósito visible más allá de recuperar el alias.",
+        "El bloqueo es real, no cosmético: sin sesión el proveedor no ejecuta nada.",
+        "Los contactos guardados sobreviven en el dispositivo tras cerrar sesión y reaparecen al volver a entrar. Es discutible: lo estricto sería borrarlos al salir.",
+        "En un despliegue sin credenciales de Google el círculo queda inaccesible por completo. Es correcto, pero conviene saberlo antes de una demo."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Bajo: es un booleano derivado de la sesión.",
+      "criterios_rubrica": [
+        "ux",
+        "problema",
+        "tecnica"
+      ],
+      "evidencia": [
+        "src/components/proveedores/CirculoProvider.tsx",
+        "src/components/navegacion/BarraPestanas.tsx",
+        "src/components/circulo/PanelCirculo.tsx"
+      ],
+      "requiere_validacion_humana": true,
+      "nota_para_humano": "Decidir si al cerrar sesión se borran los contactos del dispositivo. Hoy se conservan y reaparecen al volver a entrar, que es cómodo pero deja teléfonos de terceros guardados en un equipo donde ya nadie inició sesión."
+    },
+    {
+      "id": "ADR-025",
+      "titulo": "El círculo de cuidado sale del laboratorio y entra a producción",
+      "fecha": "2026-08-07",
+      "autor": "IA+Humano",
+      "estado": "aceptada",
+      "contexto": "El login con Google quedó funcionando en producción pero no en el preview de Lab_Dai: las variables de entorno de Vercel se asignan por entorno, no por rama, y el preview además está detrás de Deployment Protection y tiene otro dominio que Google no reconoce como callback. Arreglarlo exigía duplicar variables, registrar otra URI de redirección y convivir con un muro de SSO. El equipo decidió que era más simple llevar la rama a producción, donde las credenciales y el callback ya funcionan.",
+      "opciones": [
+        {
+          "nombre": "Duplicar las variables en el entorno Preview y registrar el callback del preview en Google",
+          "descartada_porque": "Tres pasos de configuración, un dominio más en el cliente OAuth de producción y un preview que igual no se puede compartir por Deployment Protection. Mucha ceremonia para una rama."
+        },
+        {
+          "nombre": "Probar el círculo solo en local con localhost, que ya está registrado",
+          "descartada_porque": "Es lo que yo habría hecho para iterar, pero no permite probarlo desde un teléfono real ni enseñárselo a nadie, que es justo lo que el equipo quiere hacer."
+        },
+        {
+          "nombre": "Cambiar la rama de producción de Vercel a Lab_Dai",
+          "descartada_porque": "Deja main sin desplegar y convierte una rama de laboratorio en la fuente de verdad. Confuso para el equipo de contratos, que espera main."
+        }
+      ],
+      "decision": "Se fusiona Lab_Dai en main. El círculo pasa a ser funcionalidad de producto: seis pestañas (la de Círculo solo con sesión iniciada), ADR-101 pasa de propuesta a aceptada, y se limpian de todo el repositorio las afirmaciones de que es una rama experimental fuera de alcance.",
+      "consecuencias": [
+        "El círculo funciona en el dominio de producción sin tocar ni una variable ni el cliente OAuth.",
+        "Entra en la demo del 12 de agosto, con lo que el pitch debe cubrirlo en vez de ignorarlo.",
+        "Las dos preguntas de producto de ADR-101 siguen SIN responder: cómo se evita que se use para controlar en vez de cuidar, y si se acepta el servidor que exige el tiempo real de verdad. Que esté en producción no las cierra.",
+        "Sigue siendo la única parte de la app que exige cuenta, y sigue estando simulado el transporte de la ubicación del contacto. Ambas cosas están etiquetadas dentro del producto.",
+        "La rama Lab_Dai deja de ser necesaria; queda como historia."
+      ],
+      "reversibilidad": "media",
+      "costo_de_revertir": "Medio: hay que quitar la pestaña, el proveedor y sus datos sembrados, y revisar el pitch. Nada de la cadena depende de esto.",
+      "criterios_rubrica": [
+        "ux",
+        "problema",
+        "pitch"
+      ],
+      "evidencia": [
+        "src/app/circulo/page.tsx",
+        "src/components/proveedores/CirculoProvider.tsx",
+        "CLAUDE.md",
+        "README.md"
+      ],
+      "requiere_validacion_humana": true,
+      "nota_para_humano": "Decidir cómo se presenta el círculo en el pitch. Si se muestra, hay que poder responder la pregunta de control vs cuidado delante del jurado; si no se responde bien, es la funcionalidad que más fácil se vuelve en contra. La alternativa es tenerla en la app pero no demostrarla."
     }
   ]
 }

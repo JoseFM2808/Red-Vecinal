@@ -107,6 +107,15 @@ Cerrar repitiendo la frase clave.
 > servidor nuestro. A la cadena solo llega un hash. El vínculo con la persona está cifrado y
 > requiere 2 de 3 firmas para abrirse, con rastro público de quién lo pidió.
 
+**"¿El círculo de cuidado no es una app de vigilancia?"**
+> Es la pregunta correcta y no tenemos una respuesta completa; está escrita como pendiente
+> en nuestra bitácora. Lo que sí hicimos: compartir la ubicación lo decide quien la comparte,
+> no quien la recibe, y se revoca cuando quiera. Es la única parte de la app que exige cuenta,
+> precisamente porque maneja teléfonos y ubicaciones de terceros. Pero el consentimiento
+> revocable es el mínimo, no la solución: una herramienta que muestra dónde está tu familia
+> sirve igual para cuidar que para controlar, y eso se resuelve con diseño de producto, no
+> con código. Por eso está marcada como decisión abierta.
+
 **"¿Detectan sismos de verdad?"**
 > No, y no lo decimos de otra forma. Agregamos lo que reportan los vecinos: si dos o más
 > personas distintas dicen "lo sentí" en media hora, mostramos el mapa por zonas y la

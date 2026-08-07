@@ -4,7 +4,7 @@
 
 Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o por el equipo se registra aquí ANTES o AL MOMENTO de escribir el código que la implementa. `docs/DECISIONES.md` se genera desde este archivo (npm run docs) y la pestaña Arquitectura de la app lo renderiza.
 
-**24 decisiones registradas · 9 esperan validacion humana**
+**27 decisiones registradas · 12 esperan validacion humana**
 
 ## Esperan que una persona decida
 
@@ -19,6 +19,9 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | ADR-019 | Tercera categoría: sismo sentido, como agregado comunitario y no como detector | Confirmar con el equipo de contratos que `uint8 category` acepta el índice 2 y que ReportRegistry no valida un máximo de 2 categorías. |
 | ADR-020 | La detección de distrito afirmaba con seguridad un distrito equivocado | Verificar en el celular, desde tu distrito real, que ahora aparece el correcto y que el margen de precisión que muestra es razonable. Si sigue fallando con ±20 m de precisión, avísame el distrito y la coordenada para ajustar el centroide. |
 | ADR-021 | Login con Google opcional: da continuidad entre dispositivos, no identidad pública | Falta lo único que no puedo hacer yo: crear el cliente OAuth en Google Cloud Console y cargar AUTH_SECRET, AUTH_GOOGLE_ID y AUTH_GOOGLE_SECRET en Vercel. Pasos exactos en docs/DESPLIEGUE.md. Hasta entonces el login queda invisible y la app funciona igual. Confirmar también que al equipo le parece bien que la cuenta de Google sea privada y no el identificador público. |
+| ADR-101 | Círculo de cuidado: aviso cuando pasa algo cerca de alguien de tu familia | Dos preguntas que SIGUEN ABIERTAS aunque la funcionalidad ya esté en producción (ver ADR-025). (1) Producto: ¿cómo se evita que se use para controlar a una pareja o a un hijo adolescente en vez de para cuidarlos? Sin una respuesta, la funcionalidad puede hacer más daño que bien. (2) Técnica: el tiempo real de verdad necesita servidor, y eso rompe la promesa de 'no hay servidor con tus datos'. Hay que decidir si se acepta ese costo o si se busca algo peer-to-peer. |
+| ADR-102 | El círculo es la única parte de la app que exige cuenta | Decidir si al cerrar sesión se borran los contactos del dispositivo. Hoy se conservan y reaparecen al volver a entrar, que es cómodo pero deja teléfonos de terceros guardados en un equipo donde ya nadie inició sesión. |
+| ADR-025 | El círculo de cuidado sale del laboratorio y entra a producción | Decidir cómo se presenta el círculo en el pitch. Si se muestra, hay que poder responder la pregunta de control vs cuidado delante del jurado; si no se responde bien, es la funcionalidad que más fácil se vuelve en contra. La alternativa es tenerla en la app pero no demostrarla. |
 
 ## Indice
 
@@ -48,6 +51,9 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | [ADR-022](#adr-022) | Pantalla de bienvenida en el primer arranque, no una barrera de login | IA+Humano | aceptada | alta | Producto y UX, Pitch y demo |
 | [ADR-023](#adr-023) | Tu ubicación actual es visible siempre, con cuenta o sin ella | IA+Humano | aceptada | alta | Producto y UX, Problema e impacto |
 | [ADR-024](#adr-024) | El mapa se aísla del resto de la interfaz y la app fija su escala de z-index | IA+Humano | aceptada | alta | Producto y UX, Implementacion tecnica |
+| [ADR-101](#adr-101) | Círculo de cuidado: aviso cuando pasa algo cerca de alguien de tu familia | IA+Humano | aceptada | alta | Problema e impacto, Producto y UX, Implementacion tecnica |
+| [ADR-102](#adr-102) | El círculo es la única parte de la app que exige cuenta | IA+Humano | aceptada | alta | Producto y UX, Problema e impacto, Implementacion tecnica |
+| [ADR-025](#adr-025) | El círculo de cuidado sale del laboratorio y entra a producción | IA+Humano | aceptada | media | Producto y UX, Problema e impacto, Pitch y demo |
 
 ---
 
@@ -774,3 +780,106 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 **Sirve a.** Producto y UX, Implementacion tecnica
 
 **Evidencia en el codigo.** `src/app/globals.css`, `src/components/mapa/MapaReportes.tsx`, `src/components/mapa/MapaLeaflet.tsx`, `src/components/bienvenida/PantallaBienvenida.tsx`, `src/components/arquitectura/PanelArquitectura.tsx`
+
+---
+
+## ADR-101
+
+### Círculo de cuidado: aviso cuando pasa algo cerca de alguien de tu familia
+
+`2026-08-07` · autor: **IA+Humano** · estado: **aceptada** · reversibilidad: **alta**
+
+**Contexto.** El equipo quiere probar una idea que no estaba contemplada: si alguien comparte su ubicación contigo, recibir un aviso cuando ocurre un reporte cerca de ESA persona, con su teléfono a un toque para llamarla. Tipo family care. Nació como exploración en la rama Lab_Dai; ADR-025 registra su promoción a producción. La numeración 1xx marca decisiones de ramas experimentales.
+
+**Alternativas descartadas.**
+
+- *Backend en tiempo real (Supabase, Pusher, Firebase)* — Es lo que haría falta para que la ubicación viaje de verdad entre dispositivos, pero contradice ADR-009 (sin base de datos) y crearía justo lo que el producto promete no tener: un servidor con las ubicaciones de las familias. Para un experimento no se justifica; si la idea prospera, esa es la conversación seria que hay que tener.
+- *Compartir la ubicación en cadena* — Publicar dónde está tu madre en un registro inmutable y público es exactamente lo contrario de lo que la app defiende.
+- *Radio de aviso fijo* — No es lo mismo cuidar a alguien en una avenida que en un pasaje. El radio lo elige quien recibe el aviso: 200 m, 500 m, 1 km o 2 km.
+
+**Decision.** Se implementa completo salvo el transporte. La geometría, la frescura de la ubicación, la evaluación de cercanía y la deduplicación de avisos son funciones puras con 20 tests. Lo único simulado es que la posición del contacto se mueve localmente con una trayectoria determinista; en la versión real llegaría desde su dispositivo y ese archivo desaparece. Los avisos usan la Notification API real del navegador más un panel dentro de la app. Los teléfonos se guardan solo en el dispositivo.
+
+**Consecuencias.**
+
+- Sexta pestaña 'Círculo': es la excepción declarada al límite de cinco de CLAUDE.md, y solo en esta rama. Verificado que las seis entran en 360 px sin truncarse.
+- Compartir nace desactivado: es decisión del contacto, no de quien lo agrega. Coherente con el resto del producto.
+- El mapa muestra a los contactos con su radio de aviso dibujado, y late en rojo cuando tienen un reporte dentro.
+- Un mismo reporte avisa una sola vez por contacto: la clave contacto+reporte se recuerda entre recargas.
+- Los avisos no llegan con la app cerrada. Para eso harían falta push notifications con service worker y un servidor que las envíe.
+- Riesgo de producto que hay que discutir antes de sacarlo del laboratorio: una app que muestra dónde está tu familia es también una herramienta de control. El consentimiento revocable por el contacto es el mínimo, y probablemente no basta.
+
+**Costo de revertir.** Bajo: la rama se descarta o se quitan la pestaña y el proveedor. Nada de main depende de esto.
+
+**Sirve a.** Problema e impacto, Producto y UX, Implementacion tecnica
+
+**Evidencia en el codigo.** `src/lib/circulo.ts`, `src/lib/circulo.test.ts`, `src/lib/circulo-simulacion.ts`, `src/components/circulo/PanelCirculo.tsx`, `src/components/proveedores/CirculoProvider.tsx`
+
+> **Necesita decision humana:** Dos preguntas que SIGUEN ABIERTAS aunque la funcionalidad ya esté en producción (ver ADR-025). (1) Producto: ¿cómo se evita que se use para controlar a una pareja o a un hijo adolescente en vez de para cuidarlos? Sin una respuesta, la funcionalidad puede hacer más daño que bien. (2) Técnica: el tiempo real de verdad necesita servidor, y eso rompe la promesa de 'no hay servidor con tus datos'. Hay que decidir si se acepta ese costo o si se busca algo peer-to-peer.
+
+---
+
+## ADR-102
+
+### El círculo es la única parte de la app que exige cuenta
+
+`2026-08-07` · autor: **IA+Humano** · estado: **aceptada** · reversibilidad: **alta**
+
+**Contexto.** El equipo pidió que la pestaña Círculo solo se vea con la autenticación de Google activa. Choca de frente con la regla del producto —todo funciona sin registro— así que hacía falta una razón que no fuera 'porque sí'.
+
+**Alternativas descartadas.**
+
+- *Mostrar el círculo siempre, como el resto* — Es lo que había, y guardaba teléfonos de familiares en un dispositivo sin ninguna cuenta detrás que permitiera revocarlos.
+- *Ocultar solo la pestaña y dejar la ruta accesible* — Seguridad por oscuridad: la URL sigue funcionando y el proveedor seguiría emitiendo avisos en segundo plano.
+- *Extender el requisito de cuenta al resto de la app* — Rompería la promesa central. La excepción se justifica por el dato que maneja el círculo, no por comodidad de implementación.
+
+**Decision.** Sin sesión de Google: la pestaña no aparece (la barra vuelve a cinco), `/circulo` muestra una pantalla que explica por qué se pide la cuenta y ofrece entrar, y el proveedor no carga contactos, no corre el latido y no emite ningún aviso. La razón se dice en pantalla: aquí viven los teléfonos de tu familia y las posiciones que te comparten, y una cuenta detrás es lo que permite revocarlo.
+
+**Consecuencias.**
+
+- La excepción a 'todo sin registro' queda acotada a la funcionalidad que maneja datos de terceros, y explicada al usuario en vez de impuesta.
+- Le da al login un propósito visible más allá de recuperar el alias.
+- El bloqueo es real, no cosmético: sin sesión el proveedor no ejecuta nada.
+- Los contactos guardados sobreviven en el dispositivo tras cerrar sesión y reaparecen al volver a entrar. Es discutible: lo estricto sería borrarlos al salir.
+- En un despliegue sin credenciales de Google el círculo queda inaccesible por completo. Es correcto, pero conviene saberlo antes de una demo.
+
+**Costo de revertir.** Bajo: es un booleano derivado de la sesión.
+
+**Sirve a.** Producto y UX, Problema e impacto, Implementacion tecnica
+
+**Evidencia en el codigo.** `src/components/proveedores/CirculoProvider.tsx`, `src/components/navegacion/BarraPestanas.tsx`, `src/components/circulo/PanelCirculo.tsx`
+
+> **Necesita decision humana:** Decidir si al cerrar sesión se borran los contactos del dispositivo. Hoy se conservan y reaparecen al volver a entrar, que es cómodo pero deja teléfonos de terceros guardados en un equipo donde ya nadie inició sesión.
+
+---
+
+## ADR-025
+
+### El círculo de cuidado sale del laboratorio y entra a producción
+
+`2026-08-07` · autor: **IA+Humano** · estado: **aceptada** · reversibilidad: **media**
+
+**Contexto.** El login con Google quedó funcionando en producción pero no en el preview de Lab_Dai: las variables de entorno de Vercel se asignan por entorno, no por rama, y el preview además está detrás de Deployment Protection y tiene otro dominio que Google no reconoce como callback. Arreglarlo exigía duplicar variables, registrar otra URI de redirección y convivir con un muro de SSO. El equipo decidió que era más simple llevar la rama a producción, donde las credenciales y el callback ya funcionan.
+
+**Alternativas descartadas.**
+
+- *Duplicar las variables en el entorno Preview y registrar el callback del preview en Google* — Tres pasos de configuración, un dominio más en el cliente OAuth de producción y un preview que igual no se puede compartir por Deployment Protection. Mucha ceremonia para una rama.
+- *Probar el círculo solo en local con localhost, que ya está registrado* — Es lo que yo habría hecho para iterar, pero no permite probarlo desde un teléfono real ni enseñárselo a nadie, que es justo lo que el equipo quiere hacer.
+- *Cambiar la rama de producción de Vercel a Lab_Dai* — Deja main sin desplegar y convierte una rama de laboratorio en la fuente de verdad. Confuso para el equipo de contratos, que espera main.
+
+**Decision.** Se fusiona Lab_Dai en main. El círculo pasa a ser funcionalidad de producto: seis pestañas (la de Círculo solo con sesión iniciada), ADR-101 pasa de propuesta a aceptada, y se limpian de todo el repositorio las afirmaciones de que es una rama experimental fuera de alcance.
+
+**Consecuencias.**
+
+- El círculo funciona en el dominio de producción sin tocar ni una variable ni el cliente OAuth.
+- Entra en la demo del 12 de agosto, con lo que el pitch debe cubrirlo en vez de ignorarlo.
+- Las dos preguntas de producto de ADR-101 siguen SIN responder: cómo se evita que se use para controlar en vez de cuidar, y si se acepta el servidor que exige el tiempo real de verdad. Que esté en producción no las cierra.
+- Sigue siendo la única parte de la app que exige cuenta, y sigue estando simulado el transporte de la ubicación del contacto. Ambas cosas están etiquetadas dentro del producto.
+- La rama Lab_Dai deja de ser necesaria; queda como historia.
+
+**Costo de revertir.** Medio: hay que quitar la pestaña, el proveedor y sus datos sembrados, y revisar el pitch. Nada de la cadena depende de esto.
+
+**Sirve a.** Producto y UX, Problema e impacto, Pitch y demo
+
+**Evidencia en el codigo.** `src/app/circulo/page.tsx`, `src/components/proveedores/CirculoProvider.tsx`, `CLAUDE.md`, `README.md`
+
+> **Necesita decision humana:** Decidir cómo se presenta el círculo en el pitch. Si se muestra, hay que poder responder la pregunta de control vs cuidado delante del jurado; si no se responde bien, es la funcionalidad que más fácil se vuelve en contra. La alternativa es tenerla en la app pero no demostrarla.
