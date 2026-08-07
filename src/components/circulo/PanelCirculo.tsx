@@ -284,7 +284,7 @@ function AccesoRequerido() {
           sensible del producto, y con una cuenta detras puedes revocarlo.
         </p>
         <p className="mt-2 text-[11px] leading-relaxed text-tenue">
-          Reportar, el mapa y todo lo demas siguen funcionando sin cuenta.
+          Si ves esto es que se cerro la sesion: vuelve a entrar para recuperar tu circulo.
         </p>
 
         {googleDisponible ? (

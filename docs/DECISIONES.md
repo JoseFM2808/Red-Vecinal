@@ -4,7 +4,7 @@
 
 Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o por el equipo se registra aquí ANTES o AL MOMENTO de escribir el código que la implementa. `docs/DECISIONES.md` se genera desde este archivo (npm run docs) y la pestaña Arquitectura de la app lo renderiza.
 
-**28 decisiones registradas · 12 esperan validacion humana**
+**29 decisiones registradas · 13 esperan validacion humana**
 
 ## Esperan que una persona decida
 
@@ -22,6 +22,7 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | ADR-101 | Círculo de cuidado: aviso cuando pasa algo cerca de alguien de tu familia | Dos preguntas que SIGUEN ABIERTAS aunque la funcionalidad ya esté en producción (ver ADR-025). (1) Producto: ¿cómo se evita que se use para controlar a una pareja o a un hijo adolescente en vez de para cuidarlos? Sin una respuesta, la funcionalidad puede hacer más daño que bien. (2) Técnica: el tiempo real de verdad necesita servidor, y eso rompe la promesa de 'no hay servidor con tus datos'. Hay que decidir si se acepta ese costo o si se busca algo peer-to-peer. |
 | ADR-102 | El círculo es la única parte de la app que exige cuenta | Decidir si al cerrar sesión se borran los contactos del dispositivo. Hoy se conservan y reaparecen al volver a entrar, que es cómodo pero deja teléfonos de terceros guardados en un equipo donde ya nadie inició sesión. |
 | ADR-025 | El círculo de cuidado sale del laboratorio y entra a producción | Decidir cómo se presenta el círculo en el pitch. Si se muestra, hay que poder responder la pregunta de control vs cuidado delante del jurado; si no se responde bien, es la funcionalidad que más fácil se vuelve en contra. La alternativa es tenerla en la app pero no demostrarla. |
+| ADR-027 | El acceso pasa a ser una puerta: sin cuenta no se entra | Confirmar que el equipo asume el intercambio: se gana una puerta clara y una identidad real que revelar, se pierde el argumento de "se reporta sin registro" que el pitch usaba como ventaja frente a las apps municipales. Si el jurado pregunta por friccion en una emergencia, hay que tener respuesta. |
 
 ## Indice
 
@@ -47,14 +48,15 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | [ADR-018](#adr-018) | Vercel se configura solo; lo que sí bloquea el build es un secreto expuesto | IA | aceptada | alta | Implementacion tecnica, Pitch y demo |
 | [ADR-019](#adr-019) | Tercera categoría: sismo sentido, como agregado comunitario y no como detector | IA+Humano | aceptada | alta | Problema e impacto, Producto y UX, Implementacion tecnica, Pitch y demo |
 | [ADR-020](#adr-020) | La detección de distrito afirmaba con seguridad un distrito equivocado | IA+Humano | aceptada | alta | Producto y UX, Problema e impacto, Implementacion tecnica |
-| [ADR-021](#adr-021) | Login con Google opcional: da continuidad entre dispositivos, no identidad pública | IA+Humano | aceptada | alta | Producto y UX, Implementacion tecnica, Problema e impacto |
-| [ADR-022](#adr-022) | Pantalla de bienvenida en el primer arranque, no una barrera de login | IA+Humano | aceptada | alta | Producto y UX, Pitch y demo |
+| [ADR-021](#adr-021) | Login con Google opcional: da continuidad entre dispositivos, no identidad pública | IA+Humano | reemplazada | alta | Producto y UX, Implementacion tecnica, Problema e impacto |
+| [ADR-022](#adr-022) | Pantalla de bienvenida en el primer arranque, no una barrera de login | IA+Humano | reemplazada | alta | Producto y UX, Pitch y demo |
 | [ADR-023](#adr-023) | Tu ubicación actual es visible siempre, con cuenta o sin ella | IA+Humano | aceptada | alta | Producto y UX, Problema e impacto |
 | [ADR-024](#adr-024) | El mapa se aísla del resto de la interfaz y la app fija su escala de z-index | IA+Humano | aceptada | alta | Producto y UX, Implementacion tecnica |
 | [ADR-101](#adr-101) | Círculo de cuidado: aviso cuando pasa algo cerca de alguien de tu familia | IA+Humano | aceptada | alta | Problema e impacto, Producto y UX, Implementacion tecnica |
 | [ADR-102](#adr-102) | El círculo es la única parte de la app que exige cuenta | IA+Humano | aceptada | alta | Producto y UX, Problema e impacto, Implementacion tecnica |
 | [ADR-025](#adr-025) | El círculo de cuidado sale del laboratorio y entra a producción | IA+Humano | aceptada | media | Producto y UX, Problema e impacto, Pitch y demo |
-| [ADR-026](#adr-026) | El acceso deja de depender de la pantalla de bienvenida | IA+Humano | aceptada | alta | Producto y UX, Pitch y demo |
+| [ADR-026](#adr-026) | El acceso deja de depender de la pantalla de bienvenida | IA+Humano | reemplazada | alta | Producto y UX, Pitch y demo |
+| [ADR-027](#adr-027) | El acceso pasa a ser una puerta: sin cuenta no se entra | IA+Humano | aceptada | alta | Producto y UX, Pitch y demo, Problema e impacto |
 
 ---
 
@@ -656,7 +658,7 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 
 ### Login con Google opcional: da continuidad entre dispositivos, no identidad pública
 
-`2026-08-07` · autor: **IA+Humano** · estado: **aceptada** · reversibilidad: **alta**
+`2026-08-07` · autor: **IA+Humano** · estado: **reemplazada** · reversibilidad: **alta**
 
 **Contexto.** El equipo pidió incorporar login de usuario, con Google como método suficiente. El riesgo evidente es contradecir la promesa central del producto: identidad pseudónima por defecto. Un login mal planteado convertiría a Vecino Seguro en una app más que sabe quién eres.
 
@@ -692,7 +694,7 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 
 ### Pantalla de bienvenida en el primer arranque, no una barrera de login
 
-`2026-08-07` · autor: **IA+Humano** · estado: **aceptada** · reversibilidad: **alta**
+`2026-08-07` · autor: **IA+Humano** · estado: **reemplazada** · reversibilidad: **alta**
 
 **Contexto.** Al probar la app, el equipo esperaba ver el login al abrirla y no lo encontró. El acceso vivía dentro de la pestaña Cuenta (ADR-021) y había que ir a buscarlo: existía pero era invisible. El problema real no era la falta de login, era la falta de presentación.
 
@@ -837,7 +839,7 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 
 **Consecuencias.**
 
-- La excepción a 'todo sin registro' queda acotada a la funcionalidad que maneja datos de terceros, y explicada al usuario en vez de impuesta.
+- Con ADR-027 la app entera exige cuenta, asi que esto dejo de ser una excepcion; el circulo sigue siendo la parte que justifica el requisito por el dato que maneja.
 - Le da al login un propósito visible más allá de recuperar el alias.
 - El bloqueo es real, no cosmético: sin sesión el proveedor no ejecuta nada.
 - Los contactos guardados sobreviven en el dispositivo tras cerrar sesión y reaparecen al volver a entrar. Es discutible: lo estricto sería borrarlos al salir.
@@ -891,7 +893,7 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 
 ### El acceso deja de depender de la pantalla de bienvenida
 
-`2026-08-07` · autor: **IA+Humano** · estado: **aceptada** · reversibilidad: **alta**
+`2026-08-07` · autor: **IA+Humano** · estado: **reemplazada** · reversibilidad: **alta**
 
 **Contexto.** El equipo abrio la web y no encontro forma de entrar ni de elegir modo demostracion. La causa: la pantalla de bienvenida de ADR-022 solo aparece una vez por dispositivo, y una vez descartada el unico acceso volvia a estar escondido dentro de la pestana Cuenta. Es el mismo problema que ADR-022 pretendia resolver, reaparecido en cuanto alguien ya habia visitado el sitio.
 
@@ -915,3 +917,37 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 **Sirve a.** Producto y UX, Pitch y demo
 
 **Evidencia en el codigo.** `src/components/inicio/AccesoRapido.tsx`, `src/lib/bienvenida.ts`, `src/app/page.tsx`, `src/components/cuenta/PanelCuenta.tsx`
+
+---
+
+## ADR-027
+
+### El acceso pasa a ser una puerta: sin cuenta no se entra
+
+`2026-08-07` · autor: **IA+Humano** · estado: **aceptada** · reversibilidad: **alta**
+
+**Contexto.** El equipo probo la pantalla de bienvenida de ADR-022 y la describio como "un popup en lugar de una seccion que limita el acceso". La observacion tiene dos partes y ambas eran correctas: se comportaba como aviso descartable en vez de puerta, y ademas SE SENTIA como popup porque la app se renderizaba primero y la pantalla aparecia encima medio segundo despues.
+
+**Alternativas descartadas.**
+
+- *Mantener la bienvenida descartable de ADR-022* — Es lo que habia y el equipo, que es quien decide el producto, pidio explicitamente lo contrario tras verlo funcionando.
+- *Puerta solo en las pantallas sensibles* — Deja la incoherencia de tener media app abierta y media cerrada, y obliga a explicar en cada pantalla por que si o por que no.
+- *Puerta sin valvula de escape* — Un despliegue sin credenciales de Google —o cualquiera trabajando en local sin .env— quedaria con la aplicacion entera inaccesible y sin forma de diagnosticarlo desde dentro.
+
+**Decision.** Sin sesion no se entra. La puerta se resuelve ANTES de pintar nada de la app: mientras se consulta la sesion se muestra una espera sobria, y solo entonces se decide entre la puerta y el contenido, de modo que nunca se ve la app por debajo. Si el despliegue no tiene credenciales de Google, la puerta deja pasar.
+
+**Consecuencias.**
+
+- Se acabo la sensacion de ventana emergente: el orden de render es lo que la producia, no el estilo.
+- La promesa de "reportar sin registro" deja de ser cierta y se reescribio en todos los sitios donde estaba: pantallas, README, guion del pitch y datos de arquitectura. Sostenerla habria sido mentir en la demo.
+- Se pierde el argumento de friccion cero, que sumaba en el criterio de UX. A cambio se gana coherencia con la revelacion selectiva: ahora si existe una identidad real que revelar bajo orden judicial, cosa que un seudonimo puramente local no tenia.
+- Reemplaza a ADR-022 y a ADR-026, y deja obsoleta la parte de ADR-021 que declaraba el login opcional.
+- El circulo (ADR-102) deja de ser la excepcion que exige cuenta, porque ahora la exige toda la app.
+
+**Costo de revertir.** Bajo en codigo —quitar el envoltorio del layout— pero habria que volver a reescribir los textos. Conviene no ir y venir.
+
+**Sirve a.** Producto y UX, Pitch y demo, Problema e impacto
+
+**Evidencia en el codigo.** `src/components/acceso/PuertaAcceso.tsx`, `src/app/layout.tsx`, `docs/PITCH.md`
+
+> **Necesita decision humana:** Confirmar que el equipo asume el intercambio: se gana una puerta clara y una identidad real que revelar, se pierde el argumento de "se reporta sin registro" que el pitch usaba como ventaja frente a las apps municipales. Si el jurado pregunta por friccion en una emergencia, hay que tener respuesta.

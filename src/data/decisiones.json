@@ -723,7 +723,7 @@
       "titulo": "Login con Google opcional: da continuidad entre dispositivos, no identidad pública",
       "fecha": "2026-08-07",
       "autor": "IA+Humano",
-      "estado": "aceptada",
+      "estado": "reemplazada",
       "contexto": "El equipo pidió incorporar login de usuario, con Google como método suficiente. El riesgo evidente es contradecir la promesa central del producto: identidad pseudónima por defecto. Un login mal planteado convertiría a Vecino Seguro en una app más que sabe quién eres.",
       "opciones": [
         {
@@ -774,7 +774,7 @@
       "titulo": "Pantalla de bienvenida en el primer arranque, no una barrera de login",
       "fecha": "2026-08-07",
       "autor": "IA+Humano",
-      "estado": "aceptada",
+      "estado": "reemplazada",
       "contexto": "Al probar la app, el equipo esperaba ver el login al abrirla y no lo encontró. El acceso vivía dentro de la pestaña Cuenta (ADR-021) y había que ir a buscarlo: existía pero era invisible. El problema real no era la falta de login, era la falta de presentación.",
       "opciones": [
         {
@@ -966,7 +966,7 @@
       ],
       "decision": "Sin sesión de Google: la pestaña no aparece (la barra vuelve a cinco), `/circulo` muestra una pantalla que explica por qué se pide la cuenta y ofrece entrar, y el proveedor no carga contactos, no corre el latido y no emite ningún aviso. La razón se dice en pantalla: aquí viven los teléfonos de tu familia y las posiciones que te comparten, y una cuenta detrás es lo que permite revocarlo.",
       "consecuencias": [
-        "La excepción a 'todo sin registro' queda acotada a la funcionalidad que maneja datos de terceros, y explicada al usuario en vez de impuesta.",
+        "Con ADR-027 la app entera exige cuenta, asi que esto dejo de ser una excepcion; el circulo sigue siendo la parte que justifica el requisito por el dato que maneja.",
         "Le da al login un propósito visible más allá de recuperar el alias.",
         "El bloqueo es real, no cosmético: sin sesión el proveedor no ejecuta nada.",
         "Los contactos guardados sobreviven en el dispositivo tras cerrar sesión y reaparecen al volver a entrar. Es discutible: lo estricto sería borrarlos al salir.",
@@ -1037,7 +1037,7 @@
       "titulo": "El acceso deja de depender de la pantalla de bienvenida",
       "fecha": "2026-08-07",
       "autor": "IA+Humano",
-      "estado": "aceptada",
+      "estado": "reemplazada",
       "contexto": "El equipo abrio la web y no encontro forma de entrar ni de elegir modo demostracion. La causa: la pantalla de bienvenida de ADR-022 solo aparece una vez por dispositivo, y una vez descartada el unico acceso volvia a estar escondido dentro de la pestana Cuenta. Es el mismo problema que ADR-022 pretendia resolver, reaparecido en cuanto alguien ya habia visitado el sitio.",
       "opciones": [
         {
@@ -1073,6 +1073,50 @@
         "src/components/cuenta/PanelCuenta.tsx"
       ],
       "requiere_validacion_humana": false
+    },
+    {
+      "id": "ADR-027",
+      "titulo": "El acceso pasa a ser una puerta: sin cuenta no se entra",
+      "fecha": "2026-08-07",
+      "autor": "IA+Humano",
+      "estado": "aceptada",
+      "contexto": "El equipo probo la pantalla de bienvenida de ADR-022 y la describio como \"un popup en lugar de una seccion que limita el acceso\". La observacion tiene dos partes y ambas eran correctas: se comportaba como aviso descartable en vez de puerta, y ademas SE SENTIA como popup porque la app se renderizaba primero y la pantalla aparecia encima medio segundo despues.",
+      "opciones": [
+        {
+          "nombre": "Mantener la bienvenida descartable de ADR-022",
+          "descartada_porque": "Es lo que habia y el equipo, que es quien decide el producto, pidio explicitamente lo contrario tras verlo funcionando."
+        },
+        {
+          "nombre": "Puerta solo en las pantallas sensibles",
+          "descartada_porque": "Deja la incoherencia de tener media app abierta y media cerrada, y obliga a explicar en cada pantalla por que si o por que no."
+        },
+        {
+          "nombre": "Puerta sin valvula de escape",
+          "descartada_porque": "Un despliegue sin credenciales de Google —o cualquiera trabajando en local sin .env— quedaria con la aplicacion entera inaccesible y sin forma de diagnosticarlo desde dentro."
+        }
+      ],
+      "decision": "Sin sesion no se entra. La puerta se resuelve ANTES de pintar nada de la app: mientras se consulta la sesion se muestra una espera sobria, y solo entonces se decide entre la puerta y el contenido, de modo que nunca se ve la app por debajo. Si el despliegue no tiene credenciales de Google, la puerta deja pasar.",
+      "consecuencias": [
+        "Se acabo la sensacion de ventana emergente: el orden de render es lo que la producia, no el estilo.",
+        "La promesa de \"reportar sin registro\" deja de ser cierta y se reescribio en todos los sitios donde estaba: pantallas, README, guion del pitch y datos de arquitectura. Sostenerla habria sido mentir en la demo.",
+        "Se pierde el argumento de friccion cero, que sumaba en el criterio de UX. A cambio se gana coherencia con la revelacion selectiva: ahora si existe una identidad real que revelar bajo orden judicial, cosa que un seudonimo puramente local no tenia.",
+        "Reemplaza a ADR-022 y a ADR-026, y deja obsoleta la parte de ADR-021 que declaraba el login opcional.",
+        "El circulo (ADR-102) deja de ser la excepcion que exige cuenta, porque ahora la exige toda la app."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Bajo en codigo —quitar el envoltorio del layout— pero habria que volver a reescribir los textos. Conviene no ir y venir.",
+      "criterios_rubrica": [
+        "ux",
+        "pitch",
+        "problema"
+      ],
+      "evidencia": [
+        "src/components/acceso/PuertaAcceso.tsx",
+        "src/app/layout.tsx",
+        "docs/PITCH.md"
+      ],
+      "requiere_validacion_humana": true,
+      "nota_para_humano": "Confirmar que el equipo asume el intercambio: se gana una puerta clara y una identidad real que revelar, se pierde el argumento de \"se reporta sin registro\" que el pitch usaba como ventaja frente a las apps municipales. Si el jurado pregunta por friccion en una emergencia, hay que tener respuesta."
     }
   ]
 }

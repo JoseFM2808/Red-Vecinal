@@ -150,7 +150,7 @@
     {
       "id": "identidad",
       "nombre": "Identidad, acceso y revelación selectiva",
-      "rol": "Alias público generado en el dispositivo, sin seed phrase visible. Login opcional con Google que devuelve el MISMO alias en otro teléfono: la cuenta nunca se muestra a la red ni toca la cadena, es la identidad real que IdentityEscrow custodiaría bajo 2-de-3.",
+      "rol": "Puerta de acceso con Google: sin sesion no se entra (ADR-027). El alias publico se deriva de la cuenta, asi que entrar desde otro telefono devuelve el mismo. La cuenta nunca se muestra a la red ni toca la cadena: es la identidad real que IdentityEscrow custodiaria bajo 2-de-3.",
       "estado": "simulado",
       "tecnologias": [
         "Auth.js v5 (Google)",
@@ -395,8 +395,8 @@
     },
     {
       "tema": "Acceso con Google",
-      "queHacemos": "Login opcional con Auth.js. El alias se deriva de la cuenta, así que entrar desde otro teléfono devuelve el mismo seudónimo y los mismos reportes. Sin base de datos: la sesión es una cookie firmada en el dispositivo.",
-      "queFaltaria": "Crear el cliente OAuth en Google Cloud y cargar las credenciales en Vercel. Hasta entonces el botón no aparece y todos usan su seudónimo local. La derivación del alias es de demostración, no una KDF."
+      "queHacemos": "Puerta de acceso con Auth.js: sin sesion no se entra. El alias se deriva de la cuenta, asi que entrar desde otro telefono devuelve el mismo seudonimo. Sin base de datos: la sesion es una cookie firmada en el dispositivo.",
+      "queFaltaria": "Si el despliegue no tiene credenciales de Google, la puerta se abre sola para no dejar la app inaccesible. La derivacion del alias es de demostracion, no una KDF."
     },
     {
       "tema": "Revelación selectiva",
@@ -483,7 +483,7 @@
       "evidencia": [
         "Reporte en 3 pasos, sin campos obligatorios que frenen la urgencia.",
         "Mobile-first real: barra inferior, áreas táctiles grandes, safe-area, tema oscuro.",
-        "Sin wallet ni seed phrase para empezar a usarla."
+        "Sin seed phrase ni wallet que gestionar: se entra con Google y el alias se deriva solo."
       ]
     },
     {

@@ -83,7 +83,7 @@ Ruta API que valida el aviso y genera folio para serenazgo, policía o ambulanci
 
 ### Identidad, acceso y revelación selectiva `identidad` — Simulado
 
-Alias público generado en el dispositivo, sin seed phrase visible. Login opcional con Google que devuelve el MISMO alias en otro teléfono: la cuenta nunca se muestra a la red ni toca la cadena, es la identidad real que IdentityEscrow custodiaría bajo 2-de-3.
+Puerta de acceso con Google: sin sesion no se entra (ADR-027). El alias publico se deriva de la cuenta, asi que entrar desde otro telefono devuelve el mismo. La cuenta nunca se muestra a la red ni toca la cadena: es la identidad real que IdentityEscrow custodiaria bajo 2-de-3.
 
 - Tecnologias: Auth.js v5 (Google), JWT en cookie, sin base de datos, Privy o Web3Auth (a integrar), IdentityEscrow.sol
 - Codigo: `src/auth.ts`, `src/lib/identidad.ts`, `src/components/cuenta/AccesoGoogle.tsx`, `src/components/cuenta/RevelacionSelectiva.tsx`
@@ -186,7 +186,7 @@ Red: Arbitrum Sepolia → Arbitrum One
 | Anclaje on-chain | El adaptador simulado produce un hash de transacción y un enlace al explorador con el formato real. | Desplegar ReportRegistry y activar NEXT_PUBLIC_CHAIN_MODE=arbitrum. |
 | Anti-Sybil | Límite por wallet y por zona, más multiplicador por corroboración independiente. | Un adversario con varios dispositivos todavía puede farmear. La prueba de presencia criptográfica es roadmap y así se dice en el pitch. |
 | Círculo de cuidado | Geometría, frescura de la ubicación, evaluación de cercanía y deduplicación de avisos, todo real y con tests. Avisos con la Notification API del navegador. | El transporte: hoy la ubicación del contacto se mueve localmente. El tiempo real entre dispositivos necesita servidor, y eso choca con la promesa de no guardar datos de nadie. Tampoco hay avisos con la app cerrada. |
-| Acceso con Google | Login opcional con Auth.js. El alias se deriva de la cuenta, así que entrar desde otro teléfono devuelve el mismo seudónimo y los mismos reportes. Sin base de datos: la sesión es una cookie firmada en el dispositivo. | Crear el cliente OAuth en Google Cloud y cargar las credenciales en Vercel. Hasta entonces el botón no aparece y todos usan su seudónimo local. La derivación del alias es de demostración, no una KDF. |
+| Acceso con Google | Puerta de acceso con Auth.js: sin sesion no se entra. El alias se deriva de la cuenta, asi que entrar desde otro telefono devuelve el mismo seudonimo. Sin base de datos: la sesion es una cookie firmada en el dispositivo. | Si el despliegue no tiene credenciales de Google, la puerta se abre sola para no dejar la app inaccesible. La derivacion del alias es de demostracion, no una KDF. |
 | Revelación selectiva | Demostración del mecanismo 2-de-3 y del rastro público de cada solicitud. | Integración legal real con el Poder Judicial y custodia de claves por un tercero acreditado. |
 | Escalamiento a la autoridad | Ruta API que valida y emite folio; reenvía a un webhook real si está configurado. | Convenio con un municipio y su endpoint de recepción. |
 | Índice compartido | Los reportes persisten en el dispositivo; la app arranca con datos sembrados de Lima. | Leer eventos de ReportSubmitted por RPC para que dos teléfonos vean el mismo mapa. |
@@ -221,7 +221,7 @@ Red: Arbitrum Sepolia → Arbitrum One
 
 - Reporte en 3 pasos, sin campos obligatorios que frenen la urgencia.
 - Mobile-first real: barra inferior, áreas táctiles grandes, safe-area, tema oscuro.
-- Sin wallet ni seed phrase para empezar a usarla.
+- Sin seed phrase ni wallet que gestionar: se entra con Google y el alias se deriva solo.
 
 ### Implementación técnica — 25%
 

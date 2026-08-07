@@ -9,7 +9,6 @@ import { TarjetaReporte } from "@/components/reportes/TarjetaReporte";
 import { Icono } from "@/components/ui/Icono";
 import { Aviso, Dato, EtiquetaSimulado } from "@/components/ui/primitivos";
 import { describirPolitica, POLITICA_RECOMPENSA } from "@/lib/antisybil";
-import { reiniciarBienvenida } from "@/lib/bienvenida";
 import { obtenerAdaptadorDeCadena } from "@/lib/chain";
 import { abreviarDireccion } from "@/lib/identidad";
 import type { Reporte } from "@/lib/tipos";
@@ -57,7 +56,7 @@ export function PanelCuenta() {
           <p className="mt-3 text-xs leading-relaxed text-suave">
             {cuenta
               ? "Este es tu alias publico y es lo unico que ve la red. Se deriva de tu cuenta, asi que entrar desde otro telefono te devuelve el mismo. Nunca viste una seed phrase."
-              : "Nunca pediste correo, telefono ni nombre. Tampoco viste una seed phrase: la wallet se creo sola en este dispositivo."}
+              : "Este es tu alias publico y es lo unico que ve la red. Nunca viste una seed phrase: la wallet se creo sola en este dispositivo."}
           </p>
         </div>
       </section>
@@ -136,21 +135,6 @@ export function PanelCuenta() {
         <p className="mt-2 text-[11px] leading-relaxed text-tenue">
           Borra los reportes de este dispositivo y vuelve a sembrar la red de ejemplo. Util antes de
           presentar.
-        </p>
-
-        <button
-          type="button"
-          onClick={() => {
-            reiniciarBienvenida();
-            window.location.href = "/";
-          }}
-          className="toque mt-3 w-full rounded-xl border border-borde bg-superficie-alta text-sm font-medium text-suave"
-        >
-          Volver a ver la pantalla de bienvenida
-        </button>
-        <p className="mt-2 text-[11px] leading-relaxed text-tenue">
-          La bienvenida solo aparece la primera vez en cada dispositivo. Esto la reactiva, util
-          para ensayar la demo desde el principio.
         </p>
       </section>
 

@@ -49,13 +49,13 @@ function LogoGoogle() {
 function mensajeDeError(codigo: string): string {
   switch (codigo) {
     case "Configuration":
-      return "El acceso con Google no esta bien configurado en este despliegue. Avisa al equipo; mientras tanto puedes seguir usando tu seudonimo local.";
+      return "El acceso con Google no esta bien configurado en este despliegue. Avisa al equipo: sin eso no se puede entrar.";
     case "AccessDenied":
       return "Google no autorizo el acceso. Si cancelaste, puedes intentarlo de nuevo.";
     case "OAuthAccountNotLinked":
       return "Esa cuenta ya esta vinculada de otra forma. Prueba con otra cuenta de Google.";
     default:
-      return "No se pudo completar el acceso. Tu seudonimo local sigue funcionando igual.";
+      return "No se pudo completar el acceso. Intentalo de nuevo.";
   }
 }
 
@@ -95,9 +95,9 @@ export function AccesoGoogle() {
         </div>
         {avisoError}
         <Aviso tono="info" icono="candado">
-          El acceso con Google no esta configurado en este despliegue. Sigues usando tu
-          seudonimo local, que es el modo por defecto de la app: no hace falta cuenta para
-          reportar.
+          El acceso con Google no esta configurado en este despliegue, asi que la puerta de
+          entrada esta abierta y todos usan un seudonimo local. Al configurarlo, la app
+          volvera a pedir cuenta para entrar.
         </Aviso>
       </section>
     );
@@ -162,9 +162,8 @@ export function AccesoGoogle() {
       {avisoError}
       <div className="tarjeta p-4">
         <p className="text-xs leading-relaxed text-suave">
-          Entrar es <span className="text-texto">opcional</span>. Sirve para recuperar tu
-          alias si cambias de telefono. No te identifica ante la red vecinal: tu alias
-          publico no cambia y sigue siendo lo unico que ven los demas.
+          No hay sesion iniciada. Entrar te devuelve tu mismo alias y tus reportes; no te
+          identifica ante la red vecinal, que sigue viendo solo el alias.
         </p>
 
         <button

@@ -7,7 +7,8 @@ import { formatearCoordenada } from "@/lib/geo";
 import { describirZona } from "@/lib/zonas";
 
 /**
- * "Donde estoy" (ADR-023). Funciona con o sin cuenta: la ubicacion no depende del login.
+ * "Donde estoy" (ADR-023). La ubicacion no depende del login: el proveedor vive fuera de
+ * la sesion a proposito.
  *
  * Muestra el margen de precision porque en una laptop el navegador se ubica por wifi y
  * puede errar kilometros; sin ese dato la persona no tiene forma de saber si fiarse.
@@ -87,7 +88,7 @@ export function TarjetaUbicacion() {
         <span className="block text-[11px] leading-relaxed text-tenue">
           {estado === "error"
             ? "No se pudo obtener. Toca para reintentar."
-            : "No hace falta cuenta. Se queda en tu telefono."}
+            : "Se queda en tu telefono, no viaja a ningun servidor."}
         </span>
       </span>
       {estado !== "buscando" ? (

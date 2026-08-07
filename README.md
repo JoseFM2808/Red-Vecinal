@@ -15,10 +15,9 @@ orden judicial verificable.
 Si alguien comparte su ubicación contigo, recibes un aviso cuando ocurre un reporte cerca de
 esa persona, con su teléfono a un toque para llamarla.
 
-Es la **única parte de la app que exige cuenta de Google** (`ADR-102`): aquí viven los
-teléfonos de tu familia y las posiciones que te comparten. Sin sesión la pestaña no aparece,
-la ruta explica por qué, y el proveedor no carga nada ni emite avisos. Todo lo demás
-—reportar, mapa, ubicación— sigue funcionando sin cuenta.
+Los teléfonos de tu familia y las posiciones que te comparten son el dato más sensible del
+producto, así que el círculo se apoya en la cuenta con la que entraste (`ADR-102`): sin
+sesión la pestaña no aparece y el proveedor no carga nada ni emite avisos.
 
 Lo único simulado es el transporte de la ubicación del contacto; la geometría, los avisos y
 la deduplicación son reales y tienen 20 tests. Las dos preguntas de producto que siguen
@@ -33,8 +32,9 @@ npm install
 npm run dev
 ```
 
-Abre http://localhost:3000. **No hace falta ninguna variable de entorno**: la beta corre en modo
-simulado, sin RPC, sin faucet y sin wallet.
+Abre http://localhost:3000. Sin variables de entorno la beta corre en modo simulado —sin RPC,
+sin faucet, sin wallet— y **con la puerta de acceso abierta**, porque sin credenciales de
+Google no habría forma de entrar. Al configurarlas, la app pide cuenta para entrar (`ADR-027`).
 
 Para verlo como se va a usar de verdad: DevTools → vista móvil, 375 px de ancho.
 

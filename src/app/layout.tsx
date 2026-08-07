@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import { PantallaBienvenida } from "@/components/bienvenida/PantallaBienvenida";
+import { PuertaAcceso } from "@/components/acceso/PuertaAcceso";
 import { BarraPestanas } from "@/components/navegacion/BarraPestanas";
 import { AppProvider } from "@/components/proveedores/AppProvider";
 import { CirculoProvider } from "@/components/proveedores/CirculoProvider";
@@ -62,12 +62,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <AppProvider>
               {/* El circulo necesita los reportes, por eso va dentro de AppProvider. */}
               <CirculoProvider>
-                <div className="mx-auto flex min-h-dvh max-w-lg flex-col">
-                  <main className="flex-1 espacio-barra">{children}</main>
-                </div>
-                <BarraPestanas />
-                {/* Solo la primera vez que se abre la app. No bloquea nada (ADR-022). */}
-                <PantallaBienvenida />
+                {/* Sin sesion no se pinta nada de la app: la puerta va primero (ADR-027). */}
+                <PuertaAcceso>
+                  <div className="mx-auto flex min-h-dvh max-w-lg flex-col">
+                    <main className="flex-1 espacio-barra">{children}</main>
+                  </div>
+                  <BarraPestanas />
+                </PuertaAcceso>
               </CirculoProvider>
             </AppProvider>
           </UbicacionProvider>
