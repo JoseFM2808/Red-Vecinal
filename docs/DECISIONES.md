@@ -4,7 +4,7 @@
 
 Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o por el equipo se registra aquí ANTES o AL MOMENTO de escribir el código que la implementa. `docs/DECISIONES.md` se genera desde este archivo (npm run docs) y la pestaña Arquitectura de la app lo renderiza.
 
-**23 decisiones registradas · 9 esperan validacion humana**
+**24 decisiones registradas · 9 esperan validacion humana**
 
 ## Esperan que una persona decida
 
@@ -47,6 +47,7 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | [ADR-021](#adr-021) | Login con Google opcional: da continuidad entre dispositivos, no identidad pública | IA+Humano | aceptada | alta | Producto y UX, Implementacion tecnica, Problema e impacto |
 | [ADR-022](#adr-022) | Pantalla de bienvenida en el primer arranque, no una barrera de login | IA+Humano | aceptada | alta | Producto y UX, Pitch y demo |
 | [ADR-023](#adr-023) | Tu ubicación actual es visible siempre, con cuenta o sin ella | IA+Humano | aceptada | alta | Producto y UX, Problema e impacto |
+| [ADR-024](#adr-024) | El mapa se aísla del resto de la interfaz y la app fija su escala de z-index | IA+Humano | aceptada | alta | Producto y UX, Implementacion tecnica |
 
 ---
 
@@ -741,3 +742,35 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 **Sirve a.** Producto y UX, Problema e impacto
 
 **Evidencia en el codigo.** `src/components/proveedores/UbicacionProvider.tsx`, `src/components/ubicacion/TarjetaUbicacion.tsx`, `src/components/mapa/MapaReportes.tsx`
+
+---
+
+## ADR-024
+
+### El mapa se aísla del resto de la interfaz y la app fija su escala de z-index
+
+`2026-08-07` · autor: **IA+Humano** · estado: **aceptada** · reversibilidad: **alta**
+
+**Contexto.** El equipo reportó errores de compatibilidad entre pantallas, sobre todo en el mapa. La auditoría encontró la causa común: Leaflet trae su propia escala de z-index (paneles 200-700, controles 800-1000) y su contenedor no crea contexto de apilamiento, así que convivía en el mismo plano que la barra de pestañas (50), la hoja de detalle (60) y la bienvenida (100). Además, dos reglas del tema oscuro apuntaban a `.mapa-oscuro .leaflet-container` con combinador descendiente, pero react-leaflet pone ambas clases en el MISMO div: nunca aplicaron, y el mapa se veía con el gris #ddd de Leaflet y la atribución en blanco sobre fondo oscuro.
+
+**Alternativas descartadas.**
+
+- *Subir los overlays de la app por encima de 1000* — Es una carrera armamentística: cada librería que se agregue vuelve a competir. Aislar el mapa resuelve la clase entera de una vez.
+- *Sobrescribir los z-index de Leaflet uno por uno* — Frágil ante cualquier actualización de la librería y difícil de razonar seis días antes de una demo.
+- *Dejarlo como estaba porque en portrait no se notaba* — El recorte por overflow ocultaba el problema, no lo resolvía. Bastaba una hoja a pantalla completa o un cambio de alto para que apareciera.
+
+**Decision.** El contenedor del mapa lleva `isolate`, así que todo lo de Leaflet queda encerrado en su caja y no puede competir con el chrome de la app. La escala de la app (10 / 50 / 60 / 100) queda documentada en globals.css. Los selectores del tema pasan a `.mapa-oscuro.leaflet-container` sin espacio. Se añade un ResizeObserver que llama a `invalidateSize()`, porque Leaflet mide su contenedor una sola vez y `h-[46dvh]` cambia cuando se oculta la barra del navegador móvil.
+
+**Consecuencias.**
+
+- Verificado: el fondo del mapa pasó de rgb(221,221,221) a rgb(10,12,15) y la atribución de blanco a oscuro.
+- Cualquier overlay futuro solo tiene que respetar la escala documentada; ya no hay que pensar en Leaflet.
+- Se corrigieron además dos fallos que dejaban la app inutilizable: la pantalla de bienvenida sin scroll (en horizontal el botón de entrar quedaba fuera y no había salida) y la píldora de estado saliéndose de su tarjeta en Arquitectura.
+- El mapa ahora recuerda el encuadre del usuario: filtrar o cerrar un reporte ya no lo devuelve de un salto a otro sitio.
+- Lección para el equipo: con react-leaflet, el className que se le pasa aterriza en el mismo elemento que `.leaflet-container`. Nunca usar combinador descendiente para estilarlo.
+
+**Costo de revertir.** Bajo: son clases y selectores, sin cambios de arquitectura.
+
+**Sirve a.** Producto y UX, Implementacion tecnica
+
+**Evidencia en el codigo.** `src/app/globals.css`, `src/components/mapa/MapaReportes.tsx`, `src/components/mapa/MapaLeaflet.tsx`, `src/components/bienvenida/PantallaBienvenida.tsx`, `src/components/arquitectura/PanelArquitectura.tsx`

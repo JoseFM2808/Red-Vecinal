@@ -34,6 +34,20 @@
   --alto-barra: 4.25rem;
 }
 
+/*
+ * Escala de z-index del chrome de la app. Respetarla al agregar overlays nuevos.
+ *
+ *   10   cabecera pegajosa dentro de una hoja
+ *   50   barra de pestanas inferior
+ *   60   hoja de detalle (por encima de la barra)
+ *   100  pantalla de bienvenida (por encima de todo)
+ *
+ * Leaflet usa su propia escala interna (paneles 200-700, controles 800-1000) y su
+ * contenedor NO crea contexto de apilamiento. Por eso el contenedor del mapa lleva
+ * `isolate` en MapaReportes.tsx: sin el, los controles del mapa competirian con esta
+ * escala y taparian la hoja de detalle o la bienvenida.
+ */
+
 html,
 body {
   background-color: var(--color-fondo);
@@ -64,6 +78,16 @@ body {
     min-width: 44px;
   }
 
+  /* Tiras horizontales de chips: se arrastran, pero sin barra de scroll a la vista. */
+  .sin-barra-scroll {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .sin-barra-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
   .etiqueta-seccion {
     font-size: 0.6875rem;
     font-weight: 600;
@@ -83,31 +107,51 @@ body {
 }
 
 /* --- Mapa ---------------------------------------------------------------- */
-/* Las teselas de OpenStreetMap son claras; se invierten para que el mapa
-   acompane el tema oscuro sin depender de un proveedor de teselas con API key. */
-.mapa-oscuro .leaflet-tile {
-  filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.92) saturate(0.7);
-}
-
-.mapa-oscuro .leaflet-container {
+/*
+ * OJO CON EL SELECTOR: react-leaflet pone el className que le pasamos en el MISMO div
+ * que Leaflet marca como .leaflet-container. Por eso aqui va `.mapa-oscuro.leaflet-container`
+ * SIN espacio: con espacio (combinador descendiente) no matchea nunca, y el mapa se quedaba
+ * con el gris #ddd por defecto de Leaflet y la atribucion con fondo blanco sobre el tema
+ * oscuro. Medido antes del arreglo: background rgb(221,221,221).
+ */
+.mapa-oscuro.leaflet-container {
   background: #0a0c0f;
   font-family: var(--font-sans);
 }
 
-.mapa-oscuro .leaflet-control-attribution {
+/* Las teselas de OpenStreetMap son claras; se invierten para que el mapa
+   acompane el tema oscuro sin depender de un proveedor de teselas con API key.
+   Estas si son descendientes reales del contenedor. */
+.mapa-oscuro .leaflet-tile {
+  filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.92) saturate(0.7);
+}
+
+.mapa-oscuro.leaflet-container .leaflet-control-attribution {
   background: rgba(10, 12, 15, 0.75);
   color: #6b7684;
   font-size: 9px;
 }
 
-.mapa-oscuro .leaflet-control-attribution a {
+.mapa-oscuro.leaflet-container .leaflet-control-attribution a {
   color: #8b96a5;
 }
 
-.mapa-oscuro .leaflet-control-zoom a {
+.mapa-oscuro.leaflet-container .leaflet-control-zoom a {
   background: #14181e;
   color: #e9eef4;
   border-color: #272e38;
+}
+
+/* Tooltips de los contactos del circulo: por defecto Leaflet los pinta en blanco. */
+.mapa-oscuro.leaflet-container .leaflet-tooltip {
+  background-color: #14181e;
+  color: #e9eef4;
+  border-color: #272e38;
+  box-shadow: none;
+}
+
+.mapa-oscuro.leaflet-container .leaflet-tooltip-top::before {
+  border-top-color: #14181e;
 }
 
 .marcador-reporte {

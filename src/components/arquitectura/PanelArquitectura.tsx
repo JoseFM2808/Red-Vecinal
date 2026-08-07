@@ -46,7 +46,7 @@ export function PanelArquitectura() {
 
   return (
     <div className="px-4">
-      <div className="-mx-4 mb-4 flex gap-1.5 overflow-x-auto px-4 pb-1">
+      <div className="sin-barra-scroll -mx-4 mb-4 flex gap-1.5 overflow-x-auto px-4 py-1">
         {SECCIONES.map((s) => (
           <button
             key={s.id}
@@ -106,7 +106,8 @@ export function PanelArquitectura() {
             <div className="space-y-2">
               {capas.map((capa) => (
                 <Tarjeta key={capa.id} className="p-3.5">
-                  <div className="flex items-start justify-between gap-2">
+                  {/* flex-wrap: sin el, la pildora de estado se sale de la tarjeta a 360 px. */}
+                  <div className="flex flex-wrap items-start justify-between gap-2">
                     <h3 className="text-sm font-semibold text-texto">{capa.nombre}</h3>
                     <EtiquetaEstado estado={capa.estado} />
                   </div>
@@ -168,7 +169,8 @@ export function PanelArquitectura() {
             <div className="space-y-2">
               {contratos.map((c) => (
                 <Tarjeta key={c.nombre} className="p-3.5">
-                  <div className="flex items-start justify-between gap-2">
+                  {/* flex-wrap: sin el, la pildora de estado se sale de la tarjeta a 360 px. */}
+                  <div className="flex flex-wrap items-start justify-between gap-2">
                     <h3 className="font-mono text-sm font-semibold text-texto">{c.nombre}</h3>
                     <EtiquetaEstado estado={c.estado} />
                   </div>
@@ -218,7 +220,8 @@ export function PanelArquitectura() {
             <div className="space-y-2">
               {siguientesPasos.map((s) => (
                 <Tarjeta key={s.titulo} className="p-3.5">
-                  <div className="flex items-start justify-between gap-2">
+                  {/* flex-wrap: sin el, la pildora de estado se sale de la tarjeta a 360 px. */}
+                  <div className="flex flex-wrap items-start justify-between gap-2">
                     <h3 className="text-sm font-medium text-texto">{s.titulo}</h3>
                     <span className="shrink-0 rounded-full bg-superficie-alta px-2 py-0.5 text-[10px] text-tenue">
                       {s.responsable}

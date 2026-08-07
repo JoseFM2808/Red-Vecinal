@@ -14,7 +14,7 @@ export default function PaginaReportar() {
         caiga directo en el paso 2. useSearchParams necesita esta frontera para que la
         pagina siga siendo estatica en el build.
       */}
-      <Suspense fallback={<p className="px-4 text-sm text-tenue">Cargando…</p>}>
+      <Suspense fallback={<p className="px-4 py-6 text-center text-sm text-tenue">Cargando…</p>}>
         <FlujoReporte />
       </Suspense>
     </div>

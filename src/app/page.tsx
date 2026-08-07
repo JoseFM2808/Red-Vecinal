@@ -44,7 +44,7 @@ export default function PaginaInicio() {
             <span className="grid h-8 w-8 place-items-center rounded-lg bg-marca/15 text-marca">
               <Icono nombre="escudo" className="h-5 w-5" />
             </span>
-            <span className="text-base font-semibold tracking-tight">Vecino Seguro</span>
+            <h1 className="text-base font-semibold tracking-tight">Vecino Seguro</h1>
           </div>
           <IndicadorRed />
         </div>
