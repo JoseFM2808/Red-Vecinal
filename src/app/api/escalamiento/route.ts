@@ -15,6 +15,15 @@ import { NextResponse } from "next/server";
  * coordenada ya truncada. El vinculo con la persona sigue en IdentityEscrow.
  */
 
+/**
+ * Tope de la funcion serverless en Vercel. El fetch al municipio ya se aborta a los 4 s,
+ * asi que esto es solo el cinturon de seguridad de segundo nivel.
+ */
+export const maxDuration = 10;
+
+/** Si el canal de la autoridad no responde en 4 s, se corta y se devuelve el respaldo. */
+const TIMEOUT_WEBHOOK_MS = 4000;
+
 const DESTINOS = new Set(["serenazgo", "policia", "ambulancia"]);
 
 interface CuerpoEscalamiento {
@@ -105,6 +114,10 @@ export async function POST(request: Request) {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(aviso),
+        // Sin esto, un municipio con el servidor caido dejaria la funcion colgada hasta
+        // el limite de Vercel y el vecino mirando un boton que gira. El aviso vale poco
+        // si tarda un minuto: se corta a los 4 s y se responde con el respaldo.
+        signal: AbortSignal.timeout(TIMEOUT_WEBHOOK_MS),
       });
       return NextResponse.json({
         folio,

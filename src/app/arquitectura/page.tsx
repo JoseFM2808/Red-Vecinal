@@ -3,7 +3,8 @@ import { Encabezado } from "@/components/ui/Encabezado";
 import { IndicadorRed } from "@/components/ui/IndicadorRed";
 
 export const metadata = {
-  title: "Arquitectura — Vecino Seguro",
+  // El layout raiz aplica la plantilla "%s · Vecino Seguro".
+  title: "Arquitectura",
   description:
     "Como esta construido Vecino Seguro: capas, flujo de un reporte, contratos en Arbitrum, bitacora de decisiones y limites declarados de la beta.",
 };

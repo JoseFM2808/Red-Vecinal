@@ -2,13 +2,36 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { BarraPestanas } from "@/components/navegacion/BarraPestanas";
 import { AppProvider } from "@/components/proveedores/AppProvider";
+import { urlBase } from "@/lib/url-base";
+
+const DESCRIPCION =
+  "Reporta lo que pasa en tu cuadra en tres toques. Evidencia anclada en Arbitrum, identidad pseudonima y escalamiento directo a la autoridad cuando hace falta.";
 
 export const metadata: Metadata = {
-  title: "Vecino Seguro — red vecinal de reporte",
-  description:
-    "Reporta lo que pasa en tu cuadra en tres toques. Evidencia anclada en Arbitrum, identidad pseudonima y escalamiento directo a la autoridad cuando hace falta.",
+  // Sin metadataBase, Next resuelve la imagen de Open Graph contra localhost y el
+  // enlace compartido por WhatsApp sale sin tarjeta. urlBase() la deduce de Vercel.
+  metadataBase: urlBase(),
+  title: {
+    default: "Vecino Seguro — red vecinal de reporte",
+    template: "%s · Vecino Seguro",
+  },
+  description: DESCRIPCION,
   applicationName: "Vecino Seguro",
   manifest: "/manifest.webmanifest",
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    locale: "es_PE",
+    siteName: "Vecino Seguro",
+    title: "Vecino Seguro — red vecinal de reporte",
+    description: DESCRIPCION,
+    url: "/",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Vecino Seguro — red vecinal de reporte",
+    description: DESCRIPCION,
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

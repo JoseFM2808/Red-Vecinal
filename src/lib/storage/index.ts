@@ -9,8 +9,14 @@ import type { Evidencia } from "../tipos";
  * servidor nuestro: va a IPFS y a la cadena solo llega su CID dentro del hash.
  *
  * La beta usa el adaptador simulado, que deriva un CID determinista del SHA-256
- * del archivo. Conectar Pinata es implementar `subir()` con el JWT en variables
- * de entorno de Vercel — el JWT nunca se commitea.
+ * del archivo.
+ *
+ * AL CONECTAR PINATA, OJO: este modulo corre en el NAVEGADOR y por lo tanto NO puede
+ * leer PINATA_JWT. Cualquier intento de exponerlo con prefijo NEXT_PUBLIC_ publicaria
+ * el token en el bundle (`npm run preflight` aborta el build si alguien lo intenta).
+ * La forma correcta es la misma que usa el escalamiento: una ruta de servidor
+ * — por ejemplo POST /api/evidencia — que lea `process.env.PINATA_JWT` alli y suba
+ * el archivo; este adaptador solo le habla a esa ruta.
  */
 
 export interface AdaptadorEvidencia {

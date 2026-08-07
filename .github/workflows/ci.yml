@@ -1,0 +1,50 @@
+name: CI
+
+# Vercel despliega en cada push a main. Esto corre en paralelo y deja constancia de si
+# el commit pasa la verificacion completa, para que un fallo se vea en el commit y no
+# se descubra abriendo la app cinco minutos antes del pitch.
+#
+# No bloquea el despliegue a proposito: un build roto ya no llega a produccion (Vercel
+# conserva el deployment anterior), y bloquear el deploy con un check de Actions es una
+# via mas de fallo justo el 12 de agosto.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    name: Verificacion completa
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Preparar Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Instalar dependencias
+        # npm ci respeta package-lock.json exactamente: mismas versiones que en local.
+        run: npm ci
+
+      - name: Verificacion completa
+        # preflight + validate + docs:check + typecheck + lint + test
+        run: npm run check
+
+      - name: Build de produccion
+        # Lo mismo que corre Vercel. Si esto pasa, el deploy pasa.
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"

@@ -3,11 +3,12 @@
 /* eslint-disable @next/next/no-img-element */
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useApp } from "@/components/proveedores/AppProvider";
+import { useApp, type ResultadoEscalamiento } from "@/components/proveedores/AppProvider";
 import { Icono } from "@/components/ui/Icono";
 import { Aviso, Dato, EtiquetaSimulado } from "@/components/ui/primitivos";
-import { CATEGORIAS, obtenerCategoria } from "@/lib/categorias";
+import { CATEGORIAS, esIdCategoria, obtenerCategoria } from "@/lib/categorias";
 import { TEXTO_ETAPA, type EtapaFlujo, type ResultadoFlujo } from "@/lib/flujo-reporte";
 import { abreviarHash, formatearUsd } from "@/lib/formato";
 import { formatearCoordenada } from "@/lib/geo";
@@ -33,8 +34,16 @@ const UBICACION_DEMO: Coordenada = { lat: -11.9762, lng: -76.9941 };
 export function FlujoReporte() {
   const { enviarReporte, escalar } = useApp();
 
-  const [paso, setPaso] = useState<Paso>("categoria");
-  const [categoria, setCategoria] = useState<IdCategoria | null>(null);
+  // El panel comunitario de sismos enlaza a /reportar?categoria=sismo_sentido para que
+  // "Yo tambien lo senti" sea un solo toque. Se valida contra el catalogo: un parametro
+  // inventado en la URL no puede crear una categoria que no existe.
+  const parametros = useSearchParams();
+  const preseleccion = parametros.get("categoria");
+  const categoriaPrevia =
+    preseleccion !== null && esIdCategoria(preseleccion) ? preseleccion : null;
+
+  const [paso, setPaso] = useState<Paso>(categoriaPrevia ? "detalle" : "categoria");
+  const [categoria, setCategoria] = useState<IdCategoria | null>(categoriaPrevia);
   const [descripcion, setDescripcion] = useState("");
   const [archivo, setArchivo] = useState<File | null>(null);
   const [vistaPrevia, setVistaPrevia] = useState<string | null>(null);
@@ -44,7 +53,8 @@ export function FlujoReporte() {
   );
   const [etapa, setEtapa] = useState<EtapaFlujo>("validando");
   const [resultado, setResultado] = useState<ResultadoFlujo | null>(null);
-  const [folio, setFolio] = useState<string | null>(null);
+  const [escalamiento, setEscalamiento] = useState<ResultadoEscalamiento | null>(null);
+  const [escalando, setEscalando] = useState(false);
 
   const inputArchivo = useRef<HTMLInputElement>(null);
 
@@ -86,7 +96,8 @@ export function FlujoReporte() {
     setCoordenada(null);
     setEstadoGps("inactivo");
     setResultado(null);
-    setFolio(null);
+    setEscalamiento(null);
+    setEscalando(false);
   };
 
   const enviar = async () => {
@@ -168,8 +179,32 @@ export function FlujoReporte() {
 
         <div>
           <label htmlFor="descripcion" className="etiqueta-seccion mb-1.5 block">
-            Que viste (opcional)
+            {categoria === "sismo_sentido" ? "Que tan fuerte lo sentiste" : "Que viste (opcional)"}
           </label>
+
+          {/* Un toque en vez de teclear. En sismos hacen de escala de intensidad. */}
+          <div className="mb-2 flex flex-wrap gap-1.5">
+            {cat.sugerencias.map((s) => {
+              const activa = descripcion === s;
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setDescripcion(activa ? "" : s)}
+                  aria-pressed={activa}
+                  className="toque flex items-center rounded-full border border-borde px-3.5 text-left text-xs leading-tight transition"
+                  style={
+                    activa
+                      ? { borderColor: cat.color, backgroundColor: `${cat.color}1f`, color: cat.color }
+                      : undefined
+                  }
+                >
+                  <span className={activa ? "" : "text-suave"}>{s}</span>
+                </button>
+              );
+            })}
+          </div>
+
           <textarea
             id="descripcion"
             value={descripcion}
@@ -398,7 +433,7 @@ export function FlujoReporte() {
           </div>
         </section>
 
-        {cat.urgente && !folio ? (
+        {cat.urgente && !escalamiento?.ok ? (
           <section>
             <h2 className="etiqueta-seccion mb-2">Necesitas ayuda ahora?</h2>
             <div className="grid grid-cols-3 gap-2">
@@ -406,10 +441,15 @@ export function FlujoReporte() {
                 <button
                   key={d}
                   type="button"
-                  onClick={async () => setFolio(await escalar(reporte.id, d))}
-                  className="toque rounded-xl border border-borde bg-superficie-alta px-2 py-3 text-xs font-medium capitalize text-texto transition active:scale-[0.98]"
+                  disabled={escalando}
+                  onClick={async () => {
+                    setEscalando(true);
+                    setEscalamiento(await escalar(reporte.id, d));
+                    setEscalando(false);
+                  }}
+                  className="toque rounded-xl border border-borde bg-superficie-alta px-2 py-3 text-xs font-medium capitalize text-texto transition active:scale-[0.98] disabled:opacity-50"
                 >
-                  {d}
+                  {escalando ? "Enviando…" : d}
                 </button>
               ))}
             </div>
@@ -419,9 +459,15 @@ export function FlujoReporte() {
           </section>
         ) : null}
 
-        {folio ? (
+        {escalamiento?.ok ? (
           <Aviso tono="info" icono="megafono">
-            Aviso escalado con folio <span className="font-mono">{folio}</span>.
+            Aviso escalado con folio <span className="font-mono">{escalamiento.folio}</span>.
+          </Aviso>
+        ) : null}
+
+        {escalamiento && !escalamiento.ok ? (
+          <Aviso tono="alerta" icono="alerta">
+            {escalamiento.mensaje}
           </Aviso>
         ) : null}
 

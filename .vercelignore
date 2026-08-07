@@ -1,0 +1,30 @@
+# Archivos que no necesitan subir al build de Vercel.
+# Reduce el tamano del contexto de despliegue y acorta el tiempo de build.
+#
+# Ojo: NO excluir src/data/*.json — la app los importa en tiempo de compilacion,
+# y tampoco docs/PROYECTO.md, que se cita como fuente en la interfaz.
+
+# Dependencias y artefactos locales
+node_modules
+.next
+out
+coverage
+
+# Control de versiones y editores
+.git
+.github
+.vscode
+.idea
+
+# Configuracion local de agentes de IA
+.claude
+
+# Pruebas: no se ejecutan en el build de Vercel, corren en GitHub Actions
+**/*.test.ts
+**/*.test.tsx
+vitest.config.ts
+
+# Entornos locales (Vercel inyecta las suyas desde el dashboard)
+.env
+.env.local
+.env*.local

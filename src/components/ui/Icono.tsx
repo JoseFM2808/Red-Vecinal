@@ -11,6 +11,7 @@ export type NombreIcono =
   | "arquitectura"
   | "alerta"
   | "foco"
+  | "sismo"
   | "camara"
   | "ubicacion"
   | "escudo"
@@ -66,6 +67,8 @@ const TRAZOS: Record<NombreIcono, React.ReactNode> = {
       <path d="M12 3a6 6 0 0 0-3.5 10.9c.5.4.8 1 .8 1.6h5.4c0-.6.3-1.2.8-1.6A6 6 0 0 0 12 3Z" />
     </>
   ),
+  // Trazo de sismografo: la linea plana que se dispara y vuelve a la calma.
+  sismo: <path d="M2 12h3.2l2.1-6 3 12.5 2.4-8.5 1.8 4.6 1.3-2.6H22" />,
   camara: (
     <>
       <path d="M3 8.5A2 2 0 0 1 5 6.5h2l1.2-2h7.6l1.2 2h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />

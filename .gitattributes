@@ -1,0 +1,15 @@
+# El equipo trabaja en Windows; Vercel y GitHub Actions corren en Linux.
+# Esto es higiene, no un arreglo: `docs:check` ya normaliza CRLF antes de comparar
+# (scripts/generate-docs.mjs, funcion `normalizar`), asi que no puede fallar por eso.
+# Lo que evita es que el mismo archivo aparezca como cambiado entero al pasar de una
+# maquina a otra, que es ruido justo cuando hay que leer diffs con prisa.
+* text=auto eol=lf
+
+# Binarios: nunca tocar finales de linea
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary

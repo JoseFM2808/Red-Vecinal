@@ -27,6 +27,7 @@ const DESTINOS: { id: DestinoEscalamiento; etiqueta: string }[] = [
 export function HojaDetalle({ reporte, onCerrar }: { reporte: Reporte; onCerrar: () => void }) {
   const { identidad, corroborar, escalar } = useApp();
   const [escalando, setEscalando] = useState(false);
+  const [errorEscalamiento, setErrorEscalamiento] = useState<string | null>(null);
   const categoria = obtenerCategoria(reporte.categoria);
 
   const esMio =
@@ -38,8 +39,11 @@ export function HojaDetalle({ reporte, onCerrar }: { reporte: Reporte; onCerrar:
 
   const manejarEscalar = async (destino: DestinoEscalamiento) => {
     setEscalando(true);
-    await escalar(reporte.id, destino);
+    setErrorEscalamiento(null);
+    const resultado = await escalar(reporte.id, destino);
     setEscalando(false);
+    // Si falla, se dice. Un boton que se queda mudo hace pensar que el aviso salio.
+    if (!resultado.ok) setErrorEscalamiento(resultado.mensaje);
   };
 
   return (
@@ -194,10 +198,17 @@ export function HojaDetalle({ reporte, onCerrar }: { reporte: Reporte; onCerrar:
                       onClick={() => void manejarEscalar(d.id)}
                       className="toque rounded-xl border border-borde bg-superficie-alta px-2 py-3 text-xs font-medium text-texto transition active:scale-[0.98] disabled:opacity-50"
                     >
-                      {d.etiqueta}
+                      {escalando ? "Enviando…" : d.etiqueta}
                     </button>
                   ))}
                 </div>
+                {errorEscalamiento ? (
+                  <div className="mt-2">
+                    <Aviso tono="alerta" icono="alerta">
+                      {errorEscalamiento}
+                    </Aviso>
+                  </div>
+                ) : null}
                 <p className="mt-2 text-[11px] leading-relaxed text-tenue">
                   Se envia hash, categoria, zona y coordenada truncada. Nunca tu identidad.
                 </p>

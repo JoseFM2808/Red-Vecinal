@@ -7,7 +7,7 @@
  * equipo de contratos, no solo refactorizar.
  */
 
-export type IdCategoria = "actividad_sospechosa" | "infraestructura";
+export type IdCategoria = "actividad_sospechosa" | "infraestructura" | "sismo_sentido";
 
 export type DestinoEscalamiento = "serenazgo" | "policia" | "ambulancia";
 

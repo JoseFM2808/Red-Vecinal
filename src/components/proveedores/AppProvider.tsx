@@ -34,6 +34,23 @@ import type { DestinoEscalamiento, Identidad, Reporte } from "@/lib/tipos";
 
 type SolicitudUI = Omit<SolicitudReporte, "identidad" | "reportesPrevios">;
 
+/**
+ * Resultado del escalamiento. Se devuelve siempre un objeto, nunca null:
+ * un boton que no dice nada cuando falla es el peor resultado posible en una demo
+ * en vivo — el vecino no sabe si el aviso salio o no.
+ */
+export interface ResultadoEscalamiento {
+  ok: boolean;
+  folio: string | null;
+  /** El canal de la autoridad acepto el aviso. */
+  aceptado: boolean;
+  simulado: boolean;
+  mensaje: string;
+}
+
+/** El servidor ya se corta a los 4 s; el cliente espera un poco mas por el arranque en frio. */
+const TIMEOUT_ESCALAMIENTO_MS = 10_000;
+
 interface EstadoApp {
   identidad: Identidad | null;
   reportes: Reporte[];
@@ -46,7 +63,7 @@ interface EstadoApp {
     onEtapa?: (etapa: EtapaFlujo) => void,
   ) => Promise<ResultadoFlujo>;
   corroborar: (idReporte: string) => void;
-  escalar: (idReporte: string, destino: DestinoEscalamiento) => Promise<string | null>;
+  escalar: (idReporte: string, destino: DestinoEscalamiento) => Promise<ResultadoEscalamiento>;
   reiniciarDemo: () => Promise<void>;
 }
 
@@ -162,8 +179,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const escalar = useCallback<EstadoApp["escalar"]>(
     async (idReporte, destino) => {
+      const fallo = (mensaje: string): ResultadoEscalamiento => ({
+        ok: false,
+        folio: null,
+        aceptado: false,
+        simulado: true,
+        mensaje,
+      });
+
       const reporte = reportes.find((r) => r.id === idReporte);
-      if (!reporte) return null;
+      if (!reporte) return fallo("No se encontro el reporte en este dispositivo.");
 
       try {
         const respuesta = await fetch("/api/escalamiento", {
@@ -177,12 +202,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
             zonaNombre: reporte.zonaNombre,
             cid: reporte.evidencia?.cid ?? null,
           }),
+          signal: AbortSignal.timeout(TIMEOUT_ESCALAMIENTO_MS),
         });
 
-        if (!respuesta.ok) return null;
+        if (!respuesta.ok) {
+          return fallo(
+            `El servicio de escalamiento respondio ${respuesta.status}. Tu reporte sigue publicado en la red vecinal.`,
+          );
+        }
+
         const datos: unknown = await respuesta.json();
-        const cuerpo = datos as { folio?: string; simulado?: boolean; mensaje?: string };
-        if (!cuerpo.folio) return null;
+        const cuerpo = datos as {
+          folio?: string;
+          simulado?: boolean;
+          aceptado?: boolean;
+          mensaje?: string;
+        };
+        if (!cuerpo.folio) {
+          return fallo("La respuesta del servicio llego incompleta. Intenta de nuevo.");
+        }
+
+        const resultado: ResultadoEscalamiento = {
+          ok: true,
+          folio: cuerpo.folio,
+          aceptado: cuerpo.aceptado !== false,
+          simulado: cuerpo.simulado ?? true,
+          mensaje: cuerpo.mensaje ?? "",
+        };
 
         persistir(
           reportes.map((r) =>
@@ -190,19 +236,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
               ? {
                   ...r,
                   escalamiento: {
-                    folio: cuerpo.folio ?? "",
+                    folio: resultado.folio ?? "",
                     destino,
                     creadoEn: Date.now(),
-                    simulado: cuerpo.simulado ?? true,
-                    mensaje: cuerpo.mensaje ?? "",
+                    simulado: resultado.simulado,
+                    mensaje: resultado.mensaje,
                   },
                 }
               : r,
           ),
         );
-        return cuerpo.folio;
+        return resultado;
       } catch {
-        return null;
+        // Incluye el corte por AbortSignal: red del movil caida o funcion sin responder.
+        return fallo(
+          "No hubo respuesta del canal de la autoridad. Tu reporte sigue publicado en la red vecinal.",
+        );
       }
     },
     [persistir, reportes],

@@ -29,6 +29,43 @@ interface Semilla {
 }
 
 const SEMILLAS: readonly Semilla[] = [
+  // --- Sismo sentido: cuatro vecinos de distritos distintos en 8 minutos. -----------
+  // Es el evento que enciende el panel comunitario "lo sentiste" (src/lib/sismos.ts).
+  // Estan a menos de 30 minutos a proposito; si pasa mas tiempo el panel se apaga solo,
+  // que es el comportamiento correcto. Antes de presentar: Cuenta > Reiniciar datos.
+  {
+    categoria: "sismo_sentido",
+    descripcion: "Moderado: se movieron las cosas. Se escucho crujir la estructura.",
+    coordenada: { lat: -11.9748, lng: -76.9968 },
+    minutosAtras: 4,
+    autorSeudonimo: "vecina-4410",
+    autorDireccion: "0xc41d09a7e3b5824f16db09e4a752c8031f6b9e47",
+  },
+  {
+    categoria: "sismo_sentido",
+    descripcion: "Fuerte: dificil mantenerse en pie, se cayo un cuadro.",
+    coordenada: { lat: -12.0451, lng: -77.0402 },
+    minutosAtras: 6,
+    autorSeudonimo: "vecino-9037",
+    autorDireccion: "0x5b0e83f1a94c27d6083be51749fa2c60d38e7b19",
+  },
+  {
+    categoria: "sismo_sentido",
+    descripcion: "Moderado: se balancearon las lamparas.",
+    coordenada: { lat: -12.1596, lng: -76.9712 },
+    minutosAtras: 7,
+    autorSeudonimo: "vecina-1725",
+    autorDireccion: "0xe80a4c25b7139df6042ba8e51370c9f4a26d8b03",
+  },
+  {
+    categoria: "sismo_sentido",
+    descripcion: "Leve: apenas se sintio, pero se movio el agua del bidon.",
+    coordenada: { lat: -11.9518, lng: -77.0601 },
+    minutosAtras: 9,
+    autorSeudonimo: "vecino-6284",
+    autorDireccion: "0x1f7c60b3ae925d84013fc7e6a4820d59b3ef14a7",
+  },
+  // --- Seguridad e infraestructura --------------------------------------------------
   {
     categoria: "actividad_sospechosa",
     descripcion: "Dos personas en moto dando vueltas a la cuadra desde hace media hora.",

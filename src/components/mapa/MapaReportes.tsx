@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { useApp } from "@/components/proveedores/AppProvider";
 import { HojaDetalle } from "@/components/reportes/HojaDetalle";
 import { TarjetaReporte } from "@/components/reportes/TarjetaReporte";
+import { AvisoSismo } from "@/components/sismos/AvisoSismo";
 import { Icono } from "@/components/ui/Icono";
 import { CATEGORIAS } from "@/lib/categorias";
 import type { Coordenada, IdCategoria, Reporte } from "@/lib/tipos";
@@ -121,6 +122,8 @@ export function MapaReportes() {
       </div>
 
       <div className="space-y-2 p-4">
+        <AvisoSismo compacto />
+
         <div className="flex items-center justify-between">
           <h2 className="etiqueta-seccion">
             {visibles.length} reporte{visibles.length === 1 ? "" : "s"}
