@@ -294,7 +294,8 @@ function SeccionArbitrum({ datos }: { datos: (typeof ARQUITECTURA)["arbitrum"] }
           <p className="mt-3 border-t border-borde pt-3 text-xs leading-relaxed text-suave">
             Unas <span className="font-semibold text-marca">{factor}x</span> mas barato. Con un
             reporte diario por vecino, en L1 el proyecto no existe: el costo de la prueba supera el
-            valor de la recompensa. Estimacion pendiente de medirse en el contrato desplegado.
+            valor de la recompensa. Ya no es estimacion: 216,804 de gas medidos por anclaje contra
+            el contrato real (2026-08-09).
           </p>
         </Tarjeta>
       </section>

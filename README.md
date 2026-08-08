@@ -84,7 +84,7 @@ en `localhost` también. Si el GPS falla, el flujo ofrece una ubicación de demo
 ```bash
 npm run dev       # desarrollo
 npm run check     # preflight + validate + docs:check + typecheck + lint + test  ← antes de "listo"
-npm run test      # solo los tests del dominio (88)
+npm run test      # solo los tests del dominio (168)
 npm run docs      # regenera docs/ARQUITECTURA.md y docs/DECISIONES.md desde src/data
 npm run preflight # valida el entorno; aborta si un secreto lleva prefijo NEXT_PUBLIC_
 npm run build     # build de produccion (lo mismo que corre Vercel)
@@ -133,12 +133,12 @@ Lo simulado está etiquetado **dentro del producto** (pestaña Arquitectura → 
 | --- | --- | --- |
 | Detección de sismos | Agrega los reportes de vecinos por zona ("lo sentiste") | Nada previsto: **cuenta reportes, no mide sismos** |
 | Distrito del reporte | Estimado en el dispositivo con 49 referencias de Lima y Callao, corregible a mano | Cerca de un borde puede apuntar al distrito vecino |
-| Anclaje on-chain | Comprobante simulado con el formato real de Arbiscan | Desplegar `ReportRegistry` |
-| Recompensas | Política aplicada en cliente, con tests | `TokenReward.sol` |
+| Anclaje on-chain | **Real en Arbitrum Sepolia**: contratos verificados, firma embebida (Privy) y gas automático | Variables en Vercel + push para activarlo en producción |
+| Recompensas | Política en cliente con tests; `TokenReward` desplegado y verificado | Botón de claim y corroboración on-chain en la interfaz |
 | Evidencia IPFS | CID determinista derivado del hash del archivo | Pinata con JWT |
 | Escalamiento | Ruta API real, destino simulado | Convenio municipal |
-| Identidad | Pseudónimo local, sin seed phrase | Privy o Web3Auth |
-| Índice compartido | Local al dispositivo + datos sembrados | Leer eventos `ReportSubmitted` |
+| Identidad | Wallet embebida de Privy atada a tu Google, sin seed phrase (ADR-050) | Unificar sesión y firma en un solo login |
+| Índice compartido | Lee eventos `ReportSubmitted` del contrato real | Corroboraciones y descripciones de reportes remotos |
 
 ---
 

@@ -2,7 +2,7 @@
   "meta": {
     "nombre": "Vecino Seguro",
     "version": "0.1.0-beta.2",
-    "actualizado": "2026-08-07",
+    "actualizado": "2026-08-09",
     "resumen": "Red vecinal de reporte de seguridad. El vecino reporta en 3 toques desde el celular; la evidencia se sube a IPFS, su hash se ancla en Arbitrum y la red vecinal se entera al instante. Un botón aparte escala a serenazgo o policía. Nadie ve quién reportó salvo que el propio usuario lo autorice o exista una orden judicial verificable."
   },
   "problema": {
@@ -91,7 +91,7 @@
     {
       "id": "estado",
       "nombre": "Estado y persistencia",
-      "rol": "Repositorio de reportes con persistencia en el dispositivo y datos sembrados de Lima para que la red se vea activa desde el primer arranque.",
+      "rol": "Repositorio de reportes con persistencia en el dispositivo, más el índice compartido leído de la cadena en modo arbitrum. Los datos sembrados de demostración existen solo con NEXT_PUBLIC_DATOS_DEMO=1 (ADR-040): en la prueba real la red muestra únicamente reportes reales.",
       "estado": "simulado",
       "tecnologias": [
         "React Context",
@@ -106,13 +106,13 @@
     {
       "id": "cadena",
       "nombre": "Capa de cadena (Arbitrum)",
-      "rol": "Interfaz ChainAdapter: anclar reporte, consultar recompensa, resolver enlaces al explorador, leer el índice compartido. Los tres contratos (ReportRegistry, TokenReward, IdentityEscrow) están escritos, testeados, desplegados en Arbitrum Sepolia y verificados en Arbiscan (2026-08-08). ArbitrumChainAdapter (ADR-030) implementa la interfaz con viem y firma con wallet inyectada. La beta sigue corriendo en modo simulado en producción hasta que las direcciones se carguen como variables de entorno en Vercel y se redespliegue — el código y los contratos ya no son lo que falta.",
-      "estado": "simulado",
+      "rol": "Interfaz ChainAdapter: anclar reporte, consultar recompensa, resolver enlaces al explorador, leer el índice compartido. Los tres contratos están desplegados y verificados en Arbitrum Sepolia (2026-08-08) y ya registran reportes reales de la prueba de campo. ArbitrumChainAdapter firma con la wallet embebida de Privy (ADR-050) — o con una inyectada si existe — y el gas llega solo por el grifo automático (ADR-051). Gas medido del anclaje: 216,804 por submitReport. En producción (Vercel) el modo arbitrum se activa al cargar las variables y redesplegar; hasta entonces solo producción sigue en simulado, con el respaldo etiquetado del ADR-049 para quien no tenga firma.",
+      "estado": "listo",
       "tecnologias": [
         "Arbitrum Sepolia (421614)",
         "Arbitrum One (42161)",
-        "ABIs tipadas",
-        "viem"
+        "viem",
+        "Privy (wallet embebida)"
       ],
       "archivos": [
         "src/lib/chain/types.ts",
@@ -121,7 +121,8 @@
         "src/lib/chain/proveedor-inyectado.ts",
         "src/lib/chain/eventos.ts",
         "src/lib/chain/redes.ts",
-        "src/lib/chain/abis.ts"
+        "src/lib/chain/abis.ts",
+        "src/components/proveedores/ProveedorPrivy.tsx"
       ]
     },
     {
@@ -158,7 +159,7 @@
       "tecnologias": [
         "Auth.js v5 (Google)",
         "JWT en cookie, sin base de datos",
-        "Privy o Web3Auth (a integrar)",
+        "Privy — wallet embebida integrada (ADR-050)",
         "IdentityEscrow.sol"
       ],
       "archivos": [
@@ -300,8 +301,8 @@
   "contratos": [
     {
       "nombre": "ReportRegistry.sol",
-      "red": "Arbitrum Sepolia → Arbitrum One",
-      "estado": "pendiente-equipo",
+      "red": "Arbitrum Sepolia — 0x322a2862C2218136124DF6f1d030E9942aBe43Ba (verificado en Arbiscan)",
+      "estado": "listo",
       "responsabilidad": "Registro inmutable de reportes: hash de contenido, coordenadas en microgrados, categoría y timestamp. Emite el evento que alimenta el mapa compartido.",
       "funciones": [
         {
@@ -316,8 +317,8 @@
     },
     {
       "nombre": "TokenReward.sol",
-      "red": "Arbitrum Sepolia → Arbitrum One",
-      "estado": "pendiente-equipo",
+      "red": "Arbitrum Sepolia — 0x6E1B4747913431343196FD1D4b6772c5d43E9Fa5 (verificado en Arbiscan)",
+      "estado": "listo",
       "responsabilidad": "ERC-20 que mintea la recompensa con los límites anti-Sybil. La especificación ejecutable está en src/lib/antisybil.ts.",
       "funciones": [
         {
@@ -332,8 +333,8 @@
     },
     {
       "nombre": "IdentityEscrow.sol",
-      "red": "Arbitrum Sepolia → Arbitrum One",
-      "estado": "pendiente-equipo",
+      "red": "Arbitrum Sepolia — 0x84F39967863b42D4041988ADc9a88F8D32729eF2 (verificado en Arbiscan)",
+      "estado": "listo",
       "responsabilidad": "Custodia el vínculo cifrado wallet↔identidad. Libera solo con 2 de 3 firmas (usuario, plataforma, autoridad judicial).",
       "funciones": [
         {
@@ -348,7 +349,7 @@
     }
   ],
   "arbitrum": {
-    "porQue": "Un reporte por vecino por día solo cierra si anclar cuesta fracciones de centavo. En L1 el mismo gesto cuesta dólares y el producto no existe.",
+    "porQue": "Un reporte por vecino por día solo cierra si anclar cuesta fracciones de centavo. Ya no es una estimación: medido en Sepolia, submitReport consume 216,804 de gas — alrededor de un centavo en Arbitrum One y varios dólares en Ethereum L1. En L1 el producto no existe.",
     "usos": [
       {
         "titulo": "Asentamiento de evidencia",
@@ -383,8 +384,8 @@
   "limites": [
     {
       "tema": "Anclaje on-chain",
-      "queHacemos": "ArbitrumChainAdapter está implementado con viem y firma con la wallet inyectada del navegador; el adaptador simulado sigue siendo el que corre por defecto y produce un hash y un enlace al explorador con el formato real.",
-      "queFaltaria": "Desplegar los tres contratos en Arbitrum Sepolia con una wallet fondeada y cargar las direcciones en NEXT_PUBLIC_*_ADDRESS. No falta código: el despliegue guardado en contracts/ignition/deployments/chain-421614 se hizo contra un nodo Hardhat local que imita ese chainId, y esas direcciones no existen en la red real (ADR-038)."
+      "queHacemos": "Anclaje REAL en Arbitrum Sepolia: contratos desplegados y verificados, la wallet embebida de Privy firma (ADR-050), el gas llega solo (ADR-051) y hay reportes reales de la prueba de campo en el contrato. Quien no active la firma conserva el comprobante simulado, etiquetado (ADR-049).",
+      "queFaltaria": "Producción: cargar en Vercel NEXT_PUBLIC_PRIVY_APP_ID, NEXT_PUBLIC_REPORT_REGISTRY_DEPLOY_BLOCK y GAS_DRIP_PRIVATE_KEY, y hacer push (bloqueado hoy por la conexión a GitHub del equipo). La app de Privy sigue en modo development."
     },
     {
       "tema": "Anti-Sybil",
@@ -398,7 +399,7 @@
     },
     {
       "tema": "Acceso con Google",
-      "queHacemos": "Puerta de acceso selectiva con Auth.js (ADR-035): navegar no pide sesion, reportar y el circulo si. El alias se deriva de la cuenta, asi que entrar desde otro telefono devuelve el mismo seudonimo. Sin base de datos: la sesion es una cookie firmada en el dispositivo.",
+      "queHacemos": "Puerta de acceso selectiva con Auth.js (ADR-035): navegar no pide sesion, reportar y el circulo si. El alias se deriva de la cuenta, asi que entrar desde otro telefono devuelve el mismo seudonimo. Sin base de datos: la sesion es una cookie firmada en el dispositivo. Con Privy (ADR-050), la misma cuenta de Google activa una wallet embebida que firma los anclajes de verdad, con el gas goteado por la plataforma (ADR-051).",
       "queFaltaria": "Si el despliegue no tiene credenciales de Google, tambien reportar y el circulo se abren solos para no dejar esas rutas inaccesibles. La derivacion del alias es de demostracion, no una KDF."
     },
     {
@@ -413,8 +414,8 @@
     },
     {
       "tema": "Índice compartido",
-      "queHacemos": "La lectura de eventos ReportSubmitted por RPC está implementada y fusiona lo local completo con lo remoto best-effort (ADR-032). Mientras no haya contrato desplegado, lo que se ve son los reportes del dispositivo más los datos sembrados de Lima.",
-      "queFaltaria": "Un contrato desplegado del que leer. Las corroboraciones aún no se sincronizan: un reporte reconstruido desde el evento llega sin descripción ni conteo de corroboraciones."
+      "queHacemos": "Lee los eventos ReportSubmitted del contrato real y los fusiona con lo local: dos teléfonos en modo arbitrum ven los mismos reportes anclados.",
+      "queFaltaria": "Las corroboraciones aún no se sincronizan: un reporte reconstruido desde el evento llega sin descripción ni conteo de corroboraciones de otros dispositivos."
     },
     {
       "tema": "Detección de distrito",
@@ -434,40 +435,34 @@
   ],
   "siguientesPasos": [
     {
-      "titulo": "Desplegar los tres contratos en Arbitrum Sepolia",
-      "responsable": "Quien tenga una wallet con ETH de testnet",
-      "detalle": "Los contratos ya están escritos, compilados y con 27 tests en verde (contracts/, ADR-033, ADR-034) — no falta código, falta una wallet fondeada. Correr `npm run contracts:deploy:sepolia` tras llenar contracts/.env (ver contracts/.env.example) y publicar las tres direcciones en las variables NEXT_PUBLIC_*_ADDRESS.",
-      "bloquea": "Anclaje real, recompensa real, índice compartido"
+      "titulo": "Activar el modo arbitrum en producción",
+      "responsable": "Equipo (Vercel + push)",
+      "detalle": "El código y los contratos ya están: falta push de los commits en cola (bloqueado por la conexión a GitHub) y cargar en Vercel NEXT_PUBLIC_PRIVY_APP_ID, NEXT_PUBLIC_REPORT_REGISTRY_DEPLOY_BLOCK=295929385 y GAS_DRIP_PRIVATE_KEY (Sensitive).",
+      "bloquea": "La prueba multi-teléfono en producción: hoy el anclaje real solo corre en local."
     },
     {
-      "titulo": "Verificar el código fuente en Arbiscan",
-      "responsable": "Quien despliegue",
-      "detalle": "`npm run --prefix contracts verify:sepolia` (o `hardhat ignition verify`) con ARBISCAN_API_KEY en contracts/.env. Sin esto el contrato es una caja negra para el jurado.",
-      "bloquea": "Que el criterio de Arbitrum se pueda verificar de verdad, no solo argumentar"
-    },
-    {
-      "titulo": "Probar ArbitrumChainAdapter contra Sepolia real",
+      "titulo": "Conectar IdentityEscrow a la pantalla de revelación selectiva",
       "responsable": "Frontend",
-      "detalle": "El adaptador (src/lib/chain/arbitrum-adapter.ts) y la lectura de eventos (src/lib/chain/eventos.ts) ya están implementados y gateados por NEXT_PUBLIC_CHAIN_MODE (ADR-030, ADR-032), firmando con wallet inyectada. Falta solo que existan direcciones desplegadas para verificar end-to-end.",
-      "bloquea": "Confirmar el formato de zoneId (hoy keccak256 del string, ver ADR-030) y medir el costo real de gas"
-    },
-    {
-      "titulo": "Conectar Privy o Web3Auth",
-      "responsable": "Frontend",
-      "detalle": "Reemplazar la wallet inyectada interina (src/lib/chain/proveedor-inyectado.ts) por la wallet embebida. La interfaz ya está aislada para que sea un cambio de un archivo.",
-      "bloquea": "Firmar transacciones reales sin que el vecino instale una wallet aparte"
+      "detalle": "El contrato está desplegado pero RevelacionSelectiva.tsx sigue siendo una demo client-side: nada llama a bindIdentity, requestDisclosure ni approveDisclosure. No bloquea reportar/recompensar.",
+      "bloquea": "Que la revelación bajo orden judicial deje de ser demo conceptual."
     },
     {
       "titulo": "Sincronizar corroboraciones desde TokenReward.corroborate()",
       "responsable": "Frontend",
-      "detalle": "El índice compartido (ADR-032) hoy reconstruye reportes remotos sin corroboraciones ni descripción. Leer también estos eventos para que la recompensa mostrada coincida entre dispositivos.",
-      "bloquea": "Que el saldo mostrado sea el mismo en todos los teléfonos"
+      "detalle": "El índice compartido reconstruye reportes remotos sin corroboraciones ni descripción. Leer también estos eventos para que la recompensa mostrada coincida entre dispositivos.",
+      "bloquea": "Que el multiplicador x1.5 se vea igual en todos los teléfonos."
+    },
+    {
+      "titulo": "Unificar la sesión y la firma en un solo login",
+      "responsable": "Frontend (post-demo)",
+      "detalle": "Hoy conviven NextAuth (sesión) y Privy (firma): dos consentimientos de Google. Unificarlos toca la puerta de acceso y la identidad — decisión de después del 12 (ADR-050).",
+      "bloquea": "Nada de la demo; es deuda de experiencia."
     },
     {
       "titulo": "Evaluar Stylus para verificación geoespacial",
       "responsable": "Equipo de contratos",
-      "detalle": "Medir el costo en gas del cálculo de distancia en Solidity contra Rust/Stylus antes de prometerlo en el pitch.",
-      "bloquea": "Nada del MVP; es argumento de escalabilidad"
+      "detalle": "Sigue siendo candidato de roadmap: medir el gas de corroborate() con coordenadas contra una versión Stylus antes de prometer nada en el pitch.",
+      "bloquea": "Nada: es roadmap honesto."
     }
   ],
   "rubrica": [

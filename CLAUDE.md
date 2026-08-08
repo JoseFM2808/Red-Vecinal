@@ -18,14 +18,14 @@ donde no llegan o no generan confianza — no los reemplaza.
 - On-chain se guarda el **hash** del reporte (IPFS + coordenadas + timestamp), no la identidad.
 
 ## Stack técnico
-- **Contratos**: Solidity sobre Arbitrum Sepolia (testnet) → mira a Arbitrum One.
+- **Contratos**: Solidity sobre Arbitrum Sepolia — **desplegados y verificados (2026-08-08)** → mira a Arbitrum One.
   - `ReportRegistry.sol` — hash IPFS + coordenadas + categoría + timestamp, emite evento.
   - `TokenReward.sol` (ERC-20) — mint con rate-limit por wallet/zona/tiempo.
   - `IdentityEscrow.sol` — vínculo wallet↔identidad cifrado, multisig simplificado 2-de-3 para el MVP.
 - **Frontend** (este repo): Next.js 15 App Router + React 19 + Tailwind 4, TypeScript estricto.
   Mobile-first, con barra lateral desde el punto de corte `md` en escritorio (ADR-028).
   - Login **opcional** con Google (Auth.js v5). No identifica ante la red: el alias publico no cambia (ADR-021).
-  - Wallet abstraction: Privy o Web3Auth (nada de seed phrases visibles al usuario).
+  - Wallet abstraction: **Privy** — wallet embebida por cuenta de Google y gas automático (ADR-050/051); nada de seed phrases.
   - Mapa en tiempo real: Leaflet + OpenStreetMap (sin API key — ver ADR-004).
   - Flujo: categoría → foto/video → geolocalización automática → confirmar → recompensa.
   - Botón de escalamiento a autoridad (webhook/SMS/WhatsApp simulado para demo).

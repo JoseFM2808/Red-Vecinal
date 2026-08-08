@@ -1,9 +1,10 @@
 # Siguientes pasos — integración con Arbitrum
 
-Estado actual: `NEXT_PUBLIC_CHAIN_MODE=simulado`. El frontend (adaptador, lectura de eventos) y
-los tres contratos ya están escritos y testeados (ADR-030 a ADR-034). **No queda código por
-escribir para activar la integración real** — falta una wallet con ETH de testnet para
-desplegar, y después cargar tres direcciones en Vercel.
+Estado actual (2026-08-09): **la integración real FUNCIONA de punta a punta en local.**
+Contratos desplegados y verificados en Arbitrum Sepolia (2026-08-08), la wallet embebida de
+Privy firma (ADR-050), el gas gotea solo (ADR-051) y el contrato ya registra reportes reales
+de la prueba de campo, con gas medido (216,804 por `submitReport`). Lo único que separa a
+producción de ese estado: push de los commits en cola + variables en Vercel (§5).
 
 Los contratos viven en [`contracts/`](../contracts), un proyecto Hardhat 3 + viem separado del
 frontend (tiene su propio `package.json`, no afecta `npm run check` ni `npm run build`). Antes
@@ -117,10 +118,10 @@ Ya no es tarea del equipo de contratos. `src/lib/chain/arbitrum-adapter.ts` impl
 cargadas (con fallback seguro al simulado si falla). Nada de esto cambia cuando desplieguen:
 solo hace falta que las variables de entorno del §5 apunten a contratos reales.
 
-Un detalle a conocer: el adaptador firma con lo que devuelva `src/lib/chain/proveedor-inyectado.ts`
-(hoy, `window.ethereum` — MetaMask u otra wallet inyectada), porque el frontend todavía no decidió
-Privy vs Web3Auth. Para probar el adaptador contra Sepolia hace falta una wallet inyectada con esa
-red configurada y con fondos de un faucet.
+El adaptador firma con lo que devuelva `src/lib/chain/proveedor-inyectado.ts`. Desde ADR-050
+eso es, en orden: la wallet embebida de Privy (la de la cuenta de Google, con gas goteado por
+ADR-051) y, si no existe, `window.ethereum` (MetaMask u otra inyectada). Probarlo ya no exige
+faucet ni extension: activar la firma en Cuenta basta.
 
 ---
 
@@ -212,7 +213,13 @@ evaluado, que es más creíble que un logo en una slide.
 
 ---
 
-## 8. AVISO CRÍTICO antes de desplegar: quién firma cuando el usuario entró con Google
+## 8. ~~AVISO CRÍTICO~~ RESUELTO: quién firma cuando el usuario entró con Google
+
+> **Resolución (2026-08-09):** el hueco descrito abajo se cerró con la wallet embebida de
+> Privy (ADR-050) + el grifo automático de gas (ADR-051). Cada cuenta de Google recibe su
+> propia wallet firmante — el reporter on-chain es el vecino, el anti-Sybil del contrato
+> aplica por persona y no hizo falta tocar los contratos ya desplegados. La sección se
+> conserva como registro del análisis.
 
 > Añadido el 8 de agosto tras un barrido de verificación (9 lectores + crítico sobre el código
 > real, no sobre la memoria). **Leer esto antes de desplegar a Sepolia.** La prueba con cuentas
@@ -317,14 +324,13 @@ Pendiente:
 
 - [ ] Variables de entorno cargadas en **Vercel** (Project Settings → Environment Variables) y
       redeploy — `.env.local` no llega a Vercel, hay que copiarlas ahí también
-- [ ] Costo real por anclaje medido → reemplazar la estimación en `src/lib/chain/redes.ts`
-- [ ] Probar `ArbitrumChainAdapter` end-to-end contra los contratos reales, desde la app y con
-      una wallet inyectada de verdad (MetaMask) — la validación hecha hasta ahora fue contra un
-      nodo local, no contra estos contratos ya desplegados
+- [x] Costo real por anclaje medido: **216,804 de gas** por `submitReport` (recibo real del 2026-08-09) — `redes.ts` ya proyecta con ese dato
+- [x] Probado end-to-end contra los contratos reales, desde la app: reportes de la prueba de
+      campo anclados con la firma embebida de Privy (sin MetaMask — ADR-050)
 
 Pendiente, del frontend, fuera de esta pasada:
 
-- [ ] Conectar Privy o Web3Auth en vez de la wallet inyectada interina
+- [x] Privy conectado (ADR-050): wallet embebida por cuenta de Google, con goteo automático de gas (ADR-051)
 - [ ] Sincronizar corroboraciones desde `TokenReward.corroborate()` en el índice compartido
 - [ ] Si se decide verificar distancia on-chain en `corroborate()`, extender su ABI con
       coordenadas y recién ahí medir si Stylus se justifica (§7)

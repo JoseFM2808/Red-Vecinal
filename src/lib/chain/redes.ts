@@ -15,9 +15,12 @@ export interface RedArbitrum {
   explorador: string;
   esTestnet: boolean;
   /**
-   * Costo estimado de una llamada a submitReport(), en USD.
-   * Estimacion, no medicion: reemplazar con el dato real cuando el contrato
-   * este desplegado (ADR-012, pendiente de validacion del equipo de contratos).
+   * Costo de una llamada a submitReport(), en USD.
+   *
+   * YA NO ES ESTIMACION (ADR-012 cerrada): medido el 2026-08-09 contra el contrato
+   * real en Sepolia — submitReport consume 216,804 de gas (recibo de la tx
+   * 0x30f3263e...c4b1993, precio efectivo 0.02 gwei). El valor de One proyecta ese
+   * gas al precio tipico de la red (~0.01 gwei) con ETH a $3,500; el de L1, a ~8 gwei.
    */
   costoAnclajeUsd: number;
 }
@@ -41,12 +44,12 @@ export const REDES: Record<number, RedArbitrum> = {
     rpcPublico: "https://arb1.arbitrum.io/rpc",
     explorador: "https://arbiscan.io",
     esTestnet: false,
-    costoAnclajeUsd: 0.0021,
+    costoAnclajeUsd: 0.0076,
   },
 };
 
-/** Costo del mismo anclaje en Ethereum L1, para la comparacion del pitch. */
-export const COSTO_ANCLAJE_L1_USD = 1.85;
+/** El mismo anclaje en Ethereum L1: 216,804 de gas medidos x ~8 gwei x $3,500. */
+export const COSTO_ANCLAJE_L1_USD = 6.07;
 
 export function obtenerRed(chainId: number): RedArbitrum {
   const red = REDES[chainId];
