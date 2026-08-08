@@ -4,7 +4,7 @@
 
 Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o por el equipo se registra aquí ANTES o AL MOMENTO de escribir el código que la implementa. `docs/DECISIONES.md` se genera desde este archivo (npm run docs) y la pestaña Arquitectura de la app lo renderiza.
 
-**50 decisiones registradas · 25 esperan validacion humana**
+**51 decisiones registradas · 26 esperan validacion humana**
 
 ## Esperan que una persona decida
 
@@ -35,6 +35,7 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | ADR-042 | Los sismos llegan del IGP y el vecino responde la intensidad, en vez de reportarlos | Dos cosas a validar. 1) El IGP es un servicio publico sin SLA ni terminos de uso publicados para este endpoint: confirmar que el equipo acepta esa dependencia para la demo (la app se degrada con aviso si falla). 2) El umbral de alerta (M3.5) y los radios por magnitud son criterio nuestro, no del IGP: revisarlos con alguien que sepa sismologia antes de presumirlos delante del jurado. |
 | ADR-043 | Sin sesion, la app es la vitrina: historia en Inicio y mapa de incidentes con filtros | Decision de producto que conviene confirmar antes del 12: la pestana Arquitectura queda detras del login. Es la pantalla que mas puntua con el jurado tecnico — si un juez explora la app por su cuenta sin entrar, no la va a ver. Alternativa barata si molesta: sacar /arquitectura de RUTAS_PROTEGIDAS (una linea con test). RESUELTO: el equipo decidio mantenerla publica — ver ADR-044. |
 | ADR-046 | El circulo se vincula por QR o enlace, con consentimiento, plazo y revocacion, cifrado de extremo a extremo | Dos cosas. 1) Para que el canal funcione entre telefonos EN VERCEL hay que provisionar un Redis de Upstash (gratis) y cargar UPSTASH_REDIS_REST_URL y UPSTASH_REDIS_REST_TOKEN como variables Sensitive; sin eso cada telefono puede caer en una instancia distinta y los sobres no se encuentran (la API responde efimero:true como sintoma). Coordinarlo con TI segun la regla de la organizacion sobre servicios nuevos. 2) Esto matiza la regla 'sin base de datos': es un buzon efimero de sobres cifrados con TTL de minutos, no un registro de datos — confirmar que el equipo lo acepta asi para poder defenderlo ante el jurado. |
+| ADR-049 | Sin wallet inyectada, el modo arbitrum ancla con comprobante simulado en vez de romper el reporte | Tres cosas. 1) Falta una variable en Vercel que no esta en tu lista: NEXT_PUBLIC_REPORT_REGISTRY_DEPLOY_BLOCK=295929385 (el bloque real del despliegue, verificado en Blockscout) — sin ella la primera carga del indice compartido pagina desde el bloque 0 y puede ser lenta o fallar con el RPC publico. 2) Confirmar con el equipo que la demo acepta las dos verdades etiquetadas (anclado real con wallet / comprobante simulado sin wallet) mientras el hueco de firma se cierra con relevo o Privy. 3) El anti-Sybil on-chain solo aplica a quien firma de verdad; el resto sigue bajo la politica del cliente. |
 
 ## Indice
 
@@ -90,6 +91,7 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | [ADR-046](#adr-046) | El circulo se vincula por QR o enlace, con consentimiento, plazo y revocacion, cifrado de extremo a extremo | IA+Humano | aceptada | media | Producto y UX, Problema e impacto, Implementacion tecnica |
 | [ADR-047](#adr-047) | Dependencia nueva: qrcode para generar el codigo del vinculo | IA+Humano | aceptada | alta | Implementacion tecnica, Producto y UX |
 | [ADR-048](#adr-048) | La ruta protegida sin sesion muestra un aviso con boton de entrar, no un rebote mudo | IA+Humano | aceptada | alta | Producto y UX |
+| [ADR-049](#adr-049) | Sin wallet inyectada, el modo arbitrum ancla con comprobante simulado en vez de romper el reporte | IA+Humano | aceptada | alta | Ecosistema Arbitrum, Producto y UX, Implementacion tecnica |
 
 ---
 
@@ -1660,3 +1662,36 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 **Sirve a.** Producto y UX
 
 **Evidencia en el codigo.** `src/components/acceso/PuertaAcceso.tsx`
+
+---
+
+## ADR-049
+
+### Sin wallet inyectada, el modo arbitrum ancla con comprobante simulado en vez de romper el reporte
+
+`2026-08-09` · autor: **IA+Humano** · estado: **aceptada** · reversibilidad: **alta**
+
+**Contexto.** Los tres contratos ya estan desplegados y verificados en Arbitrum Sepolia (merge de feature/arbitrum-imp, direcciones cargadas en Vercel). Pero ArbitrumChainAdapter firma con wallet inyectada, y la identidad de la app no tiene clave privada (SIGUIENTES-PASOS §8.1): en cuanto NEXT_PUBLIC_CHAIN_MODE=arbitrum llegara a produccion, cada usuario de solo-Google — casi todos en la prueba — veria morir el boton de publicar con 'instala MetaMask'. El hueco de firma estaba documentado; este es el parche minimo para que la activacion no rompa la prueba.
+
+**Alternativas descartadas.**
+
+- *Activar arbitrum solo cuando exista el relevo del servidor o Privy* — Deja el despliegue real sin estrenar a tres dias de la demo. La lectura del indice compartido — el valor visible — no necesita wallet y estaria lista hoy.
+- *Dejar que anclarReporte falle y mostrar el error* — Rompe la accion principal de la app para el 95% de los probadores. Un error de MetaMask en un telefono que jamas tendra MetaMask no es informacion, es una pared.
+- *Caer al adaptador simulado COMPLETO cuando no hay wallet* — Tira lo real por lo que falta: las lecturas (indice compartido, saldo) funcionan sin wallet y son la mitad del valor. Solo la firma necesita respaldo.
+
+**Decision.** chain/index.ts envuelve el adaptador real: anclarReporte verifica el proveedor inyectado EN CADA LLAMADA; si no hay, delega en el anclaje del adaptador simulado — cuyo recibo lleva simulado:true y la interfaz ya lo etiqueta — y avisa por consola. Lecturas y saldo siguen contra Sepolia real. Si la persona instala la wallet a mitad de sesion, su siguiente reporte ancla de verdad. Con test: en node (sin window.ethereum) el adaptador es 'arbitrum', no-simulado, y el recibo del anclaje si es simulado.
+
+**Consecuencias.**
+
+- La activacion del modo arbitrum en Vercel no rompe el flujo de reportar para nadie.
+- Dos verdades conviven etiquetadas: reportes anclados de verdad (con wallet) y reportes con comprobante simulado (sin wallet). El recibo de cada uno lo dice.
+- Los reportes de usuarios sin wallet NO llegan a la cadena, asi que siguen sin compartirse entre telefonos: el hueco de firma (§8.2) sigue abierto y su cierre real es el relevo del servidor o Privy.
+- El costo del parche es honestidad fina: alguien podria leer 'modo arbitrum' y asumir que todo ancla. Por eso el recibo simulado conserva su etiqueta y este ADR queda con validacion humana.
+
+**Costo de revertir.** Quitar el envoltorio conRespaldoDeFirma: una funcion y un test.
+
+**Sirve a.** Ecosistema Arbitrum, Producto y UX, Implementacion tecnica
+
+**Evidencia en el codigo.** `src/lib/chain/index.ts`, `src/lib/chain/index.test.ts`, `docs/SIGUIENTES-PASOS-ARBITRUM.md`
+
+> **Necesita decision humana:** Tres cosas. 1) Falta una variable en Vercel que no esta en tu lista: NEXT_PUBLIC_REPORT_REGISTRY_DEPLOY_BLOCK=295929385 (el bloque real del despliegue, verificado en Blockscout) — sin ella la primera carga del indice compartido pagina desde el bloque 0 y puede ser lenta o fallar con el RPC publico. 2) Confirmar con el equipo que la demo acepta las dos verdades etiquetadas (anclado real con wallet / comprobante simulado sin wallet) mientras el hueco de firma se cierra con relevo o Privy. 3) El anti-Sybil on-chain solo aplica a quien firma de verdad; el resto sigue bajo la politica del cliente.

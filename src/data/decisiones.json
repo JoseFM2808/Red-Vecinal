@@ -1991,6 +1991,49 @@
         "src/components/acceso/PuertaAcceso.tsx"
       ],
       "requiere_validacion_humana": false
+    },
+    {
+      "id": "ADR-049",
+      "titulo": "Sin wallet inyectada, el modo arbitrum ancla con comprobante simulado en vez de romper el reporte",
+      "fecha": "2026-08-09",
+      "autor": "IA+Humano",
+      "estado": "aceptada",
+      "contexto": "Los tres contratos ya estan desplegados y verificados en Arbitrum Sepolia (merge de feature/arbitrum-imp, direcciones cargadas en Vercel). Pero ArbitrumChainAdapter firma con wallet inyectada, y la identidad de la app no tiene clave privada (SIGUIENTES-PASOS §8.1): en cuanto NEXT_PUBLIC_CHAIN_MODE=arbitrum llegara a produccion, cada usuario de solo-Google — casi todos en la prueba — veria morir el boton de publicar con 'instala MetaMask'. El hueco de firma estaba documentado; este es el parche minimo para que la activacion no rompa la prueba.",
+      "opciones": [
+        {
+          "nombre": "Activar arbitrum solo cuando exista el relevo del servidor o Privy",
+          "descartada_porque": "Deja el despliegue real sin estrenar a tres dias de la demo. La lectura del indice compartido — el valor visible — no necesita wallet y estaria lista hoy."
+        },
+        {
+          "nombre": "Dejar que anclarReporte falle y mostrar el error",
+          "descartada_porque": "Rompe la accion principal de la app para el 95% de los probadores. Un error de MetaMask en un telefono que jamas tendra MetaMask no es informacion, es una pared."
+        },
+        {
+          "nombre": "Caer al adaptador simulado COMPLETO cuando no hay wallet",
+          "descartada_porque": "Tira lo real por lo que falta: las lecturas (indice compartido, saldo) funcionan sin wallet y son la mitad del valor. Solo la firma necesita respaldo."
+        }
+      ],
+      "decision": "chain/index.ts envuelve el adaptador real: anclarReporte verifica el proveedor inyectado EN CADA LLAMADA; si no hay, delega en el anclaje del adaptador simulado — cuyo recibo lleva simulado:true y la interfaz ya lo etiqueta — y avisa por consola. Lecturas y saldo siguen contra Sepolia real. Si la persona instala la wallet a mitad de sesion, su siguiente reporte ancla de verdad. Con test: en node (sin window.ethereum) el adaptador es 'arbitrum', no-simulado, y el recibo del anclaje si es simulado.",
+      "consecuencias": [
+        "La activacion del modo arbitrum en Vercel no rompe el flujo de reportar para nadie.",
+        "Dos verdades conviven etiquetadas: reportes anclados de verdad (con wallet) y reportes con comprobante simulado (sin wallet). El recibo de cada uno lo dice.",
+        "Los reportes de usuarios sin wallet NO llegan a la cadena, asi que siguen sin compartirse entre telefonos: el hueco de firma (§8.2) sigue abierto y su cierre real es el relevo del servidor o Privy.",
+        "El costo del parche es honestidad fina: alguien podria leer 'modo arbitrum' y asumir que todo ancla. Por eso el recibo simulado conserva su etiqueta y este ADR queda con validacion humana."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Quitar el envoltorio conRespaldoDeFirma: una funcion y un test.",
+      "criterios_rubrica": [
+        "arbitrum",
+        "ux",
+        "tecnica"
+      ],
+      "evidencia": [
+        "src/lib/chain/index.ts",
+        "src/lib/chain/index.test.ts",
+        "docs/SIGUIENTES-PASOS-ARBITRUM.md"
+      ],
+      "requiere_validacion_humana": true,
+      "nota_para_humano": "Tres cosas. 1) Falta una variable en Vercel que no esta en tu lista: NEXT_PUBLIC_REPORT_REGISTRY_DEPLOY_BLOCK=295929385 (el bloque real del despliegue, verificado en Blockscout) — sin ella la primera carga del indice compartido pagina desde el bloque 0 y puede ser lenta o fallar con el RPC publico. 2) Confirmar con el equipo que la demo acepta las dos verdades etiquetadas (anclado real con wallet / comprobante simulado sin wallet) mientras el hueco de firma se cierra con relevo o Privy. 3) El anti-Sybil on-chain solo aplica a quien firma de verdad; el resto sigue bajo la politica del cliente."
     }
   ]
 }

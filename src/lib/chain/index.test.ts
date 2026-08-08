@@ -78,4 +78,36 @@ describe("obtenerAdaptadorDeCadena — activacion por configuracion", { timeout:
     expect(warn).toHaveBeenCalledOnce();
     warn.mockRestore();
   });
+
+  /**
+   * ADR-049 — el caso de la prueba real: modo arbitrum activo (direcciones en Vercel) y un
+   * telefono con login de Google pero SIN wallet inyectada. Sin el respaldo, anclarReporte
+   * lanzaba "instala MetaMask" y publicar moria para casi todos los usuarios de la prueba.
+   */
+  it("sin wallet inyectada, el modo arbitrum ancla con comprobante simulado en vez de morir", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.stubEnv("NEXT_PUBLIC_CHAIN_MODE", "arbitrum");
+    vi.stubEnv("NEXT_PUBLIC_CHAIN_ID", "421614");
+    vi.stubEnv("NEXT_PUBLIC_REPORT_REGISTRY_ADDRESS", "0x1111111111111111111111111111111111111111");
+
+    const adaptador = await cargarAdaptador();
+    expect(adaptador.id).toBe("arbitrum");
+    // Las lecturas siguen siendo reales: el adaptador NO es el simulado.
+    expect(adaptador.simulado).toBe(false);
+
+    // En node no existe window.ethereum: es exactamente el telefono sin wallet.
+    const recibo = await adaptador.anclarReporte({
+      contentHash: `0x${"ab".repeat(32)}`,
+      latE6: -12046400,
+      lngE6: -77042800,
+      categoriaIndice: 0,
+      zonaId: "z-2391_-15409",
+      cid: null,
+    });
+
+    expect(recibo.simulado).toBe(true);
+    expect(recibo.txHash).toMatch(/^0x/);
+    expect(warn).toHaveBeenCalledOnce();
+    warn.mockRestore();
+  });
 });
