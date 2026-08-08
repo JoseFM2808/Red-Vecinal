@@ -50,7 +50,7 @@ const CSP = [
   "img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.openstreetmap.org https://gateway.pinata.cloud https://*.mypinata.cloud https://lh3.googleusercontent.com",
   "font-src 'self' data:",
   // Arbitrum Sepolia y One, mas los gateways de Pinata: preparados para el siguiente paso.
-  "connect-src 'self' https://sepolia-rollup.arbitrum.io https://arb1.arbitrum.io https://*.arbitrum.io https://api.pinata.cloud https://gateway.pinata.cloud https://*.mypinata.cloud https://auth.privy.io wss://relay.walletconnect.com wss://relay.walletconnect.org https://pulse.walletconnect.org https://api.web3modal.org",
+  "connect-src 'self' https://sepolia-rollup.arbitrum.io https://arb1.arbitrum.io https://*.arbitrum.io https://api.pinata.cloud https://gateway.pinata.cloud https://*.mypinata.cloud https://auth.privy.io wss://relay.walletconnect.com wss://relay.walletconnect.org https://pulse.walletconnect.org https://api.web3modal.org https://explorer-api.walletconnect.com",
   "manifest-src 'self'",
   "worker-src 'self' blob:",
   "upgrade-insecure-requests",
