@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   POLITICA_RECOMPENSA,
   buscarCorroboraciones,
+  evaluarCorroboracion,
   evaluarReporte,
   recompensaTrasCorroborar,
+  type EntradaCorroboracion,
   type EntradaEvaluacion,
   type ReporteEvaluable,
 } from "./antisybil";
@@ -196,5 +198,93 @@ describe("recompensa tras corroboracion posterior", () => {
     expect(recompensaTrasCorroborar(0).estado).toBe("pendiente_corroboracion");
     expect(recompensaTrasCorroborar(1).estado).toBe("otorgada");
     expect(recompensaTrasCorroborar(1).monto).toBe(15);
+  });
+});
+
+/**
+ * Corroboracion manual: el boton "Yo tambien lo vi" (ADR-041).
+ *
+ * Es la unica senal de presencia del MVP. Sin la comprobacion de distancia, confirmar
+ * era gratis desde cualquier sitio y el multiplicador x1.5 se farmeaba entre conocidos.
+ */
+describe("evaluarCorroboracion — quien puede confirmar el reporte de otro", () => {
+  const reporteBase = {
+    autorDireccion: "0xvecina",
+    coordenada: ESQUINA,
+    corroboraciones: [] as readonly string[],
+  };
+
+  const corroboracion = (over: Partial<EntradaCorroboracion> = {}): EntradaCorroboracion => ({
+    corroborador: "0xotro",
+    ubicacionCorroborador: ESQUINA,
+    reporte: reporteBase,
+    ...over,
+  });
+
+  it("permite confirmar a quien esta al lado del hecho", () => {
+    const r = evaluarCorroboracion(corroboracion());
+    expect(r.permitido).toBe(true);
+    expect(r.codigo).toBe("ok");
+    expect(r.distanciaM).toBe(0);
+  });
+
+  it("permite confirmar dentro del radio, a 150 m", () => {
+    const r = evaluarCorroboracion(corroboracion({ ubicacionCorroborador: A_150_M }));
+    expect(r.permitido).toBe(true);
+    expect(r.distanciaM).toBeLessThan(POLITICA_RECOMPENSA.radioCorroboracionM);
+  });
+
+  it("RECHAZA a quien esta a 2 km: es el caso que antes pasaba", () => {
+    const r = evaluarCorroboracion(corroboracion({ ubicacionCorroborador: A_2_KM }));
+    expect(r.permitido).toBe(false);
+    expect(r.codigo).toBe("demasiado_lejos");
+    expect(r.distanciaM).toBeGreaterThan(POLITICA_RECOMPENSA.radioCorroboracionM);
+    // El mensaje dice la distancia real: sin eso, el rechazo parece un fallo de la app.
+    expect(r.mensaje).toContain(`${r.distanciaM} m`);
+  });
+
+  it("rechaza sin ubicacion, para que negar el permiso no sea la via de escape", () => {
+    const r = evaluarCorroboracion(corroboracion({ ubicacionCorroborador: null }));
+    expect(r.permitido).toBe(false);
+    expect(r.codigo).toBe("sin_ubicacion");
+    expect(r.distanciaM).toBeNull();
+  });
+
+  it("rechaza corroborar el propio reporte, aunque estes encima", () => {
+    const r = evaluarCorroboracion(corroboracion({ corroborador: "0xVecina" }));
+    expect(r.permitido).toBe(false);
+    expect(r.codigo).toBe("es_tuyo");
+  });
+
+  it("rechaza corroborar dos veces, sin importar mayusculas de la direccion", () => {
+    const r = evaluarCorroboracion(
+      corroboracion({ reporte: { ...reporteBase, corroboraciones: ["0xOTRO"] } }),
+    );
+    expect(r.permitido).toBe(false);
+    expect(r.codigo).toBe("ya_corroboraste");
+  });
+
+  it("el orden de las reglas: ser el autor gana a no tener ubicacion", () => {
+    const r = evaluarCorroboracion(
+      corroboracion({ corroborador: "0xvecina", ubicacionCorroborador: null }),
+    );
+    expect(r.codigo).toBe("es_tuyo");
+  });
+
+  it("justo en el limite de 300 m se permite; pasado, no", () => {
+    // 300 m al sur de ESQUINA: 1 grado de latitud ~ 111.32 km.
+    const justo = { lat: ESQUINA.lat - 300 / 111_320, lng: ESQUINA.lng };
+    const pasado = { lat: ESQUINA.lat - 340 / 111_320, lng: ESQUINA.lng };
+
+    expect(evaluarCorroboracion(corroboracion({ ubicacionCorroborador: justo })).permitido).toBe(
+      true,
+    );
+    expect(evaluarCorroboracion(corroboracion({ ubicacionCorroborador: pasado })).permitido).toBe(
+      false,
+    );
+  });
+
+  it("usa el mismo radio que la corroboracion automatica: la regla es una sola", () => {
+    expect(POLITICA_RECOMPENSA.radioCorroboracionM).toBe(300);
   });
 });

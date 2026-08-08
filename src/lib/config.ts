@@ -26,6 +26,22 @@ function leerChainId(): number {
   return Number.isFinite(bruto) && bruto > 0 ? bruto : CHAIN_ID_POR_DEFECTO;
 }
 
+/**
+ * Datos de demostracion: reportes sembrados de Lima y contactos del circulo (ADR-040).
+ *
+ * APAGADOS por defecto. Se encienden con NEXT_PUBLIC_DATOS_DEMO=1, y solo entonces la
+ * app arranca con la red poblada. Con una prueba real entre varias cuentas de Google,
+ * los sembrados estorban: no se distingue lo que reporto una persona de lo que ya venia
+ * puesto, y las cifras de la landing mienten sobre cuanta actividad hay de verdad.
+ *
+ * Para el ensayo del pitch conviene volver a encenderlos: un mapa vacio delante del
+ * jurado cuenta peor la historia que uno con doce reportes en los distritos que
+ * docs/PROYECTO.md identifica con menor cobertura.
+ */
+function leerDatosDemo(): boolean {
+  return process.env.NEXT_PUBLIC_DATOS_DEMO === "1";
+}
+
 /** Bloque de despliegue de ReportRegistry: evita paginar getLogs desde el genesis. */
 function leerBloqueDespliegue(): bigint {
   const bruto = process.env.NEXT_PUBLIC_REPORT_REGISTRY_DEPLOY_BLOCK;
@@ -47,6 +63,7 @@ export const CONFIG = {
     identityEscrow: process.env.NEXT_PUBLIC_IDENTITY_ESCROW_ADDRESS ?? "",
   },
   reportRegistryDeployBlock: leerBloqueDespliegue(),
+  datosDemo: leerDatosDemo(),
   walletAbstraction: {
     privyAppId: process.env.NEXT_PUBLIC_PRIVY_APP_ID ?? "",
   },

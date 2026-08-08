@@ -10,7 +10,13 @@ import {
   type ReactNode,
 } from "react";
 import { useSession } from "next-auth/react";
-import { POLITICA_RECOMPENSA, recompensaTrasCorroborar } from "@/lib/antisybil";
+import { useUbicacion } from "@/components/proveedores/UbicacionProvider";
+import {
+  POLITICA_RECOMPENSA,
+  evaluarCorroboracion,
+  recompensaTrasCorroborar,
+  type ResultadoCorroboracion,
+} from "@/lib/antisybil";
 import { obtenerAdaptadorDeCadena } from "@/lib/chain";
 import { fusionarConCadena, leerReportesDesdeCadena } from "@/lib/chain/eventos";
 import { CONFIG } from "@/lib/config";
@@ -74,7 +80,8 @@ interface EstadoApp {
     solicitud: SolicitudUI,
     onEtapa?: (etapa: EtapaFlujo) => void,
   ) => Promise<ResultadoFlujo>;
-  corroborar: (idReporte: string) => void;
+  /** Devuelve el veredicto: si no se permitio, dice por que (ADR-041). */
+  corroborar: (idReporte: string) => ResultadoCorroboracion;
   escalar: (idReporte: string, destino: DestinoEscalamiento) => Promise<ResultadoEscalamiento>;
   reiniciarDemo: () => Promise<void>;
 }
@@ -110,6 +117,8 @@ function agregarCorroboracion(reporte: Reporte, direccion: string): Reporte {
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const { data: sesion, status } = useSession();
+  // AppProvider vive dentro de UbicacionProvider (ver layout.tsx), asi que puede leerla.
+  const ubicacion = useUbicacion();
   const [identidad, setIdentidad] = useState<Identidad | null>(null);
   const [reportes, setReportes] = useState<Reporte[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -122,7 +131,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     const iniciar = async () => {
       const guardados = cargarReportes();
-      const iniciales = guardados ?? (await construirReportesSembrados(Date.now()));
+      // Sin datos de demo (ADR-040) la red arranca vacia y solo se llena con lo que
+      // reporte gente de verdad. Es lo que hace legible una prueba entre varias cuentas.
+      const iniciales =
+        guardados ?? (CONFIG.datosDemo ? await construirReportesSembrados(Date.now()) : []);
 
       if (!vigente) return;
       setReportes(iniciales);
@@ -210,18 +222,50 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [identidad, persistir, reportes],
   );
 
+  /**
+   * Confirmar el reporte de otro exige estar a menos de 300 m del hecho (ADR-041).
+   * La decision vive en `evaluarCorroboracion`, que es pura y tiene tests; aqui solo
+   * se le pasa la ubicacion actual y se aplica el resultado.
+   */
   const corroborar = useCallback<EstadoApp["corroborar"]>(
     (idReporte) => {
-      if (!identidad) return;
+      if (!identidad) {
+        return {
+          permitido: false,
+          codigo: "sin_ubicacion",
+          mensaje: "Todavia estamos preparando tu identidad. Intenta en un momento.",
+          distanciaM: null,
+        };
+      }
+
+      const reporte = reportes.find((r) => r.id === idReporte);
+      if (!reporte) {
+        return {
+          permitido: false,
+          codigo: "sin_ubicacion",
+          mensaje: "Ese reporte ya no esta disponible.",
+          distanciaM: null,
+        };
+      }
+
+      const veredicto = evaluarCorroboracion({
+        corroborador: identidad.direccion,
+        ubicacionCorroborador: ubicacion.coordenada,
+        reporte: {
+          autorDireccion: reporte.autorDireccion,
+          coordenada: reporte.coordenada,
+          corroboraciones: reporte.corroboraciones,
+        },
+      });
+
+      if (!veredicto.permitido) return veredicto;
+
       persistir(
-        reportes.map((r) =>
-          r.id === idReporte && r.autorDireccion.toLowerCase() !== identidad.direccion.toLowerCase()
-            ? agregarCorroboracion(r, identidad.direccion)
-            : r,
-        ),
+        reportes.map((r) => (r.id === idReporte ? agregarCorroboracion(r, identidad.direccion) : r)),
       );
+      return veredicto;
     },
-    [identidad, persistir, reportes],
+    [identidad, persistir, reportes, ubicacion.coordenada],
   );
 
   const escalar = useCallback<EstadoApp["escalar"]>(
@@ -304,10 +348,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [persistir, reportes],
   );
 
+  /**
+   * Con datos de demo encendidos, vuelve a sembrar la red con reportes frescos.
+   * Apagados (ADR-040), es simplemente "borrar todo lo de este dispositivo" — que es
+   * justo lo que hace falta entre dos rondas de prueba con cuentas reales.
+   */
   const reiniciarDemo = useCallback(async () => {
     setCargando(true);
     limpiarReportes();
-    const frescos = await construirReportesSembrados(Date.now());
+    const frescos = CONFIG.datosDemo ? await construirReportesSembrados(Date.now()) : [];
     persistir(frescos);
     setCargando(false);
   }, [persistir]);

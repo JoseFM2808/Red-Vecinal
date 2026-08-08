@@ -49,6 +49,12 @@ export function VistaEventosPublica() {
   const maximo = porZona[0]?.[1] ?? 1;
   const corroborados = recientes.filter((r) => r.corroboraciones.length > 0).length;
   const ultimos = reportes.slice(0, MAX_EVENTOS);
+  // Sin datos de demo (ADR-040) una red recien estrenada esta vacia de verdad. Mostrar
+  // tres ceros es el peor gancho posible; se cambia por una invitacion a estrenarla.
+  const vacia = !cargando && reportes.length === 0;
+  // Los sembrados llevan esSemilla; si no hay ninguno, lo que se ve es actividad real
+  // y la etiqueta de simulado seria mentira al reves.
+  const hayDatosSembrados = reportes.some((r) => r.esSemilla);
 
   return (
     <div className="space-y-2">
@@ -66,24 +72,41 @@ export function VistaEventosPublica() {
               Ultimas 24 horas, agregado por zona. Abierto: no hace falta cuenta ni pagar.
             </p>
           </div>
-          <EtiquetaSimulado titulo="Reportes de este dispositivo mas los datos sembrados de demostracion. El indice compartido entre telefonos necesita el contrato desplegado." />
+          {hayDatosSembrados ? (
+            <EtiquetaSimulado titulo="Incluye reportes sembrados de demostracion. El indice compartido entre telefonos necesita el contrato desplegado." />
+          ) : null}
         </div>
 
-        {/* --- Cifras -------------------------------------------------------- */}
-        <div className="mt-4 grid grid-cols-3 gap-2">
-          {[
-            { valor: recientes.length, etiqueta: "reportes hoy" },
-            { valor: porZona.length, etiqueta: "zonas activas" },
-            { valor: corroborados, etiqueta: "corroborados" },
-          ].map((m) => (
-            <div key={m.etiqueta} className="rounded-xl bg-superficie-alta px-2 py-3 text-center">
-              <p className="text-2xl font-semibold tabular-nums text-texto">
-                {cargando ? "—" : m.valor}
-              </p>
-              <p className="mt-0.5 text-[11px] leading-tight text-tenue">{m.etiqueta}</p>
-            </div>
-          ))}
-        </div>
+        {vacia ? (
+          <div className="mt-4 rounded-xl border border-dashed border-borde px-4 py-6 text-center">
+            <span className="mx-auto grid h-10 w-10 place-items-center rounded-full bg-superficie-alta text-tenue">
+              <Icono nombre="mapa" className="h-5 w-5" />
+            </span>
+            <p className="mt-2.5 text-sm font-medium text-texto">
+              Todavia no hay reportes en esta red
+            </p>
+            <p className="mx-auto mt-1 max-w-xs text-xs leading-relaxed text-suave">
+              Esta empezando. El primer aviso de tu cuadra puede ser el tuyo — y queda
+              anclado con fecha cierta desde el minuto uno.
+            </p>
+          </div>
+        ) : (
+          /* --- Cifras ------------------------------------------------------ */
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            {[
+              { valor: recientes.length, etiqueta: "reportes hoy" },
+              { valor: porZona.length, etiqueta: "zonas activas" },
+              { valor: corroborados, etiqueta: "corroborados" },
+            ].map((m) => (
+              <div key={m.etiqueta} className="rounded-xl bg-superficie-alta px-2 py-3 text-center">
+                <p className="text-2xl font-semibold tabular-nums text-texto">
+                  {cargando ? "—" : m.valor}
+                </p>
+                <p className="mt-0.5 text-[11px] leading-tight text-tenue">{m.etiqueta}</p>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* --- Mapa de calor por zona, en texto ------------------------------ */}
         {porZona.length > 0 ? (

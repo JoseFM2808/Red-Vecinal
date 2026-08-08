@@ -91,6 +91,106 @@ export function buscarCorroboraciones(entrada: EntradaEvaluacion): string[] {
   return [...encontradas];
 }
 
+/* --- Corroboracion manual (el boton "Yo tambien lo vi") ---------------------------- */
+
+export type CodigoCorroboracion =
+  | "ok"
+  | "es_tuyo"
+  | "ya_corroboraste"
+  | "sin_ubicacion"
+  | "demasiado_lejos";
+
+export interface EntradaCorroboracion {
+  /** Direccion de quien pulsa el boton. */
+  corroborador: string;
+  /** Donde esta ahora quien corrobora. null si el navegador no la dio. */
+  ubicacionCorroborador: Coordenada | null;
+  reporte: {
+    autorDireccion: string;
+    coordenada: Coordenada;
+    corroboraciones: readonly string[];
+  };
+}
+
+export interface ResultadoCorroboracion {
+  permitido: boolean;
+  codigo: CodigoCorroboracion;
+  mensaje: string;
+  /** Distancia medida, en metros. null si no se pudo medir. */
+  distanciaM: number | null;
+}
+
+/**
+ * Decide si alguien puede confirmar el reporte de otro (ADR-041).
+ *
+ * La corroboracion es la unica senal de presencia que tiene el MVP: es lo que separa
+ * "confirmo desde el sofa" de "estuve ahi". Sin la comprobacion de distancia, el boton
+ * de confirmar era exactamente el farmeo que ADR-014 dice evitar — cualquiera podia
+ * inflar la recompensa de un conocido sin moverse de casa.
+ *
+ * Usa el MISMO radio que la corroboracion automatica entre reportes
+ * (`radioCorroboracionM`, 300 m): la regla es una sola, aplicada por dos caminos.
+ *
+ * Sin ubicacion NO se permite. Es deliberado: si la ausencia de GPS abriera la puerta,
+ * bastaria con negar el permiso para saltarse el control.
+ *
+ * OJO con la precision: la coordenada del reporte esta truncada a ~11 m (ADR de geo) y
+ * el GPS del navegador tiene su propio error. Cerca del limite de 300 m la decision es
+ * borrosa por construccion. Se acepta: es el mismo dato que vera el contrato, que solo
+ * conoce las coordenadas truncadas en microgrados.
+ *
+ * Pura: recibe la ubicacion, no la lee de `navigator`.
+ */
+export function evaluarCorroboracion(entrada: EntradaCorroboracion): ResultadoCorroboracion {
+  const { corroborador, ubicacionCorroborador, reporte } = entrada;
+
+  if (mismaDireccion(reporte.autorDireccion, corroborador)) {
+    return {
+      permitido: false,
+      codigo: "es_tuyo",
+      mensaje: "Es tu reporte. La corroboracion tiene que venir de otro vecino.",
+      distanciaM: null,
+    };
+  }
+
+  if (reporte.corroboraciones.some((d) => mismaDireccion(d, corroborador))) {
+    return {
+      permitido: false,
+      codigo: "ya_corroboraste",
+      mensaje: "Ya confirmaste este reporte.",
+      distanciaM: null,
+    };
+  }
+
+  if (!ubicacionCorroborador) {
+    return {
+      permitido: false,
+      codigo: "sin_ubicacion",
+      mensaje:
+        "Necesitamos tu ubicacion para confirmar que estuviste cerca. Activa el permiso de ubicacion.",
+      distanciaM: null,
+    };
+  }
+
+  const distanciaM = Math.round(distanciaMetros(ubicacionCorroborador, reporte.coordenada));
+
+  if (distanciaM > POLITICA_RECOMPENSA.radioCorroboracionM) {
+    return {
+      permitido: false,
+      codigo: "demasiado_lejos",
+      mensaje: `Estas a ${distanciaM} m del hecho. Solo puede confirmar quien este a menos de ${POLITICA_RECOMPENSA.radioCorroboracionM} m: es la prueba de que estuviste ahi.`,
+      distanciaM,
+    };
+  }
+
+  return {
+    permitido: true,
+    codigo: "ok",
+    mensaje: `Estas a ${distanciaM} m del hecho.`,
+    distanciaM,
+  };
+}
+
 function construirRecompensa(corroboraciones: number): Recompensa {
   const corroborado = corroboraciones > 0;
   const multiplicador = corroborado ? POLITICA_RECOMPENSA.multiplicadorCorroborado : 1;

@@ -12,6 +12,7 @@ import {
 } from "react";
 import { useApp } from "@/components/proveedores/AppProvider";
 import { obtenerCategoria } from "@/lib/categorias";
+import { CONFIG } from "@/lib/config";
 import {
   RADIO_AVISO_POR_DEFECTO_M,
   evaluarAvisos,
@@ -113,9 +114,13 @@ export function CirculoProvider({ children }: { children: ReactNode }) {
 
     const ahora = Date.now();
     const guardados = cargarContactos();
-    const iniciales = guardados ?? contactosSembrados(ahora);
+    // Sin datos de demo (ADR-040) el circulo arranca vacio: los contactos los agrega
+    // la persona. En una prueba real, contactos inventados solo confunden los avisos.
+    const iniciales = guardados ?? (CONFIG.datosDemo ? contactosSembrados(ahora) : []);
 
-    for (const { id, base } of BASES_DEMO) registrarBase(id, base);
+    if (CONFIG.datosDemo) {
+      for (const { id, base } of BASES_DEMO) registrarBase(id, base);
+    }
     // Un contacto agregado a mano conserva su ultima posicion como punto base.
     for (const c of iniciales) {
       if (!bases.current.has(c.id) && c.coordenada) registrarBase(c.id, c.coordenada);

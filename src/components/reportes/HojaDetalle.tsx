@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { useApp } from "@/components/proveedores/AppProvider";
 import { Icono } from "@/components/ui/Icono";
 import { Aviso, Dato, EtiquetaSimulado } from "@/components/ui/primitivos";
+import { POLITICA_RECOMPENSA } from "@/lib/antisybil";
 import { obtenerCategoria } from "@/lib/categorias";
 import { abreviarHash, formatearBytes, formatearUsd, tiempoRelativo } from "@/lib/formato";
 import { formatearCoordenada } from "@/lib/geo";
@@ -29,6 +30,8 @@ export function HojaDetalle({ reporte, onCerrar }: { reporte: Reporte; onCerrar:
   /** Que destino se esta enviando, para que solo ESE boton lo diga. */
   const [escalando, setEscalando] = useState<DestinoEscalamiento | null>(null);
   const [errorEscalamiento, setErrorEscalamiento] = useState<string | null>(null);
+  /** Motivo por el que se rechazo la ultima corroboracion, para decirlo en pantalla. */
+  const [rechazoCorroboracion, setRechazoCorroboracion] = useState<string | null>(null);
   const categoria = obtenerCategoria(reporte.categoria);
 
   const esMio =
@@ -179,14 +182,34 @@ export function HojaDetalle({ reporte, onCerrar }: { reporte: Reporte; onCerrar:
                 Ya confirmaste este reporte.
               </Aviso>
             ) : (
-              <button
-                type="button"
-                onClick={() => corroborar(reporte.id)}
-                className="toque flex w-full items-center justify-center gap-2 rounded-xl border border-marca/40 bg-marca/10 py-3 text-sm font-semibold text-marca transition active:scale-[0.99]"
-              >
-                <Icono nombre="check" className="h-4 w-4" />
-                Yo tambien lo vi
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const veredicto = corroborar(reporte.id);
+                    // Solo se guarda el rechazo: si sale bien, el reporte cambia y la
+                    // rama de "ya confirmaste" toma el relevo sola.
+                    setRechazoCorroboracion(veredicto.permitido ? null : veredicto.mensaje);
+                  }}
+                  className="toque flex w-full items-center justify-center gap-2 rounded-xl border border-marca/40 bg-marca/10 py-3 text-sm font-semibold text-marca transition active:scale-[0.99]"
+                >
+                  <Icono nombre="check" className="h-4 w-4" />
+                  Yo tambien lo vi
+                </button>
+
+                {rechazoCorroboracion ? (
+                  <div className="mt-2">
+                    <Aviso tono="alerta" icono="ubicacion">
+                      {rechazoCorroboracion}
+                    </Aviso>
+                  </div>
+                ) : (
+                  <p className="mt-2 text-[11px] leading-relaxed text-tenue">
+                    Solo puede confirmar quien este a menos de {POLITICA_RECOMPENSA.radioCorroboracionM} m
+                    del hecho. Es la prueba de presencia que sostiene la recompensa (ADR-041).
+                  </p>
+                )}
+              </>
             )}
           </section>
 

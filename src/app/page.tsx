@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { AccesoRapido } from "@/components/inicio/AccesoRapido";
 import { ResumenRed } from "@/components/inicio/ResumenRed";
-import { AvisoSismo } from "@/components/sismos/AvisoSismo";
+import { AlarmaSismo } from "@/components/sismos/AlarmaSismo";
 import { Icono } from "@/components/ui/Icono";
 import { IndicadorRed } from "@/components/ui/IndicadorRed";
 import { TarjetaUbicacion } from "@/components/ubicacion/TarjetaUbicacion";
@@ -56,9 +56,9 @@ export default function PaginaInicio() {
         <p className="mt-3 text-sm leading-relaxed text-suave">{problema.tesis}</p>
       </header>
 
-      {/* Solo aparece si varios vecinos reportaron un sismo en la ultima media hora. */}
+      {/* Alarma desde el IGP (ADR-042): solo aparece si hay un sismo reciente y cercano. */}
       <section className="px-4 empty:hidden">
-        <AvisoSismo />
+        <AlarmaSismo />
       </section>
 
       <section className="px-4">

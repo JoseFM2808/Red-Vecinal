@@ -151,7 +151,13 @@ export function FlujoReporte() {
     return (
       <div className="space-y-3 px-4">
         <p className="text-sm text-suave">Que esta pasando?</p>
-        {CATEGORIAS.map((c) => (
+        {/*
+          sismo_sentido ya no se reporta a mano (ADR-042): el sismo llega del IGP y el
+          vecino responde la intensidad desde la alarma. El indiceContrato 2 se conserva
+          en categorias.ts porque ya esta escrito en cadena y las respuestas de
+          intensidad viajaran con esa categoria.
+        */}
+        {CATEGORIAS.filter((c) => c.id !== "sismo_sentido").map((c) => (
           <button
             key={c.id}
             type="button"
