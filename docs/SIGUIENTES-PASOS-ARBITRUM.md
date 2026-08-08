@@ -233,13 +233,24 @@ Ya hecho — contratos (ADR-033, ADR-034):
 - [x] Decidido mint optimista vs conservador (ADR-014 → conservador, patrón pull en ADR-034)
 - [x] Módulo de despliegue (`contracts/ignition/modules/VecinoSeguro.ts`) listo para correr
 
-Pendiente — necesita una wallet fondeada, ninguna IA debe tenerla:
+Hecho — desplegado y verificado el 2026-08-08 (requirió una wallet fondeada, la tuvo el equipo):
 
-- [ ] Los tres contratos desplegados en Arbitrum Sepolia (`npm run contracts:deploy:sepolia`)
-- [ ] Código fuente verificado en Arbiscan (`npm run --prefix contracts verify:sepolia`)
-- [ ] Variables de entorno cargadas en Vercel (incluye `NEXT_PUBLIC_REPORT_REGISTRY_DEPLOY_BLOCK`)
+- [x] Los tres contratos desplegados en Arbitrum Sepolia:
+      - `ReportRegistry`: `0x322a2862C2218136124DF6f1d030E9942aBe43Ba`
+      - `TokenReward`: `0x6E1B4747913431343196FD1D4b6772c5d43E9Fa5`
+      - `IdentityEscrow`: `0x84F39967863b42D4041988ADc9a88F8D32729eF2`
+- [x] Código fuente verificado en Arbiscan, Blockscout y Sourcify (`npm run --prefix contracts verify:sepolia` —
+      el script necesitaba `--network arbitrumSepolia`, ya corregido)
+- [x] `.env.local` cargado con las tres direcciones para desarrollo local
+
+Pendiente:
+
+- [ ] Variables de entorno cargadas en **Vercel** (Project Settings → Environment Variables) y
+      redeploy — `.env.local` no llega a Vercel, hay que copiarlas ahí también
 - [ ] Costo real por anclaje medido → reemplazar la estimación en `src/lib/chain/redes.ts`
-- [ ] Probar `ArbitrumChainAdapter` end-to-end contra los contratos reales (no fue posible antes del despliegue)
+- [ ] Probar `ArbitrumChainAdapter` end-to-end contra los contratos reales, desde la app y con
+      una wallet inyectada de verdad (MetaMask) — la validación hecha hasta ahora fue contra un
+      nodo local, no contra estos contratos ya desplegados
 
 Pendiente, del frontend, fuera de esta pasada:
 
