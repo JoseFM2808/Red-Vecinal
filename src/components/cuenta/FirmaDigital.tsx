@@ -98,10 +98,11 @@ function TarjetaFirma() {
           Desactivar
         </button>
       </div>
-      <p className="mt-3 rounded-xl border border-ambar/30 bg-ambar/5 p-2.5 text-[11px] leading-relaxed text-suave">
-        <span className="font-semibold text-ambar">Gas:</span> anclar cuesta fracciones de
-        centavo que paga esta wallet. En la prueba, el equipo le deposita una gota de ETH de
-        testnet — pasale la direccion de arriba a quien administre la wallet fondeada.
+      <p className="mt-3 rounded-xl border border-borde bg-superficie-alta p-2.5 text-[11px] leading-relaxed text-suave">
+        <span className="font-semibold text-texto">Gas:</span> anclar cuesta fracciones de
+        centavo de prueba que la app deposita sola en esta wallet al activarla (ADR-051) —
+        no tienes que conseguir nada. Si un anclaje saliera marcado como simulado, la carga
+        aun estaba en camino: reintenta en unos segundos.
         {user?.google?.email ? " Atada a tu Google actual." : ""}
       </p>
     </Tarjeta>

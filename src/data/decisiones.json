@@ -2085,6 +2085,51 @@
       ],
       "requiere_validacion_humana": true,
       "nota_para_humano": "Cuatro pasos que solo el equipo puede dar. 1) Cargar NEXT_PUBLIC_PRIVY_APP_ID en Vercel (no sensible) y redesplegar. 2) En el panel de Privy: Embedded wallets -> create on login, y Allowed domains con vecino-seguro.vercel.app y localhost:3000; en Google, credenciales vacias, Return OAuth tokens apagado, sin scopes extra. 3) GAS: gotear ~0.001 ETH de Sepolia desde la wallet del despliegue a cada wallet embebida de probador (la direccion sale en Cuenta -> Firma digital). 4) Probar el ciclo completo con una cuenta real: activar firma -> reportar -> ver el reporte en Arbiscan y en un segundo telefono. La app de Privy esta en modo development: suficiente para la demo, migrar a production despues."
+    },
+    {
+      "id": "ADR-051",
+      "titulo": "Grifo automatico de gas de testnet: la app deposita sola la primera carga al activar la firma",
+      "fecha": "2026-08-09",
+      "autor": "IA+Humano",
+      "estado": "aceptada",
+      "contexto": "La primera prueba real del anclaje con wallet embebida murio dos veces: primero por la CSP (proxy RPC de Privy) y despues porque la wallet nace con 0 ETH. El flujo exigia que el equipo goteara gas a mano a cada probador — el paso cripto manual que la wallet embebida existe para eliminar. El equipo lo dijo con claridad: el gas debe llegar solo, apenas te logeas, sin pasos adicionales.",
+      "opciones": [
+        {
+          "nombre": "Goteo manual del equipo a cada wallet",
+          "descartada_porque": "No escala ni a cinco probadores, convierte cada activacion en una coordinacion por chat, y delata el gas — el concepto que el producto promete esconder."
+        },
+        {
+          "nombre": "Patrocinio de gas con smart wallets de Privy (paymaster)",
+          "descartada_porque": "Es la solucion fina para mainnet, pero cambia el tipo de wallet y la superficie del SDK a tres dias de la demo. Queda anotada como el reemplazo de este grifo si el producto sale de testnet."
+        },
+        {
+          "nombre": "Un faucet publico de terceros",
+          "descartada_porque": "Exige que el vecino salga de la app, resuelva un captcha y pegue su direccion: mas friccion que el goteo manual que se quiere eliminar."
+        }
+      ],
+      "decision": "Ruta POST /api/gas: cuando la wallet embebida se registra (PuenteFirma), el cliente pide el goteo automaticamente. La decision es una funcion pura con tests (gas-goteo.ts): SOLO Arbitrum Sepolia (en cualquier otra red el grifo se niega a existir), umbral de 0.0002 ETH, gota de 0.0005, ventana de 6 h por wallet y tope global de 30/hora por instancia. La clave del grifo (GAS_DRIP_PRIVATE_KEY, secreto de servidor) solo puede hacer una cosa: enviar el monto fijo a una direccion validada. Best-effort: sin grifo configurado o con fallo, la app sigue y el anclaje cae al comprobante simulado (ADR-049).",
+      "consecuencias": [
+        "El vecino activa la firma y ancla: el gas es invisible, que era el requisito literal del equipo.",
+        "Un adversario que drene el grifo se lleva ETH de testnet sin valor, limitado por umbral, ventana por wallet y tope global.",
+        "El tope y la ventana viven en memoria por instancia: en Vercel con varias lambdas el limite real se multiplica. Aceptado en testnet; si se provisiona el KV del circulo, migrar los contadores alli.",
+        "La clave del grifo es un secreto operativo mas que custodiar (rotarla es vaciar y reemplazar la wallet).",
+        "El caso 'active la firma y ancle EN EL MISMO SEGUNDO' puede ganarle al goteo: ese primer reporte sale simulado y el siguiente ya ancla. La tarjeta de Cuenta lo explica."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Borrar la ruta y el disparo del puente; volver al goteo manual.",
+      "criterios_rubrica": [
+        "ux",
+        "arbitrum",
+        "tecnica"
+      ],
+      "evidencia": [
+        "src/lib/gas-goteo.ts",
+        "src/lib/gas-goteo.test.ts",
+        "src/app/api/gas/route.ts",
+        "src/components/proveedores/ProveedorPrivy.tsx"
+      ],
+      "requiere_validacion_humana": true,
+      "nota_para_humano": "El grifo necesita su wallet: crear una NUEVA (jamas reutilizar la del despliegue ni una con fondos reales), fondearla con ETH de Sepolia de un faucet (con ~0.05 alcanza para cien probadores), y cargar su clave privada como GAS_DRIP_PRIVATE_KEY en .env.local (para la prueba local) y en Vercel como Sensitive (Production y Preview). Yo no debo ver ni manejar esa clave: pegarla directamente. Sin ella todo sigue funcionando en modo simulado."
     }
   ]
 }

@@ -4,7 +4,7 @@
 
 Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o por el equipo se registra aquí ANTES o AL MOMENTO de escribir el código que la implementa. `docs/DECISIONES.md` se genera desde este archivo (npm run docs) y la pestaña Arquitectura de la app lo renderiza.
 
-**52 decisiones registradas · 27 esperan validacion humana**
+**53 decisiones registradas · 28 esperan validacion humana**
 
 ## Esperan que una persona decida
 
@@ -37,6 +37,7 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | ADR-046 | El circulo se vincula por QR o enlace, con consentimiento, plazo y revocacion, cifrado de extremo a extremo | Dos cosas. 1) Para que el canal funcione entre telefonos EN VERCEL hay que provisionar un Redis de Upstash (gratis) y cargar UPSTASH_REDIS_REST_URL y UPSTASH_REDIS_REST_TOKEN como variables Sensitive; sin eso cada telefono puede caer en una instancia distinta y los sobres no se encuentran (la API responde efimero:true como sintoma). Coordinarlo con TI segun la regla de la organizacion sobre servicios nuevos. 2) Esto matiza la regla 'sin base de datos': es un buzon efimero de sobres cifrados con TTL de minutos, no un registro de datos — confirmar que el equipo lo acepta asi para poder defenderlo ante el jurado. |
 | ADR-049 | Sin wallet inyectada, el modo arbitrum ancla con comprobante simulado en vez de romper el reporte | Tres cosas. 1) Falta una variable en Vercel que no esta en tu lista: NEXT_PUBLIC_REPORT_REGISTRY_DEPLOY_BLOCK=295929385 (el bloque real del despliegue, verificado en Blockscout) — sin ella la primera carga del indice compartido pagina desde el bloque 0 y puede ser lenta o fallar con el RPC publico. 2) Confirmar con el equipo que la demo acepta las dos verdades etiquetadas (anclado real con wallet / comprobante simulado sin wallet) mientras el hueco de firma se cierra con relevo o Privy. 3) El anti-Sybil on-chain solo aplica a quien firma de verdad; el resto sigue bajo la politica del cliente. |
 | ADR-050 | Privy con wallet embebida cierra el hueco de firma: quien entra con Google ancla de verdad | Cuatro pasos que solo el equipo puede dar. 1) Cargar NEXT_PUBLIC_PRIVY_APP_ID en Vercel (no sensible) y redesplegar. 2) En el panel de Privy: Embedded wallets -> create on login, y Allowed domains con vecino-seguro.vercel.app y localhost:3000; en Google, credenciales vacias, Return OAuth tokens apagado, sin scopes extra. 3) GAS: gotear ~0.001 ETH de Sepolia desde la wallet del despliegue a cada wallet embebida de probador (la direccion sale en Cuenta -> Firma digital). 4) Probar el ciclo completo con una cuenta real: activar firma -> reportar -> ver el reporte en Arbiscan y en un segundo telefono. La app de Privy esta en modo development: suficiente para la demo, migrar a production despues. |
+| ADR-051 | Grifo automatico de gas de testnet: la app deposita sola la primera carga al activar la firma | El grifo necesita su wallet: crear una NUEVA (jamas reutilizar la del despliegue ni una con fondos reales), fondearla con ETH de Sepolia de un faucet (con ~0.05 alcanza para cien probadores), y cargar su clave privada como GAS_DRIP_PRIVATE_KEY en .env.local (para la prueba local) y en Vercel como Sensitive (Production y Preview). Yo no debo ver ni manejar esa clave: pegarla directamente. Sin ella todo sigue funcionando en modo simulado. |
 
 ## Indice
 
@@ -94,6 +95,7 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | [ADR-048](#adr-048) | La ruta protegida sin sesion muestra un aviso con boton de entrar, no un rebote mudo | IA+Humano | aceptada | alta | Producto y UX |
 | [ADR-049](#adr-049) | Sin wallet inyectada, el modo arbitrum ancla con comprobante simulado en vez de romper el reporte | IA+Humano | aceptada | alta | Ecosistema Arbitrum, Producto y UX, Implementacion tecnica |
 | [ADR-050](#adr-050) | Privy con wallet embebida cierra el hueco de firma: quien entra con Google ancla de verdad | IA+Humano | aceptada | media | Ecosistema Arbitrum, Producto y UX, Implementacion tecnica |
+| [ADR-051](#adr-051) | Grifo automatico de gas de testnet: la app deposita sola la primera carga al activar la firma | IA+Humano | aceptada | alta | Producto y UX, Ecosistema Arbitrum, Implementacion tecnica |
 
 ---
 
@@ -1733,3 +1735,37 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 **Evidencia en el codigo.** `src/components/proveedores/ProveedorPrivy.tsx`, `src/components/cuenta/FirmaDigital.tsx`, `src/lib/chain/proveedor-inyectado.ts`, `next.config.ts`, `.npmrc`
 
 > **Necesita decision humana:** Cuatro pasos que solo el equipo puede dar. 1) Cargar NEXT_PUBLIC_PRIVY_APP_ID en Vercel (no sensible) y redesplegar. 2) En el panel de Privy: Embedded wallets -> create on login, y Allowed domains con vecino-seguro.vercel.app y localhost:3000; en Google, credenciales vacias, Return OAuth tokens apagado, sin scopes extra. 3) GAS: gotear ~0.001 ETH de Sepolia desde la wallet del despliegue a cada wallet embebida de probador (la direccion sale en Cuenta -> Firma digital). 4) Probar el ciclo completo con una cuenta real: activar firma -> reportar -> ver el reporte en Arbiscan y en un segundo telefono. La app de Privy esta en modo development: suficiente para la demo, migrar a production despues.
+
+---
+
+## ADR-051
+
+### Grifo automatico de gas de testnet: la app deposita sola la primera carga al activar la firma
+
+`2026-08-09` · autor: **IA+Humano** · estado: **aceptada** · reversibilidad: **alta**
+
+**Contexto.** La primera prueba real del anclaje con wallet embebida murio dos veces: primero por la CSP (proxy RPC de Privy) y despues porque la wallet nace con 0 ETH. El flujo exigia que el equipo goteara gas a mano a cada probador — el paso cripto manual que la wallet embebida existe para eliminar. El equipo lo dijo con claridad: el gas debe llegar solo, apenas te logeas, sin pasos adicionales.
+
+**Alternativas descartadas.**
+
+- *Goteo manual del equipo a cada wallet* — No escala ni a cinco probadores, convierte cada activacion en una coordinacion por chat, y delata el gas — el concepto que el producto promete esconder.
+- *Patrocinio de gas con smart wallets de Privy (paymaster)* — Es la solucion fina para mainnet, pero cambia el tipo de wallet y la superficie del SDK a tres dias de la demo. Queda anotada como el reemplazo de este grifo si el producto sale de testnet.
+- *Un faucet publico de terceros* — Exige que el vecino salga de la app, resuelva un captcha y pegue su direccion: mas friccion que el goteo manual que se quiere eliminar.
+
+**Decision.** Ruta POST /api/gas: cuando la wallet embebida se registra (PuenteFirma), el cliente pide el goteo automaticamente. La decision es una funcion pura con tests (gas-goteo.ts): SOLO Arbitrum Sepolia (en cualquier otra red el grifo se niega a existir), umbral de 0.0002 ETH, gota de 0.0005, ventana de 6 h por wallet y tope global de 30/hora por instancia. La clave del grifo (GAS_DRIP_PRIVATE_KEY, secreto de servidor) solo puede hacer una cosa: enviar el monto fijo a una direccion validada. Best-effort: sin grifo configurado o con fallo, la app sigue y el anclaje cae al comprobante simulado (ADR-049).
+
+**Consecuencias.**
+
+- El vecino activa la firma y ancla: el gas es invisible, que era el requisito literal del equipo.
+- Un adversario que drene el grifo se lleva ETH de testnet sin valor, limitado por umbral, ventana por wallet y tope global.
+- El tope y la ventana viven en memoria por instancia: en Vercel con varias lambdas el limite real se multiplica. Aceptado en testnet; si se provisiona el KV del circulo, migrar los contadores alli.
+- La clave del grifo es un secreto operativo mas que custodiar (rotarla es vaciar y reemplazar la wallet).
+- El caso 'active la firma y ancle EN EL MISMO SEGUNDO' puede ganarle al goteo: ese primer reporte sale simulado y el siguiente ya ancla. La tarjeta de Cuenta lo explica.
+
+**Costo de revertir.** Borrar la ruta y el disparo del puente; volver al goteo manual.
+
+**Sirve a.** Producto y UX, Ecosistema Arbitrum, Implementacion tecnica
+
+**Evidencia en el codigo.** `src/lib/gas-goteo.ts`, `src/lib/gas-goteo.test.ts`, `src/app/api/gas/route.ts`, `src/components/proveedores/ProveedorPrivy.tsx`
+
+> **Necesita decision humana:** El grifo necesita su wallet: crear una NUEVA (jamas reutilizar la del despliegue ni una con fondos reales), fondearla con ETH de Sepolia de un faucet (con ~0.05 alcanza para cien probadores), y cargar su clave privada como GAS_DRIP_PRIVATE_KEY en .env.local (para la prueba local) y en Vercel como Sensitive (Production y Preview). Yo no debo ver ni manejar esa clave: pegarla directamente. Sin ella todo sigue funcionando en modo simulado.

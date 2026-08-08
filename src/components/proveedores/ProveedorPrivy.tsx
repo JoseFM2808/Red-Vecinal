@@ -27,6 +27,38 @@ import { CONFIG } from "@/lib/config";
 
 const CADENA_POR_ID = { 421614: arbitrumSepolia, 42161: arbitrum } as const;
 
+/** Direcciones ya goteadas en esta sesion: el grifo no se pide dos veces por recarga. */
+const goteadas = new Set<string>();
+
+/**
+ * Goteo automatico (ADR-051): apenas la wallet existe, la plataforma le deposita el
+ * gas de prueba. Best-effort a proposito — si el grifo no esta configurado o falla,
+ * la app sigue y el anclaje caera al comprobante simulado (ADR-049), no a un error.
+ */
+function pedirGoteo(direccion: string): void {
+  const clave = direccion.toLowerCase();
+  if (goteadas.has(clave)) return;
+  goteadas.add(clave);
+
+  void fetch("/api/gas", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ direccion }),
+  })
+    .then(async (r) => {
+      const cuerpo = (await r.json()) as { goteado?: boolean; codigo?: string };
+      if (cuerpo.goteado) {
+        console.info("[vecino-seguro] gas de prueba depositado en la wallet embebida");
+      } else if (cuerpo.codigo && cuerpo.codigo !== "saldo_suficiente") {
+        console.info(`[vecino-seguro] grifo de gas: ${cuerpo.codigo}`);
+      }
+    })
+    .catch(() => {
+      // Sin red no hay goteo; el siguiente inicio de sesion lo reintenta.
+      goteadas.delete(clave);
+    });
+}
+
 /** Registra el proveedor EIP-1193 de la wallet embebida cuando existe. */
 function PuenteFirma({ children }: { children: ReactNode }) {
   const { wallets } = useWallets();
@@ -51,7 +83,11 @@ function PuenteFirma({ children }: { children: ReactNode }) {
       }
       try {
         const proveedor = await wallet.getEthereumProvider();
-        if (vigente) registrarProveedorEmbebido(proveedor as EIP1193Provider);
+        if (vigente) {
+          registrarProveedorEmbebido(proveedor as EIP1193Provider);
+          // Con la firma lista, el gas: automatico, sin que nadie pida nada (ADR-051).
+          if (wallet.walletClientType === "privy") pedirGoteo(wallet.address);
+        }
       } catch (error) {
         console.warn("[vecino-seguro] la wallet embebida no expuso su proveedor", error);
         if (vigente) registrarProveedorEmbebido(null);
