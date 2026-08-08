@@ -153,7 +153,7 @@
     {
       "id": "identidad",
       "nombre": "Identidad, acceso y revelación selectiva",
-      "rol": "Puerta de acceso con Google: sin sesion no se entra (ADR-027). El alias publico se deriva de la cuenta, asi que entrar desde otro telefono devuelve el mismo. La cuenta nunca se muestra a la red ni toca la cadena: es la identidad real que IdentityEscrow custodiaria bajo 2-de-3.",
+      "rol": "Puerta de acceso selectiva con Google (ADR-035, amend de ADR-027): navegar la app es libre, reportar y el circulo exigen sesion. El alias publico se deriva de la cuenta, asi que entrar desde otro telefono devuelve el mismo. La cuenta nunca se muestra a la red ni toca la cadena: es la identidad real que IdentityEscrow custodiaria bajo 2-de-3.",
       "estado": "simulado",
       "tecnologias": [
         "Auth.js v5 (Google)",
@@ -398,8 +398,8 @@
     },
     {
       "tema": "Acceso con Google",
-      "queHacemos": "Puerta de acceso con Auth.js: sin sesion no se entra. El alias se deriva de la cuenta, asi que entrar desde otro telefono devuelve el mismo seudonimo. Sin base de datos: la sesion es una cookie firmada en el dispositivo.",
-      "queFaltaria": "Si el despliegue no tiene credenciales de Google, la puerta se abre sola para no dejar la app inaccesible. La derivacion del alias es de demostracion, no una KDF."
+      "queHacemos": "Puerta de acceso selectiva con Auth.js (ADR-035): navegar no pide sesion, reportar y el circulo si. El alias se deriva de la cuenta, asi que entrar desde otro telefono devuelve el mismo seudonimo. Sin base de datos: la sesion es una cookie firmada en el dispositivo.",
+      "queFaltaria": "Si el despliegue no tiene credenciales de Google, tambien reportar y el circulo se abren solos para no dejar esas rutas inaccesibles. La derivacion del alias es de demostracion, no una KDF."
     },
     {
       "tema": "Revelación selectiva",

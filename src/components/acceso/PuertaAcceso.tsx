@@ -1,24 +1,28 @@
 "use client";
 
 import { signIn, useSession } from "next-auth/react";
+import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { useGoogleDisponible } from "@/components/proveedores/SesionProvider";
 import { Icono } from "@/components/ui/Icono";
+import { rutaRequiereSesion } from "@/lib/acceso";
 
 /**
- * Puerta de acceso (ADR-027). Sustituye a la pantalla de bienvenida de ADR-022.
+ * Puerta de acceso — selectiva por ruta (ADR-035, amend de ADR-027).
  *
- * Ya no es un aviso que se descarta: sin sesion no se entra. La app completa vive detras.
+ * Navegar la app (Inicio, Mapa, Arquitectura, Cuenta) es libre: no espera sesion ni la exige.
+ * Solo las rutas de `src/lib/acceso.ts` (reportar, circulo) la piden, porque son las dos
+ * acciones que necesitan una identidad real detras: la prueba de que existe alguien a quien
+ * pedirle revelacion bajo orden judicial cuando reporta, y los contactos guardados del
+ * circulo (ADR-102).
  *
- * POR QUE NO SE SIENTE COMO UN POPUP: lo importante no es el estilo sino el ORDEN. Antes la
- * app se renderizaba y la bienvenida aparecia encima medio segundo despues, que es
- * exactamente la sensacion de ventana emergente. Aqui no se pinta nada de la app hasta
- * saber si hay sesion: mientras se resuelve se muestra una espera sobria, y solo entonces
- * se decide entre la puerta y el contenido. El usuario nunca ve la app "por debajo".
+ * POR QUE NO SE SIENTE COMO UN POPUP en las rutas que si la piden: no se pinta nada de esa
+ * ruta hasta saber si hay sesion — mientras se resuelve se muestra una espera sobria, y solo
+ * entonces se decide entre la tarjeta de acceso y el contenido.
  *
- * VALVULA IMPORTANTE: si no hay credenciales de Google configuradas, la puerta deja pasar.
- * Sin eso, un despliegue mal configurado —o cualquiera trabajando en local sin .env—
- * dejaria la aplicacion entera inaccesible y sin forma de diagnosticarlo desde dentro.
+ * VALVULA IMPORTANTE: si no hay credenciales de Google configuradas, la puerta deja pasar en
+ * cualquier ruta. Sin eso, un despliegue mal configurado —o cualquiera trabajando en local sin
+ * .env— dejaria reportar inaccesible y sin forma de diagnosticarlo desde dentro.
  */
 
 function LogoGoogle() {
@@ -41,11 +45,23 @@ function LogoGoogle() {
   );
 }
 
-const PROMESAS = [
-  { icono: "reportar" as const, texto: "Reportas lo que pasa en tu cuadra en tres toques" },
-  { icono: "candado" as const, texto: "La red te ve con un alias: nadie sabe que fuiste tu" },
-  { icono: "cadena" as const, texto: "Tu evidencia queda anclada en Arbitrum" },
-];
+/** Copy puntual segun la ruta que la pidio — ya no es una bienvenida general (ADR-035). */
+const COPY_POR_RUTA: Record<string, { titulo: string; bajada: string }> = {
+  "/reportar": {
+    titulo: "Para reportar hace falta una cuenta",
+    bajada:
+      "Entrar no te identifica ante la red: tu alias sigue siendo lo unico que ven los demas. La cuenta existe para que exista una identidad real detras de la revelacion selectiva, si algun dia hace falta.",
+  },
+  "/circulo": {
+    titulo: "El circulo de cuidado pide una cuenta",
+    bajada:
+      "Los contactos que guardas ahi quedan atados a tu cuenta, no a este telefono, para poder recuperarlos o revocarlos si cambias de dispositivo.",
+  },
+};
+const COPY_POR_DEFECTO = {
+  titulo: "Esta seccion pide una cuenta",
+  bajada: "Entrar no te identifica ante la red: tu alias sigue siendo lo unico que ven los demas.",
+};
 
 /**
  * NextAuth vuelve a la raiz con ?error=CODIGO cuando el login falla. La puerta tiene que
@@ -82,6 +98,7 @@ function Cargando() {
 export function PuertaAcceso({ children }: { children: ReactNode }) {
   const { status } = useSession();
   const googleDisponible = useGoogleDisponible();
+  const pathname = usePathname();
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -96,10 +113,36 @@ export function PuertaAcceso({ children }: { children: ReactNode }) {
     window.history.replaceState({}, "", url.toString());
   }, []);
 
+  const protegida = rutaRequiereSesion(pathname);
+
+  const avisoError = error ? (
+    <div
+      role="alert"
+      className="flex items-start gap-2.5 rounded-xl border border-alerta/40 bg-alerta/10 p-3"
+    >
+      <Icono nombre="alerta" className="mt-0.5 h-4 w-4 shrink-0 text-alerta" />
+      <p className="text-xs leading-relaxed text-texto/90">{error}</p>
+    </div>
+  ) : null;
+
+  // Rutas libres (Inicio, Mapa, Arquitectura, Cuenta): nunca esperan ni exigen sesion. Si el
+  // login fallo mientras se intentaba entrar a una ruta protegida, NextAuth vuelve aqui
+  // (auth.ts: pages.error = "/") — el aviso tiene que verse igual, aunque esta ruta no pida cuenta.
+  if (!protegida) {
+    return (
+      <>
+        {avisoError ? <div className="mx-auto max-w-lg px-4 pt-3">{avisoError}</div> : null}
+        {children}
+      </>
+    );
+  }
+
   if (status === "loading") return <Cargando />;
 
   // Sesion iniciada, o despliegue sin login configurado: pasa.
   if (status === "authenticated" || !googleDisponible) return <>{children}</>;
+
+  const copy = COPY_POR_RUTA[pathname] ?? COPY_POR_DEFECTO;
 
   return (
     <div className="min-h-dvh overflow-y-auto bg-fondo">
@@ -109,40 +152,21 @@ export function PuertaAcceso({ children }: { children: ReactNode }) {
             <Icono nombre="escudo" className="h-8 w-8" />
           </span>
 
-          <h1 className="mt-5 text-2xl font-semibold tracking-tight text-texto">Vecino Seguro</h1>
-          <p className="mt-2 text-sm leading-relaxed text-suave">
-            La red de tu cuadra. Complementa al serenazgo donde no llega o no genera confianza.
-          </p>
-
-          <ul className="mt-7 space-y-3.5">
-            {PROMESAS.map((p) => (
-              <li key={p.texto} className="flex items-center gap-3">
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-superficie text-marca">
-                  <Icono nombre={p.icono} className="h-4 w-4" />
-                </span>
-                <span className="text-sm text-texto">{p.texto}</span>
-              </li>
-            ))}
-          </ul>
+          <h1 className="mt-5 text-2xl font-semibold tracking-tight text-texto">{copy.titulo}</h1>
+          <p className="mt-2 text-sm leading-relaxed text-suave">{copy.bajada}</p>
         </div>
 
         <div className="space-y-3">
-          {error ? (
-            <div
-              role="alert"
-              className="flex items-start gap-2.5 rounded-xl border border-alerta/40 bg-alerta/10 p-3"
-            >
-              <Icono nombre="alerta" className="mt-0.5 h-4 w-4 shrink-0 text-alerta" />
-              <p className="text-xs leading-relaxed text-texto/90">{error}</p>
-            </div>
-          ) : null}
+          {avisoError}
 
           <button
             type="button"
             disabled={ocupado}
             onClick={() => {
               setOcupado(true);
-              void signIn("google", { redirectTo: "/" });
+              // Vuelve a la misma ruta protegida tras entrar (ej. /reportar), no siempre a
+              // Inicio: con la puerta selectiva (ADR-035) el punto de partida ya no es fijo.
+              void signIn("google", { redirectTo: pathname });
             }}
             className="toque flex w-full items-center justify-center gap-2.5 rounded-xl bg-white text-sm font-semibold text-[#1f1f1f] transition active:scale-[0.99] disabled:opacity-60"
           >

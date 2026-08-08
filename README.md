@@ -33,8 +33,10 @@ npm run dev
 ```
 
 Abre http://localhost:3000. Sin variables de entorno la beta corre en modo simulado —sin RPC,
-sin faucet, sin wallet— y **con la puerta de acceso abierta**, porque sin credenciales de
-Google no habría forma de entrar. Al configurarlas, la app pide cuenta para entrar (`ADR-027`).
+sin faucet, sin wallet. **Navegar (Inicio, Mapa, Arquitectura, Cuenta) nunca pide cuenta.**
+Reportar y el Círculo de cuidado sí la piden (`ADR-035`, amend de `ADR-027`) — y sin credenciales
+de Google configuradas, hasta esas dos rutas dejan pasar, para que un despliegue sin `.env` no
+quede inaccesible.
 
 Para verlo como se va a usar de verdad: DevTools → vista móvil, 375 px de ancho.
 

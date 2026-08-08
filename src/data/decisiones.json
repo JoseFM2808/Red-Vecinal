@@ -1079,7 +1079,7 @@
       "titulo": "El acceso pasa a ser una puerta: sin cuenta no se entra",
       "fecha": "2026-08-07",
       "autor": "IA+Humano",
-      "estado": "aceptada",
+      "estado": "reemplazada",
       "contexto": "El equipo probo la pantalla de bienvenida de ADR-022 y la describio como \"un popup en lugar de una seccion que limita el acceso\". La observacion tiene dos partes y ambas eran correctas: se comportaba como aviso descartable en vez de puerta, y ademas SE SENTIA como popup porque la app se renderizaba primero y la pantalla aparecia encima medio segundo despues.",
       "opciones": [
         {
@@ -1399,6 +1399,47 @@
       ],
       "requiere_validacion_humana": true,
       "nota_para_humano": "Dos cosas para confirmar antes de un despliegue que no sea solo de demo: (1) que un reporte jamas corroborado no pague nada es aceptable, y (2) que corroborate() sin verificacion de distancia on-chain es un riesgo asumible para el MVP."
+    },
+    {
+      "id": "ADR-035",
+      "titulo": "El acceso vuelve a ser mixto: navegar es libre, reportar exige cuenta real",
+      "fecha": "2026-08-07",
+      "autor": "IA+Humano",
+      "estado": "aceptada",
+      "contexto": "El equipo pidio una forma de entrar sin Google. Al conversarlo se aclaro que el problema real no era falta de un proveedor alternativo: era que ADR-027 volvio obligatoria una cuenta para TODA la app, incluso solo para mirar el mapa o leer Inicio, y eso le costo al producto el argumento de friccion cero frente a las apps municipales competidoras (docs/PROYECTO.md). La razon de ADR-027 seguia siendo valida para reportar (que exista una identidad real que revelar bajo orden judicial), pero no aplicaba a navegar.",
+      "opciones": [
+        {
+          "nombre": "Revertir ADR-027 por completo (volver a identidad puramente local, sin cuenta obligatoria en ningun lado)",
+          "descartada_porque": "Tambien se conversó con el equipo. Pierde la razon completa de ADR-027: sin cuenta real en ningun punto, la revelacion selectiva vuelve a no tener nada que abrir para quien reporta."
+        },
+        {
+          "nombre": "Agregar un boton 'Entrar sin cuenta' dentro de la puerta total existente",
+          "descartada_porque": "Deja la app entera detras de una decision binaria en la puerta (cuenta real vs invitado) en vez de pedir la cuenta solo cuando la accion la necesita de verdad. Un invitado que solo queria ver el mapa igual se topa con la puerta."
+        }
+      ],
+      "decision": "src/lib/acceso.ts define RUTAS_PROTEGIDAS = ['/reportar', '/circulo'] con rutaRequiereSesion(), funcion pura con test. PuertaAcceso.tsx (src/components/acceso/PuertaAcceso.tsx) deja de ser un gate global: renderiza el contenido de inmediato en cualquier ruta no protegida, sin esperar la sesion, y solo bloquea /reportar y /circulo hasta que haya sesion (o hasta que se confirme que Google no esta configurado, la misma valvula de siempre). El boton de Google, al entrar, redirige de vuelta a la ruta protegida original en vez de siempre a Inicio.",
+      "consecuencias": [
+        "Se recupera la friccion cero para explorar el producto (Inicio, Mapa, Arquitectura, Cuenta), que era el argumento que ADR-027 sacrificaba explicitamente.",
+        "Reportar y Circulo (ADR-102) siguen exigiendo una cuenta real: el argumento de 'existe una identidad que revelar bajo orden judicial' sigue siendo cierto para quien de verdad reporta, que es a quien le aplica.",
+        "README.md y docs/PITCH.md se actualizaron: ya no describen una puerta total ni abren el guion de demo con el login como primer paso obligatorio.",
+        "ADR-027 pasa a 'reemplazada' — no se borra, queda como registro de por que existio la puerta total y por que se ajusto."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Bajo: PuertaAcceso.tsx vuelve a evaluar sin mirar la ruta.",
+      "criterios_rubrica": [
+        "ux",
+        "problema",
+        "pitch"
+      ],
+      "evidencia": [
+        "src/lib/acceso.ts",
+        "src/lib/acceso.test.ts",
+        "src/components/acceso/PuertaAcceso.tsx",
+        "README.md",
+        "docs/PITCH.md"
+      ],
+      "requiere_validacion_humana": true,
+      "nota_para_humano": "ADR-027 ya habia pasado por validacion humana con la advertencia explicita de que se perdia el argumento de 'reportar sin registro'. Esta decision lo recupera a medias (navegar si, reportar no) — confirmar que el equipo esta de acuerdo con el punto medio y no esperaba una reversion total."
     }
   ]
 }

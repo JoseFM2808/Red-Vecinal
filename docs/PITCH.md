@@ -24,9 +24,10 @@ No abrir con la tecnología. Abrir con el vacío.
 > que tú lo autorices o exista una orden judicial. Y si hace falta, un botón aparte
 > escala a serenazgo, policía o ambulancia."
 
-Si preguntan por el login: entrar con Google no es identificarse ante la red. Es lo que
-permite que exista una identidad real que revelar bajo orden judicial — sin cuenta, la
-revelación selectiva no tendría nada que abrir.
+Si preguntan por el login: navegar la app —Inicio, Mapa, Arquitectura— no pide cuenta. Solo
+reportar la pide, y entrar con Google no es identificarse ante la red: es lo que permite que
+exista una identidad real que revelar bajo orden judicial — sin cuenta, la revelación selectiva
+no tendría nada que abrir.
 
 La frase clave, repetirla al cerrar: **complementamos al serenazgo donde no llega, no lo reemplazamos.**
 
@@ -34,23 +35,26 @@ La frase clave, repetirla al cerrar: **complementamos al serenazgo donde no lleg
 
 Guion exacto (ensayarlo con cronómetro):
 
-1. **Puerta de acceso** — entrar con Google. Frase clave: "entrar no te identifica ante la red; el alias es lo único que ven los demás y lo único que toca la cadena".
-2. **Inicio** — las cifras del problema están dentro del producto, con su fuente.
-3. **Reportar** — categoría → foto → ubicación automática → publicar.
+1. **Inicio** — se abre directo, sin ninguna puerta: las cifras del problema están dentro del
+   producto, con su fuente. Frase clave: "esto se navega sin cuenta".
+2. **Reportar** — al tocarlo sin sesión aparece el pedido de cuenta. Entrar con Google. Frase
+   clave: "entrar no te identifica ante la red; el alias es lo único que ven los demás y lo
+   único que toca la cadena — la cuenta es para que exista una identidad real que revelar bajo
+   orden judicial, si hace falta". Categoría → foto → ubicación automática → publicar.
    Mientras carga, señalar las etapas reales: valida anti-bots, sube a IPFS, calcula hash, ancla.
-4. **Comprobante** — "esto es lo que queda en cadena: un hash. No la foto, no el nombre,
+3. **Comprobante** — "esto es lo que queda en cadena: un hash. No la foto, no el nombre,
    no la dirección exacta. La coordenada va truncada a 11 metros."
-5. **Recompensa** — 15 VSG con multiplicador ×1.5. "No pagamos por tener la app abierta:
+4. **Recompensa** — 15 VSG con multiplicador ×1.5. "No pagamos por tener la app abierta:
    pagamos cuando otro vecino confirma el mismo hecho a menos de 300 metros dentro de 30 minutos.
    Eso es caro de falsificar; tener la app abierta no."
-6. **Mapa** — el reporte aparece georreferenciado junto a los demás. Si el panel de sismos
+5. **Mapa** — el reporte aparece georreferenciado junto a los demás. Si el panel de sismos
    está activo, señalarlo: "cuando varios vecinos reportan un sismo en la misma media hora,
    la app arma el mapa de quién lo sintió, tipo 'Did You Feel It?' del USGS. Ojo con la
    frase exacta: **cuenta reportes, no mide sismos.** No tenemos acelerómetros y no vamos
    a fingir que sí."
-7. **Cuenta → Revelación selectiva** — tocar las firmas y mostrar el umbral 2-de-3.
+6. **Cuenta → Revelación selectiva** — tocar las firmas y mostrar el umbral 2-de-3.
    "Ni siquiera nosotros podemos abrir el vínculo solos."
-8. **Arquitectura** — cerrar aquí. Es el diferenciador: mostrar el estado real de cada módulo,
+7. **Arquitectura** — cerrar aquí. Es el diferenciador: mostrar el estado real de cada módulo,
    los límites declarados y la bitácora de decisiones.
 
 ### 3:15 – 4:00 · Por qué Arbitrum

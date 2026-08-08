@@ -4,7 +4,7 @@
 
 Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o por el equipo se registra aquí ANTES o AL MOMENTO de escribir el código que la implementa. `docs/DECISIONES.md` se genera desde este archivo (npm run docs) y la pestaña Arquitectura de la app lo renderiza.
 
-**36 decisiones registradas · 17 esperan validacion humana**
+**37 decisiones registradas · 18 esperan validacion humana**
 
 ## Esperan que una persona decida
 
@@ -27,6 +27,7 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | ADR-031 | El evento ReportSubmitted necesita llevar el CID: el ABI esperado original no lo tenia | Avisar al equipo de contratos ANTES de que escriban ReportRegistry.sol: submitReport necesita un parametro `cid` adicional que no estaba en la version anterior del handoff. |
 | ADR-033 | Los tres contratos se escriben ahora, con Hardhat 3 aislado en contracts/ como proyecto propio | Quien tenga acceso a una wallet con ETH de testnet de Arbitrum Sepolia tiene que correr `npm run contracts:deploy:sepolia` (llenando antes contracts/.env con DEPLOYER_PRIVATE_KEY) para que esto deje de ser codigo listo y pase a ser contratos reales en cadena. |
 | ADR-034 | Donde vive el limite de frecuencia, y por que corroborate() no revalida geometria on-chain | Dos cosas para confirmar antes de un despliegue que no sea solo de demo: (1) que un reporte jamas corroborado no pague nada es aceptable, y (2) que corroborate() sin verificacion de distancia on-chain es un riesgo asumible para el MVP. |
+| ADR-035 | El acceso vuelve a ser mixto: navegar es libre, reportar exige cuenta real | ADR-027 ya habia pasado por validacion humana con la advertencia explicita de que se perdia el argumento de 'reportar sin registro'. Esta decision lo recupera a medias (navegar si, reportar no) — confirmar que el equipo esta de acuerdo con el punto medio y no esperaba una reversion total. |
 
 ## Indice
 
@@ -60,7 +61,7 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | [ADR-102](#adr-102) | El círculo es la única parte de la app que exige cuenta | IA+Humano | aceptada | alta | Producto y UX, Problema e impacto, Implementacion tecnica |
 | [ADR-025](#adr-025) | El círculo de cuidado sale del laboratorio y entra a producción | IA+Humano | aceptada | media | Producto y UX, Problema e impacto, Pitch y demo |
 | [ADR-026](#adr-026) | El acceso deja de depender de la pantalla de bienvenida | IA+Humano | reemplazada | alta | Producto y UX, Pitch y demo |
-| [ADR-027](#adr-027) | El acceso pasa a ser una puerta: sin cuenta no se entra | IA+Humano | aceptada | alta | Producto y UX, Pitch y demo, Problema e impacto |
+| [ADR-027](#adr-027) | El acceso pasa a ser una puerta: sin cuenta no se entra | IA+Humano | reemplazada | alta | Producto y UX, Pitch y demo, Problema e impacto |
 | [ADR-028](#adr-028) | Version de escritorio: la misma app con barra lateral, no un rediseño | IA+Humano | aceptada | alta | Producto y UX, Pitch y demo |
 | [ADR-029](#adr-029) | Ronda de mejoras de experiencia guiada por auditoria | IA+Humano | aceptada | alta | Producto y UX, Problema e impacto |
 | [ADR-030](#adr-030) | ArbitrumChainAdapter se construye ahora, firmando con wallet inyectada como paso intermedio | IA | aceptada | alta | Implementacion tecnica, Ecosistema Arbitrum |
@@ -68,6 +69,7 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | [ADR-032](#adr-032) | El indice compartido fusiona lo local completo con lo remoto best-effort, por contentHash | IA | aceptada | alta | Implementacion tecnica, Ecosistema Arbitrum, Producto y UX |
 | [ADR-033](#adr-033) | Los tres contratos se escriben ahora, con Hardhat 3 aislado en contracts/ como proyecto propio | IA | aceptada | alta | Implementacion tecnica, Ecosistema Arbitrum |
 | [ADR-034](#adr-034) | Donde vive el limite de frecuencia, y por que corroborate() no revalida geometria on-chain | IA | aceptada | media | Implementacion tecnica, Ecosistema Arbitrum, Problema e impacto |
+| [ADR-035](#adr-035) | El acceso vuelve a ser mixto: navegar es libre, reportar exige cuenta real | IA+Humano | aceptada | alta | Producto y UX, Problema e impacto, Pitch y demo |
 
 ---
 
@@ -935,7 +937,7 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 
 ### El acceso pasa a ser una puerta: sin cuenta no se entra
 
-`2026-08-07` · autor: **IA+Humano** · estado: **aceptada** · reversibilidad: **alta**
+`2026-08-07` · autor: **IA+Humano** · estado: **reemplazada** · reversibilidad: **alta**
 
 **Contexto.** El equipo probo la pantalla de bienvenida de ADR-022 y la describio como "un popup en lugar de una seccion que limita el acceso". La observacion tiene dos partes y ambas eran correctas: se comportaba como aviso descartable en vez de puerta, y ademas SE SENTIA como popup porque la app se renderizaba primero y la pantalla aparecia encima medio segundo despues.
 
@@ -1181,3 +1183,35 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 **Evidencia en el codigo.** `contracts/contracts/ReportRegistry.sol`, `contracts/contracts/TokenReward.sol`, `contracts/contracts/IdentityEscrow.sol`, `contracts/contracts/ReportRegistry.t.sol`, `contracts/contracts/TokenReward.t.sol`, `contracts/contracts/IdentityEscrow.t.sol`
 
 > **Necesita decision humana:** Dos cosas para confirmar antes de un despliegue que no sea solo de demo: (1) que un reporte jamas corroborado no pague nada es aceptable, y (2) que corroborate() sin verificacion de distancia on-chain es un riesgo asumible para el MVP.
+
+---
+
+## ADR-035
+
+### El acceso vuelve a ser mixto: navegar es libre, reportar exige cuenta real
+
+`2026-08-07` · autor: **IA+Humano** · estado: **aceptada** · reversibilidad: **alta**
+
+**Contexto.** El equipo pidio una forma de entrar sin Google. Al conversarlo se aclaro que el problema real no era falta de un proveedor alternativo: era que ADR-027 volvio obligatoria una cuenta para TODA la app, incluso solo para mirar el mapa o leer Inicio, y eso le costo al producto el argumento de friccion cero frente a las apps municipales competidoras (docs/PROYECTO.md). La razon de ADR-027 seguia siendo valida para reportar (que exista una identidad real que revelar bajo orden judicial), pero no aplicaba a navegar.
+
+**Alternativas descartadas.**
+
+- *Revertir ADR-027 por completo (volver a identidad puramente local, sin cuenta obligatoria en ningun lado)* — Tambien se conversó con el equipo. Pierde la razon completa de ADR-027: sin cuenta real en ningun punto, la revelacion selectiva vuelve a no tener nada que abrir para quien reporta.
+- *Agregar un boton 'Entrar sin cuenta' dentro de la puerta total existente* — Deja la app entera detras de una decision binaria en la puerta (cuenta real vs invitado) en vez de pedir la cuenta solo cuando la accion la necesita de verdad. Un invitado que solo queria ver el mapa igual se topa con la puerta.
+
+**Decision.** src/lib/acceso.ts define RUTAS_PROTEGIDAS = ['/reportar', '/circulo'] con rutaRequiereSesion(), funcion pura con test. PuertaAcceso.tsx (src/components/acceso/PuertaAcceso.tsx) deja de ser un gate global: renderiza el contenido de inmediato en cualquier ruta no protegida, sin esperar la sesion, y solo bloquea /reportar y /circulo hasta que haya sesion (o hasta que se confirme que Google no esta configurado, la misma valvula de siempre). El boton de Google, al entrar, redirige de vuelta a la ruta protegida original en vez de siempre a Inicio.
+
+**Consecuencias.**
+
+- Se recupera la friccion cero para explorar el producto (Inicio, Mapa, Arquitectura, Cuenta), que era el argumento que ADR-027 sacrificaba explicitamente.
+- Reportar y Circulo (ADR-102) siguen exigiendo una cuenta real: el argumento de 'existe una identidad que revelar bajo orden judicial' sigue siendo cierto para quien de verdad reporta, que es a quien le aplica.
+- README.md y docs/PITCH.md se actualizaron: ya no describen una puerta total ni abren el guion de demo con el login como primer paso obligatorio.
+- ADR-027 pasa a 'reemplazada' — no se borra, queda como registro de por que existio la puerta total y por que se ajusto.
+
+**Costo de revertir.** Bajo: PuertaAcceso.tsx vuelve a evaluar sin mirar la ruta.
+
+**Sirve a.** Producto y UX, Problema e impacto, Pitch y demo
+
+**Evidencia en el codigo.** `src/lib/acceso.ts`, `src/lib/acceso.test.ts`, `src/components/acceso/PuertaAcceso.tsx`, `README.md`, `docs/PITCH.md`
+
+> **Necesita decision humana:** ADR-027 ya habia pasado por validacion humana con la advertencia explicita de que se perdia el argumento de 'reportar sin registro'. Esta decision lo recupera a medias (navegar si, reportar no) — confirmar que el equipo esta de acuerdo con el punto medio y no esperaba una reversion total.
