@@ -5,6 +5,23 @@ Todo lo que hay que saber para publicar Vecino Seguro y para no romperlo el día
 **Regla de oro del 11 y 12 de agosto:** ningún cambio de configuración que no se haya probado
 en un deploy de preview. Un build que falla a las 3 p.m. cuesta más que cualquier mejora.
 
+### Dónde vive el proyecto
+
+| Qué | Dónde |
+| --- | --- |
+| Repositorio | `github.com/JoseFM2808/Vecino-Seguro` |
+| Dominio de producción | `https://vecino-seguro.vercel.app` ← **este es el que se comparte** |
+| Rama de producción | `main` |
+
+El repositorio y el proyecto de Vercel se renombraron el 7 de agosto (ADR-030). El dominio
+anterior `red-vecinal-chi.vercel.app` **ya no existe**: responde 404. Cualquier enlace, código
+QR o diapositiva que lo mencione hay que rehacerlo.
+
+> Los metadatos de Open Graph se congelan en el **build**: `urlBase()` lee
+> `VERCEL_PROJECT_PRODUCTION_URL`, que Vercel inyecta al construir. Un deploy anterior al
+> rename sigue anunciando el dominio viejo aunque se sirva desde el nuevo, y la tarjeta de
+> WhatsApp sale rota. Se arregla con **Redeploy**, no esperando.
+
 ---
 
 ## 1. Qué está configurado en el repositorio
@@ -190,6 +207,11 @@ Hacerlo con **días** de anticipación, no la mañana del 12.
 
 - [ ] `npm run check` y `npm run build` en verde en local
 - [ ] Último commit pusheado y su deploy en Vercel marcado **Ready**
+- [ ] **Redeploy hecho después del rename** (ADR-030), y comprobado que la tarjeta de enlace
+      ya no apunta al dominio muerto:
+      `curl -s https://vecino-seguro.vercel.app | grep 'og:url'` debe decir `vecino-seguro`
+- [ ] `https://vecino-seguro.vercel.app/api/auth/callback/google` registrada en Google Cloud
+      Console, y login probado de verdad una vez
 - [ ] Abrir el **dominio corto de producción** en un celular con datos móviles e incógnito
 - [ ] Aceptar el permiso de ubicación y confirmar que detecta **tu distrito real**
 - [ ] Publicar un reporte de prueba de punta a punta y ver el comprobante
@@ -213,5 +235,7 @@ Hacerlo con **días** de anticipación, no la mañana del 12.
 | El mapa carga gris, sin teselas | CSP bloqueando un origen nuevo | Consola del navegador → agregar el origen a `next.config.ts`, o `CSP_MODO=report-only` como parche. |
 | La app pide login al abrir el enlace | Deployment Protection, o se compartió una URL con hash | Usar el dominio corto de producción, o desactivar la protección. |
 | Cambié una variable y no pasa nada | Las `NEXT_PUBLIC_*` se congelan en el build | **Deployments > Redeploy**. |
+| El enlace compartido sale sin imagen, o la tarjeta lleva a un 404 | El deploy se construyó antes del rename del proyecto y `og:url` quedó con el dominio viejo | **Redeploy**. Si persiste, `NEXT_PUBLIC_SITE_URL` está fijada al dominio viejo: tiene prioridad sobre la detección automática (`src/lib/url-base.ts`). |
+| El login devuelve `redirect_uri_mismatch` | El dominio cambió y Google sigue con la URI vieja | Añadir `https://vecino-seguro.vercel.app/api/auth/callback/google` en Google Cloud Console. |
 | El último deploy salió mal | — | **Deployments > ⋯ > Instant Rollback** al anterior. |
 | El deploy no incluye mis cambios | El push no llegó a `main`, o el Ignored Build Step lo canceló | `git log origin/main` y revisar el estado del deployment. |

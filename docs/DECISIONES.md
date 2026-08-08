@@ -4,7 +4,7 @@
 
 Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o por el equipo se registra aquí ANTES o AL MOMENTO de escribir el código que la implementa. `docs/DECISIONES.md` se genera desde este archivo (npm run docs) y la pestaña Arquitectura de la app lo renderiza.
 
-**31 decisiones registradas · 13 esperan validacion humana**
+**32 decisiones registradas · 14 esperan validacion humana**
 
 ## Esperan que una persona decida
 
@@ -23,6 +23,7 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | ADR-102 | El círculo es la única parte de la app que exige cuenta | Decidir si al cerrar sesión se borran los contactos del dispositivo. Hoy se conservan y reaparecen al volver a entrar, que es cómodo pero deja teléfonos de terceros guardados en un equipo donde ya nadie inició sesión. |
 | ADR-025 | El círculo de cuidado sale del laboratorio y entra a producción | Decidir cómo se presenta el círculo en el pitch. Si se muestra, hay que poder responder la pregunta de control vs cuidado delante del jurado; si no se responde bien, es la funcionalidad que más fácil se vuelve en contra. La alternativa es tenerla en la app pero no demostrarla. |
 | ADR-027 | El acceso pasa a ser una puerta: sin cuenta no se entra | Confirmar que el equipo asume el intercambio: se gana una puerta clara y una identidad real que revelar, se pierde el argumento de "se reporta sin registro" que el pitch usaba como ventaja frente a las apps municipales. Si el jurado pregunta por friccion en una emergencia, hay que tener respuesta. |
+| ADR-030 | Renombrar el repositorio y el proyecto de Vercel a Vecino Seguro | Quedan tres pasos manuales que la IA no puede hacer y que rompen la demo si se olvidan. 1) Redeploy en Vercel: los metadatos de Open Graph se congelan en el build y el deploy actual todavia anuncia red-vecinal-chi.vercel.app, que ya da 404. 2) Antes del Redeploy, revisar que NEXT_PUBLIC_SITE_URL no este fijada al dominio viejo en las variables de Vercel: tiene prioridad sobre la deteccion automatica y sobrevivria al Redeploy. 3) Anadir https://vecino-seguro.vercel.app/api/auth/callback/google como URI de redireccion autorizada en Google Cloud Console. |
 
 ## Indice
 
@@ -59,6 +60,7 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | [ADR-027](#adr-027) | El acceso pasa a ser una puerta: sin cuenta no se entra | IA+Humano | aceptada | alta | Producto y UX, Pitch y demo, Problema e impacto |
 | [ADR-028](#adr-028) | Version de escritorio: la misma app con barra lateral, no un rediseño | IA+Humano | aceptada | alta | Producto y UX, Pitch y demo |
 | [ADR-029](#adr-029) | Ronda de mejoras de experiencia guiada por auditoria | IA+Humano | aceptada | alta | Producto y UX, Problema e impacto |
+| [ADR-030](#adr-030) | Renombrar el repositorio y el proyecto de Vercel a Vecino Seguro | IA+Humano | aceptada | alta | Pitch y demo, Implementacion tecnica |
 
 ---
 
@@ -1016,3 +1018,39 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 **Sirve a.** Producto y UX, Problema e impacto
 
 **Evidencia en el codigo.** `src/app/globals.css`, `src/components/reportar/FlujoReporte.tsx`, `src/components/reportes/HojaDetalle.tsx`
+
+---
+
+## ADR-030
+
+### Renombrar el repositorio y el proyecto de Vercel a Vecino Seguro
+
+`2026-08-07` · autor: **IA+Humano** · estado: **aceptada** · reversibilidad: **alta**
+
+**Contexto.** El producto se llama Vecino Seguro desde el commit inicial: paquete, manifiesto PWA, metadatos, marca en pantalla, claves de localStorage y documentacion. La infraestructura, en cambio, conservaba un nombre temprano: el repositorio era JoseFM2808/Red-Vecinal y el proyecto de Vercel publicaba en red-vecinal-chi.vercel.app. Esa URL es lo primero que ve un jurado que abre la demo el 12 de agosto.
+
+**Alternativas descartadas.**
+
+- *Dejar la infraestructura con el nombre viejo* — La URL de la demo habria dicho red-vecinal-chi.vercel.app mientras toda la app dice Vecino Seguro. Es la clase de incoherencia que un jurado lee como proyecto improvisado.
+- *Renombrar tambien la carpeta local de trabajo* — Vive dentro de OneDrive y es el directorio de trabajo activo. Renombrarla fuerza una re-sincronizacion completa a cinco dias de la entrega y no cambia nada de lo que ve el jurado.
+- *Comprar un dominio propio en vez de renombrar* — DNS, certificado y propagacion a cinco dias de la demo, por una mejora estetica. NEXT_PUBLIC_SITE_URL queda como via de escape si aparece un dominio despues.
+
+**Decision.** Se renombra el repositorio a JoseFM2808/Vecino-Seguro y el proyecto de Vercel, cuyo dominio de produccion pasa a vecino-seguro.vercel.app. El remote local se reapunta con git remote set-url. El codigo no se toca: urlBase() ya deduce el dominio de VERCEL_PROJECT_PRODUCTION_URL, que Vercel inyecta sola. La carpeta local sigue llamandose Red-Vecinal a proposito.
+
+**Consecuencias.**
+
+- Verificado: vecino-seguro.vercel.app responde 200 y el dominio viejo red-vecinal-chi.vercel.app responde 404.
+- Verificado: /api/auth/providers ya devuelve el callback en el dominio nuevo.
+- Riesgo abierto: el deploy vigente se construyo ANTES del rename, asi que og:url y og:image siguen apuntando al dominio muerto. El enlace compartido por WhatsApp sale con tarjeta rota hasta que se haga Redeploy.
+- Riesgo abierto: si la URI de redireccion nueva no se registra en Google Cloud Console, el login con Google falla con redirect_uri_mismatch en plena demo.
+- GitHub redirige el nombre viejo, asi que un clon ya existente del equipo de contratos sigue funcionando sin tocar nada.
+- El campo homepage del repositorio en GitHub todavia apunta al dominio viejo.
+- La carpeta local es el unico rastro del nombre antiguo y es invisible para el jurado.
+
+**Costo de revertir.** Bajo: renombrar de vuelta en GitHub y en Vercel y correr git remote set-url. GitHub mantiene la redireccion en ambos sentidos.
+
+**Sirve a.** Pitch y demo, Implementacion tecnica
+
+**Evidencia en el codigo.** `src/lib/url-base.ts`, `src/app/layout.tsx`, `docs/DESPLIEGUE.md`
+
+> **Necesita decision humana:** Quedan tres pasos manuales que la IA no puede hacer y que rompen la demo si se olvidan. 1) Redeploy en Vercel: los metadatos de Open Graph se congelan en el build y el deploy actual todavia anuncia red-vecinal-chi.vercel.app, que ya da 404. 2) Antes del Redeploy, revisar que NEXT_PUBLIC_SITE_URL no este fijada al dominio viejo en las variables de Vercel: tiene prioridad sobre la deteccion automatica y sobrevivria al Redeploy. 3) Anadir https://vecino-seguro.vercel.app/api/auth/callback/google como URI de redireccion autorizada en Google Cloud Console.

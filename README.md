@@ -3,6 +3,8 @@
 Red vecinal de reporte de seguridad con geolocalización y evidencia anclada en Arbitrum.
 Hackathon Ethereum Lima 2026.
 
+**Demo en vivo: https://vecino-seguro.vercel.app**
+
 El vecino reporta en tres toques desde el celular. La evidencia va a IPFS, su hash se ancla en
 Arbitrum y la red vecinal se entera al instante. Un botón aparte escala a serenazgo, policía o
 ambulancia. Nadie sabe quién reportó, salvo que el propio usuario lo autorice o exista una
