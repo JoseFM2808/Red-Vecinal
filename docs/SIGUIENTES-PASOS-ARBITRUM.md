@@ -201,6 +201,76 @@ evaluado, que es más creíble que un logo en una slide.
 
 ---
 
+## 8. AVISO CRÍTICO antes de desplegar: quién firma cuando el usuario entró con Google
+
+> Añadido el 8 de agosto tras un barrido de verificación (9 lectores + crítico sobre el código
+> real, no sobre la memoria). **Leer esto antes de desplegar a Sepolia.** La prueba con cuentas
+> reales dejó claro el hueco: los vecinos entran con Google y **no tienen wallet**, así que hoy
+> no existe nadie que firme `submitReport` desde sus teléfonos.
+
+### 8.1 El hueco, con líneas
+
+- La identidad pseudónima **no tiene clave privada**: es una dirección derivada por SHA-256
+  (`src/lib/identidad.ts`), no una cuenta secp256k1. No puede firmar nada, nunca.
+- `ArbitrumChainAdapter.anclarReporte` exige `window.ethereum` y lanza sin wallet inyectada
+  (`src/lib/chain/arbitrum-adapter.ts`). En un teléfono con Google y sin MetaMask: imposible.
+- Conclusión: con las direcciones cargadas, la **lectura** del índice compartido funcionará,
+  pero ningún reporte de un usuario Google llegará a la cadena. **Dos teléfonos seguirán sin
+  ver lo mismo.** Las credenciales solas no cierran esto.
+
+### 8.2 Si la salida es un relevo (la plataforma firma), OJO con esto
+
+Un relevo ingenuo — una sola wallet de plataforma firmando todo — **rompe tres cosas hoy**:
+
+| Rotura | Dónde | Detalle |
+| --- | --- | --- |
+| Rate-limit global | `ReportRegistry.sol:73-78` | Los límites (3/hora, 15 min por zona) aplican a `msg.sender`. Con un relayer único, TODA la plataforma comparte cupo de 3 reportes/hora; el 4º revierte `LimiteHorarioExcedido`. Dos vecinos distintos en la misma zona chocan con `ZonaEnEspera`. |
+| Recompensas muertas | `TokenReward.sol:106,113` | `claim()` exige `msg.sender == reporter` y mintea al reporter. Con relayer, el reporter es el relayer: el vecino jamás recibe VSG. |
+| Corroboración rota | `TokenReward.sol:86` | `corroborate()` revierte si `msg.sender == reporter`: el relayer no puede corroborar lo que él mismo ancló. Si todo pasa por él, ningún reporte relevado se libera nunca. |
+
+**Los contratos aún NO están desplegados en ninguna red real (ADR-038): este es el único
+momento barato para cambiarlos.** La opción que preserva el diseño: `submitReportFor(address
+reporter, ...)` restringido a una dirección de relevo autorizada, aplicando los rate-limits al
+`reporter` y no al `msg.sender`, y emitiendo `ReportSubmitted` con el `reporter` real. Nota:
+mientras el reporter derivado no tenga clave (ver 8.1), `claim()` tampoco podrá llamarlo el
+vecino — decidir si la recompensa on-chain espera a Privy/Web3Auth o si también se releva.
+
+### 8.3 Trampas de despliegue verificadas
+
+1. **Colisión de carpeta de Ignition**: `arbitrumLocal` y `arbitrumSepolia` comparten chainId
+   421614, así que Ignition usa la MISMA carpeta `contracts/ignition/deployments/chain-421614`.
+   Lo que hay ahí es del nodo local (ADR-038). **Borrar o mover esa carpeta antes del deploy
+   real**, o Ignition intentará reconciliar contra transacciones que no existen en Sepolia.
+2. `category` es `uint8` sin validación de rango en el contrato: cualquier ruta de relevo debe
+   validar 0-2 antes de firmar.
+3. El `zoneId` on-chain es `keccak256(stringToHex(zonaId))` (`arbitrum-adapter.ts:104`); el
+   `contentHash` incluye al autor y el timestamp del CLIENTE — un relevo debe recibir el hash ya
+   calculado, jamás recalcularlo con su propio reloj.
+4. `leerReportesDesdeCadena` hace una llamada `pendingReward` por evento (N+1 contra el RPC
+   público) y pagina `getLogs` en lotes de 100 000 bloques — verificar los límites del RPC que
+   usen, y cargar `NEXT_PUBLIC_REPORT_REGISTRY_DEPLOY_BLOCK` con el bloque real.
+5. En el frontend hay un gate que hoy bloquearía la lectura sin wallet: `AppProvider` solo lee
+   eventos `if (!cadena.simulado)`, y sin wallet inyectada el adaptador cae a simulado. Es
+   arreglo del lado frontend (avisar cuando la rama esté lista para coordinarlo): leer siempre
+   que `integracionCadenaLista()` sea true.
+6. `RELAYER_PRIVATE_KEY` (si la hay) es un secreto distinto de `DEPLOYER_PRIVATE_KEY` — no
+   reutilizar. Server-only, sin prefijo `NEXT_PUBLIC_`, leída en la ruta API directamente
+   (nunca en `src/lib/config.ts`, que se importa desde el cliente).
+
+### 8.4 Checklist de aceptación para la entrega de credenciales
+
+Cuando la rama esté lista y lleguen las direcciones, esto es lo que se valida en 10 minutos:
+
+- [ ] `eth_getCode` de las 3 direcciones devuelve bytecode en `sepolia-rollup.arbitrum.io/rpc`
+- [ ] El deploy usó la carpeta de Ignition limpia (8.3.1) y quedó el bloque de despliegue anotado
+- [ ] Definido y probado quién firma por los usuarios de Google (8.1/8.2) — sin esto la demo
+      multi-dispositivo NO va a funcionar, con o sin credenciales
+- [ ] Reporte de prueba anclado → visible en Arbiscan → visible en un SEGUNDO dispositivo tras
+      recargar la app con `NEXT_PUBLIC_CHAIN_MODE=arbitrum`
+- [ ] Variables en Vercel + Redeploy (las `NEXT_PUBLIC_*` se congelan en el build)
+
+---
+
 ## Checklist de entrega
 
 Ya hecho — frontend (ADR-030, ADR-031, ADR-032):
