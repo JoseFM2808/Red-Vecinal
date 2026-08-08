@@ -1,12 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { rutaRequiereSesion } from "./acceso";
 
-describe("rutaRequiereSesion", () => {
-  it("no exige sesion para navegar la app", () => {
+describe("rutaRequiereSesion (ADR-043)", () => {
+  it("la vitrina publica no exige sesion: inicio, mapa y landing", () => {
     expect(rutaRequiereSesion("/")).toBe(false);
     expect(rutaRequiereSesion("/mapa")).toBe(false);
-    expect(rutaRequiereSesion("/arquitectura")).toBe(false);
-    expect(rutaRequiereSesion("/cuenta")).toBe(false);
+    expect(rutaRequiereSesion("/landing")).toBe(false);
   });
 
   it("exige sesion para reportar", () => {
@@ -15,6 +14,11 @@ describe("rutaRequiereSesion", () => {
 
   it("exige sesion para el circulo", () => {
     expect(rutaRequiereSesion("/circulo")).toBe(true);
+  });
+
+  it("exige sesion para la cuenta y la arquitectura", () => {
+    expect(rutaRequiereSesion("/cuenta")).toBe(true);
+    expect(rutaRequiereSesion("/arquitectura")).toBe(true);
   });
 
   it("tambien protege subrutas", () => {

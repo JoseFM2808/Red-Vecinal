@@ -423,8 +423,8 @@
     },
     {
       "tema": "Detección de sismos",
-      "queHacemos": "Agrega los reportes de vecinos: si varios coinciden en media hora, muestra el mapa comunitario por zonas.",
-      "queFaltaria": "No hay medición sismológica. Un detector real es procesamiento de señal sobre acelerómetros, un proyecto aparte."
+      "queHacemos": "Los sismos llegan del Centro Sismológico Nacional del IGP (ADR-042): la app alerta a quien está dentro del radio de esa magnitud, con distancia y rumbo, y el vecino responde cómo lo sintió. Esas respuestas, agregadas por zona, dan el mapa de intensidad.",
+      "queFaltaria": "Seguimos sin medir nada: la detección es del IGP y la app lo dice. Las respuestas de intensidad son locales al dispositivo hasta que haya contrato; el IGP no publica SLA para su endpoint, así que si no responde la app se degrada con aviso."
     },
     {
       "tema": "Evidencia en IPFS",

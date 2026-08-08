@@ -2,16 +2,32 @@
 
 import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
+import { AccesoRapido } from "@/components/inicio/AccesoRapido";
 import { useApp } from "@/components/proveedores/AppProvider";
 import { useUbicacion } from "@/components/proveedores/UbicacionProvider";
 import { HojaDetalle } from "@/components/reportes/HojaDetalle";
 import { TarjetaReporte } from "@/components/reportes/TarjetaReporte";
 import { useCirculo } from "@/components/proveedores/CirculoProvider";
+import { TarjetaSismo } from "@/components/sismos/ListaSismos";
+import { useSismosOficiales } from "@/components/sismos/useSismosOficiales";
 import { Icono } from "@/components/ui/Icono";
 import { CATEGORIAS } from "@/lib/categorias";
 import { estadoDeContacto, reporteMasCercano } from "@/lib/circulo";
 import type { ContactoEnMapa } from "./MapaLeaflet";
 import type { Coordenada, IdCategoria, Reporte } from "@/lib/tipos";
+
+/**
+ * Filtro de fechas del mapa (ADR-043). "Todo" existe porque los reportes anclados no
+ * caducan: la evidencia historica es parte del valor.
+ */
+const RANGOS_FECHA = [
+  { id: "24h", etiqueta: "Hoy", ms: 24 * 3_600_000 },
+  { id: "7d", etiqueta: "7 dias", ms: 7 * 24 * 3_600_000 },
+  { id: "30d", etiqueta: "30 dias", ms: 30 * 24 * 3_600_000 },
+  { id: "todo", etiqueta: "Todo", ms: null },
+] as const;
+
+type IdRango = (typeof RANGOS_FECHA)[number]["id"];
 
 /**
  * Pantalla de mapa. El componente de Leaflet se carga solo en el navegador:
@@ -33,7 +49,10 @@ export function MapaReportes() {
   const { reportes, cargando } = useApp();
   const { contactos } = useCirculo();
   const [filtro, setFiltro] = useState<IdCategoria | null>(null);
+  const [rango, setRango] = useState<IdRango>("todo");
   const [seleccionado, setSeleccionado] = useState<string | null>(null);
+  // Sismos oficiales del IGP (ADR-042): visibles sin cuenta, con su mapa de intensidad.
+  const sismos = useSismosOficiales();
   /** Ultimo encuadre que dejo el usuario. Se respeta al cerrar la hoja o cambiar filtro. */
   const [vista, setVista] = useState<{ centro: Coordenada; zoom: number } | null>(null);
   /** Se incrementa en cada toque para poder repetir el vuelo al mismo punto. */
@@ -43,10 +62,13 @@ export function MapaReportes() {
   const { coordenada: posicionUsuario, precisionM, estado: estadoUbicacion, solicitar } =
     useUbicacion();
 
-  const visibles = useMemo(
-    () => (filtro ? reportes.filter((r) => r.categoria === filtro) : reportes),
-    [filtro, reportes],
-  );
+  const visibles = useMemo(() => {
+    const ms = RANGOS_FECHA.find((r) => r.id === rango)?.ms ?? null;
+    const desde = ms === null ? null : Date.now() - ms;
+    return reportes.filter(
+      (r) => (filtro === null || r.categoria === filtro) && (desde === null || r.creadoEn >= desde),
+    );
+  }, [filtro, rango, reportes]);
 
   const detalle: Reporte | null = useMemo(
     () => reportes.find((r) => r.id === seleccionado) ?? null,
@@ -126,8 +148,27 @@ export function MapaReportes() {
           a 320 px los chips median 430 px y no habia forma de arrastrar para alcanzar el
           ultimo: el filtro de sismos era inaccesible.
         */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-[1100] flex px-3 py-3">
-          <div className="sin-barra-scroll pointer-events-auto flex min-w-0 max-w-full gap-1.5 overflow-x-auto">
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-[1100] flex flex-col gap-1.5 px-3 py-3">
+          {/* Fila 2 (ADR-043): el rango de fechas, debajo del tipo de hallazgo. */}
+          <div className="sin-barra-scroll pointer-events-auto order-2 flex min-w-0 max-w-full gap-1.5 overflow-x-auto">
+            {RANGOS_FECHA.map((r) => (
+              <button
+                key={r.id}
+                type="button"
+                onClick={() => setRango(r.id)}
+                aria-pressed={rango === r.id}
+                className={`toque flex shrink-0 items-center rounded-full border px-3 text-[11px] font-medium backdrop-blur transition ${
+                  rango === r.id
+                    ? "border-info/50 bg-info/20 text-info"
+                    : "border-borde bg-superficie/90 text-suave"
+                }`}
+              >
+                {r.etiqueta}
+              </button>
+            ))}
+          </div>
+
+          <div className="sin-barra-scroll pointer-events-auto order-1 flex min-w-0 max-w-full gap-1.5 overflow-x-auto">
             <button
               type="button"
               onClick={() => setFiltro(null)}
@@ -193,14 +234,18 @@ export function MapaReportes() {
       </div>
 
       <div className="space-y-2 p-4">
-
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <h2 className="etiqueta-seccion">
             {visibles.length} reporte{visibles.length === 1 ? "" : "s"}
+            {rango !== "todo" ? ` · ${RANGOS_FECHA.find((r) => r.id === rango)?.etiqueta}` : ""}
           </h2>
-          {reportes.some((r) => r.esSemilla) ? (
-            <span className="text-[10px] text-tenue">Incluye datos sembrados de demo</span>
-          ) : null}
+          <div className="flex items-center gap-2">
+            {reportes.some((r) => r.esSemilla) ? (
+              <span className="text-[10px] text-tenue">Incluye datos sembrados de demo</span>
+            ) : null}
+            {/* Mirar el mapa no pide cuenta (ADR-043); entrar queda a un toque. */}
+            <AccesoRapido />
+          </div>
         </div>
 
         {cargando ? (
@@ -220,6 +265,35 @@ export function MapaReportes() {
           ))
         )}
       </div>
+
+      {/* --- Sismos oficiales (ADR-042) ------------------------------------ */}
+      <section className="space-y-2 px-4 pb-4">
+        <div className="flex items-baseline justify-between">
+          <h2 className="etiqueta-seccion">Sismos recientes · IGP</h2>
+          {sismos.degradado ? (
+            <span className="text-[10px] text-ambar">Fuente sin responder ahora</span>
+          ) : null}
+        </div>
+
+        {sismos.cargando ? (
+          <p className="py-4 text-center text-sm text-tenue">Consultando al IGP…</p>
+        ) : sismos.sismos.length === 0 ? (
+          <p className="py-4 text-center text-sm text-tenue">
+            {sismos.degradado
+              ? "El IGP no responde en este momento. Se reintenta solo."
+              : "Sin sismos registrados recientemente."}
+          </p>
+        ) : (
+          sismos.sismos.slice(0, 3).map((entrada) => (
+            <TarjetaSismo
+              key={entrada.sismo.id}
+              entrada={entrada}
+              mapa={sismos.mapaDe(entrada.sismo.id)}
+              onResponder={(intensidad) => sismos.responder(entrada.sismo.id, intensidad)}
+            />
+          ))
+        )}
+      </section>
 
       {detalle ? <HojaDetalle reporte={detalle} onCerrar={() => setSeleccionado(null)} /> : null}
     </div>

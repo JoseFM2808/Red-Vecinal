@@ -2,18 +2,24 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signIn } from "next-auth/react";
+import { useApp } from "@/components/proveedores/AppProvider";
 import { useCirculo } from "@/components/proveedores/CirculoProvider";
+import { useGoogleDisponible } from "@/components/proveedores/SesionProvider";
 import { Icono, type NombreIcono } from "@/components/ui/Icono";
 
 /**
  * Barra inferior fija.
  *
- * Seis destinos. "Circulo" solo aparece con sesion de Google iniciada (ADR-102), asi que
- * sin cuenta la barra vuelve a cinco. Verificado que las seis entran en 360 px sin
- * truncarse; "Arquitectura" va abreviada por eso.
+ * Dos modos (ADR-043):
+ *  - Visitante (login configurado, sin sesion): Inicio, Mapa y el boton de Entrar en el
+ *    centro. La vitrina publica es la historia y el mapa; el resto pide cuenta.
+ *  - Con sesion (o sin login configurado): las seis pestanas de siempre. "Circulo" sigue
+ *    exigiendo sesion (ADR-102). Verificado que las seis entran en 360 px sin truncarse;
+ *    "Arquitectura" va abreviada por eso.
  *
- * El boton del centro es el reporte: es la accion que la app existe para hacer,
- * y en una emergencia tiene que estar bajo el pulgar sin buscarla.
+ * El boton del centro es la accion principal de cada modo: reportar con cuenta,
+ * entrar sin ella.
  */
 
 interface Pestana {
@@ -45,9 +51,16 @@ const PESTANAS: readonly Pestana[] = [
 export function BarraPestanas() {
   const ruta = usePathname();
   const { habilitado: circuloHabilitado } = useCirculo();
+  const { cuenta } = useApp();
+  const googleDisponible = useGoogleDisponible();
 
-  // Sin sesion la barra vuelve a cinco pestanas, como en `main`.
-  const visibles = PESTANAS.filter((p) => !p.requiereSesion || circuloHabilitado);
+  // Modo visitante (ADR-043): hay login configurado pero nadie ha entrado.
+  // Sin credenciales en el despliegue, la barra completa sigue: no hay forma de entrar.
+  const visitante = googleDisponible && !cuenta;
+
+  const visibles = visitante
+    ? PESTANAS.filter((p) => p.href === "/" || p.href === "/mapa")
+    : PESTANAS.filter((p) => !p.requiereSesion || circuloHabilitado);
 
   return (
     <nav
@@ -68,8 +81,28 @@ export function BarraPestanas() {
       </div>
 
       <ul className="mx-auto flex max-w-lg items-stretch justify-between px-1 md:mx-0 md:max-w-none md:flex-col md:items-stretch md:gap-1 md:px-3 md:pt-2">
-        {visibles.map((pestana) => {
+        {visitante ? (
+          // El centro del modo visitante: entrar. Mismo sitio y peso que Reportar,
+          // porque es la accion que desbloquea todo lo demas.
+          <li className="order-2 flex flex-1 justify-center md:order-none md:flex-none">
+            <button
+              type="button"
+              onClick={() => void signIn("google", { redirectTo: "/reportar" })}
+              className="toque -mt-5 flex w-full flex-col items-center gap-1 pb-2 md:mt-2 md:mb-1 md:flex-row md:justify-start md:gap-3 md:rounded-xl md:bg-marca md:px-3 md:pb-0 md:text-fondo"
+            >
+              <span className="grid h-12 w-12 place-items-center rounded-full border-4 border-fondo bg-marca text-fondo shadow-lg md:h-6 md:w-6 md:border-0 md:bg-transparent md:shadow-none">
+                <Icono nombre="cuenta" className="h-6 w-6 md:h-5 md:w-5" />
+              </span>
+              <span className="text-[10px] font-semibold text-suave md:text-sm md:text-fondo">
+                Entrar
+              </span>
+            </button>
+          </li>
+        ) : null}
+        {visibles.map((pestana, indice) => {
           const activa = ruta === pestana.href;
+          // En modo visitante, Inicio va antes y Mapa despues del boton de Entrar.
+          const orden = visitante ? (indice === 0 ? "order-1" : "order-3") : "";
 
           if (pestana.destacada) {
             return (
@@ -96,7 +129,7 @@ export function BarraPestanas() {
           }
 
           return (
-            <li key={pestana.href} className="flex flex-1 md:flex-none">
+            <li key={pestana.href} className={`flex flex-1 md:flex-none ${orden}`}>
               <Link
                 href={pestana.href}
                 aria-current={activa ? "page" : undefined}

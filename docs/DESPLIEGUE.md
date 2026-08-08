@@ -156,6 +156,31 @@ curl -s https://<tu-proyecto>.vercel.app/api/auth/providers
 Debe responder con un objeto que contenga `"google"`. Si responde `{}`, faltan las credenciales
 o no se hizo Redeploy.
 
+### Prueba con cuentas reales del equipo (ADR-040, ADR-043)
+
+Para el ensayo con los compañeros, cada uno con su cuenta de Google:
+
+1. **Dejar `NEXT_PUBLIC_DATOS_DEMO` sin definir** (o vacía). La red arranca vacía: todo
+   lo que aparezca lo puso una persona, que es lo que hace legible la prueba.
+2. Si la pantalla de consentimiento OAuth está en modo **Testing**, agregar el correo de
+   cada compañero en **Audience → Test users**, o Google rechazará su login.
+3. Cada persona abre `https://<tu-proyecto>.vercel.app` en **su propio celular con datos
+   móviles** (no la misma red WiFi de la laptop, para que la prueba sea honesta).
+4. Sin sesión debe ver: Inicio con el portal del mapa, el mapa con filtros de fecha y
+   tipo, y el botón **Entrar** al centro de la barra. Nada más.
+5. Al entrar con Google: aparecen Reportar, Círculo, Cuenta y Arquitectura. El alias
+   `vecino-XXXX` se deriva de la cuenta — entrar desde otro teléfono da el mismo.
+6. Probar el ciclo completo entre dos personas: A reporta, B lo ve en el mapa **de su
+   propio dispositivo** — ojo: sin contrato desplegado el índice compartido no existe,
+   así que B solo verá lo suyo. Esa es la limitación conocida (ADR-038); la
+   corroboración a menos de 300 m (ADR-041) sí se puede probar con los dos teléfonos
+   físicamente juntos sobre el mismo reporte del dispositivo de A.
+7. Para volver a sembrar la demo del pitch: `NEXT_PUBLIC_DATOS_DEMO=1` + **Redeploy**.
+
+> Lo que ve cada teléfono es SU almacenamiento local. Dos teléfonos solo verán los mismos
+> reportes cuando el equipo de contratos despliegue `ReportRegistry` y se carguen las
+> direcciones (ADR-038). No es un bug de la prueba: es el límite declarado de la beta.
+
 ---
 
 ## 4. Publicar un cambio

@@ -1616,6 +1616,182 @@
       ],
       "requiere_validacion_humana": true,
       "nota_para_humano": "Confirmar donde queda la linea entre lo abierto y lo de pago. Hoy se abre: conteo de reportes, numero de zonas activas, corroborados, ranking de las 4 zonas mas activas y los 5 ultimos avisos con categoria, zona y antiguedad. Se mantiene cerrado: descripcion, coordenada exacta, autor, quien corroboro, historico mas alla de 24 h y cualquier exportacion. Si el plan comercial para aseguradoras y juntas necesita que el ranking por zona sea de pago, hay que recortar esta vista antes de hablar con el primer cliente."
+    },
+    {
+      "id": "ADR-040",
+      "titulo": "Los datos de demostracion quedan detras de NEXT_PUBLIC_DATOS_DEMO, apagados por defecto",
+      "fecha": "2026-08-08",
+      "autor": "IA+Humano",
+      "estado": "aceptada",
+      "contexto": "El equipo va a probar la app con cuentas reales de Google de varios companeros. Con los sembrados encendidos, la prueba no es legible: no se distingue lo que reporto una persona de lo que ya venia puesto, las cifras de la landing mienten sobre la actividad real y los contactos inventados del circulo disparan avisos que nadie pidio.",
+      "opciones": [
+        {
+          "nombre": "Borrar la semilla del todo",
+          "descartada_porque": "El ensayo del pitch la necesita: un mapa vacio delante del jurado cuenta peor la historia que uno con doce reportes en los distritos con menor cobertura. Borrarla hoy es reescribirla el dia 11."
+        },
+        {
+          "nombre": "Un boton en Cuenta para activar y desactivar la demo",
+          "descartada_porque": "Estado por dispositivo: cada telefono de la prueba podria estar en un modo distinto y nadie sabria cual. La variable de entorno lo fija por despliegue, igual para todos."
+        }
+      ],
+      "decision": "CONFIG.datosDemo lee NEXT_PUBLIC_DATOS_DEMO y por defecto es false. Sin ella: los reportes arrancan vacios, el circulo arranca sin contactos y 'Reiniciar datos de demostracion' pasa a ser 'borrar todo lo de este dispositivo'. La landing y la vista de eventos muestran un estado vacio que invita a estrenar la red, y la etiqueta Simulado solo aparece si de verdad hay sembrados (reportes con esSemilla).",
+      "consecuencias": [
+        "La prueba con cuentas reales parte de cero: todo lo que aparece lo puso una persona.",
+        "Quien ya tenia datos guardados en localStorage los conserva: la variable solo gobierna el arranque en frio.",
+        "Para el ensayo del pitch hay que acordarse de poner NEXT_PUBLIC_DATOS_DEMO=1 y redesplegar: queda anotado en el checklist de DESPLIEGUE.md.",
+        "Los tres estados vacios (landing, mapa, resumen) tuvieron que disenarse; antes eran inalcanzables."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Poner la variable en 1 y redesplegar. El codigo de la semilla queda intacto.",
+      "criterios_rubrica": [
+        "ux",
+        "tecnica"
+      ],
+      "evidencia": [
+        "src/lib/config.ts",
+        "src/components/proveedores/AppProvider.tsx",
+        "src/components/proveedores/CirculoProvider.tsx",
+        "src/components/landing/VistaEventosPublica.tsx"
+      ],
+      "requiere_validacion_humana": false
+    },
+    {
+      "id": "ADR-041",
+      "titulo": "Confirmar el reporte de otro exige estar a menos de 300 m del hecho",
+      "fecha": "2026-08-08",
+      "autor": "IA+Humano",
+      "estado": "aceptada",
+      "contexto": "La politica anti-Sybil ya definia radioCorroboracionM = 300 para la corroboracion automatica entre dos reportes, pero el boton 'Yo tambien lo vi' no comprobaba distancia: cualquiera podia confirmar desde cualquier sitio. Eso era exactamente el farmeo que ADR-014 dice evitar — dos conocidos inflando el multiplicador x1.5 sin salir de casa — y ademas hacia que la unica senal de presencia del MVP no fuese senal de nada.",
+      "opciones": [
+        {
+          "nombre": "Dejar la comprobacion solo del lado del contrato",
+          "descartada_porque": "TokenReward.corroborate() no esta desplegado y ademas el contrato solo puede validar lo que le llega; el cliente tiene la ubicacion viva del corroborador y puede rechazar en el momento con un mensaje util, sin gastar gas."
+        },
+        {
+          "nombre": "Permitir corroborar sin ubicacion cuando el GPS falla",
+          "descartada_porque": "Si negar el permiso abre la puerta, el control no existe: el atacante simplemente no da el permiso."
+        },
+        {
+          "nombre": "Un radio propio para el boton, distinto de los 300 m",
+          "descartada_porque": "Dos radios para la misma idea es una inconsistencia que el equipo de contratos tendria que portar y explicar. La regla es una: presencia = menos de radioCorroboracionM."
+        }
+      ],
+      "decision": "Nueva funcion pura evaluarCorroboracion() en antisybil.ts — el mismo archivo que es la especificacion de TokenReward.sol — con 9 tests. Rechaza: corroborar lo propio, corroborar dos veces, sin ubicacion, o a mas de 300 m (con la distancia medida en el mensaje). AppProvider.corroborar() pasa a devolver el veredicto y HojaDetalle lo muestra: el boton ya no falla en silencio.",
+      "consecuencias": [
+        "El multiplicador x1.5 vuelve a significar presencia: confirmar desde el sofa queda rechazado con la distancia en pantalla.",
+        "La coordenada del reporte esta truncada a ~11 m y el GPS tiene su propio error: cerca del limite de 300 m la decision es borrosa por construccion. Es el mismo dato que vera el contrato.",
+        "Quien tenga la ubicacion apagada no puede corroborar; el mensaje le dice por que y como activarla.",
+        "El contrato debe portar la misma regla en corroborate(): quedo anotado en la especificacion."
+      ],
+      "reversibilidad": "media",
+      "costo_de_revertir": "Quitar la llamada en AppProvider. Pero revertirlo reabre el farmeo, asi que el costo real es de producto, no de codigo.",
+      "criterios_rubrica": [
+        "tecnica",
+        "arbitrum",
+        "problema"
+      ],
+      "evidencia": [
+        "src/lib/antisybil.ts",
+        "src/lib/antisybil.test.ts",
+        "src/components/proveedores/AppProvider.tsx",
+        "src/components/reportes/HojaDetalle.tsx"
+      ],
+      "requiere_validacion_humana": true,
+      "nota_para_humano": "El equipo de contratos debe replicar esta regla en TokenReward.corroborate(): sin la comprobacion on-chain, el limite del cliente se salta llamando al contrato directo. Ver evaluarCorroboracion() y sus tests como especificacion."
+    },
+    {
+      "id": "ADR-042",
+      "titulo": "Los sismos llegan del IGP y el vecino responde la intensidad, en vez de reportarlos",
+      "fecha": "2026-08-08",
+      "autor": "IA+Humano",
+      "estado": "aceptada",
+      "contexto": "ADR-019 definio el sismo como una categoria mas de reporte: el vecino decia 'lo senti' y la app agregaba. El equipo pidio invertirlo tomando como referencia las apps tipo Sismo Detector: la deteccion viene de una fuente confiable, la app alerta, y el vecino responde COMO lo sintio para construir un mapa de intensidad. El Centro Sismologico Nacional del IGP publica un endpoint JSON con codigo, fecha, epicentro, magnitud, profundidad, referencia e intensidad — verificado en vivo: devuelve el mismo sismo que la app de referencia mostraba.",
+      "opciones": [
+        {
+          "nombre": "Seguir con el reporte manual de sismos (ADR-019)",
+          "descartada_porque": "Pide al vecino hacer el trabajo del sismologo: decidir si eso fue un sismo. La fuente oficial ya lo decidio mejor, con red de sensores. Lo que solo el vecino sabe es como se sintio en SU cuadra."
+        },
+        {
+          "nombre": "USGS como fuente principal",
+          "descartada_porque": "Para Peru el IGP publica mas rapido los eventos locales chicos (M3.5-4.5), que son justo los que la gente siente y pregunta. USGS queda como respaldo posible, no implementado."
+        },
+        {
+          "nombre": "Llamar al IGP directo desde el navegador",
+          "descartada_porque": "El endpoint no manda cabeceras CORS, obligaria a abrir la CSP a otro dominio, y devuelve el anio entero (~370 KB) que no se le manda a un telefono."
+        }
+      ],
+      "decision": "Modulo puro sismos-oficiales.ts (20 tests): normaliza la respuesta del IGP — cuya fecha y hora vienen en campos separados y montados sobre el epoch, con test que fija la combinacion —, decide la alerta con radio segun magnitud (150 a 1000 km), calcula distancia y rumbo cardinal, y agrega las respuestas de intensidad por zona. Ruta /api/sismos como puente con cache de 60 s. AlarmaSismo reemplaza al panel comunitario: vibra una vez por sismo y pregunta como lo sentiste con 5 niveles tipo Mercalli abreviada. La lista con mapa de intensidad vive en la pestana Mapa. sismo_sentido sale del selector de reporte manual; su indiceContrato 2 se conserva porque las respuestas de intensidad viajaran con esa categoria cuando haya contrato.",
+      "consecuencias": [
+        "La app deja de pedirle al usuario que detecte sismos; ahora responde a una deteccion oficial, que es el flujo real de las apps de referencia.",
+        "Verificado contra el endpoint vivo: el registro 2026-0535 (3.7 ML, Chupaca) coincide con la app de referencia, y la ruta lo sirve normalizado.",
+        "El error de fechas del IGP (hora sobre el epoch de 1970) esta cubierto por test: combinarlas mal desplazaba cada sismo 56 anios.",
+        "Sin ubicacion no hay alerta: avisar de sismos a 900 km ensena a silenciar la app. Radio por magnitud: 3.7 alerta a 150 km, 6.5+ a 1000 km.",
+        "Las respuestas de intensidad hoy son locales al dispositivo, igual que los reportes: el mapa agregado entre telefonos llega con el contrato.",
+        "Si el IGP no responde, la app lo dice y reintenta; nunca se cae ni inventa datos.",
+        "El panel comunitario de ADR-019 (AvisoSismo, resumirSismosRecientes) queda obsoleto; se elimino el componente y el modulo viejo queda solo para sus tests hasta la limpieza final."
+      ],
+      "reversibilidad": "media",
+      "costo_de_revertir": "Restaurar AvisoSismo desde git y devolver la categoria al selector. Las respuestas de intensidad guardadas se perderian.",
+      "criterios_rubrica": [
+        "problema",
+        "ux",
+        "tecnica"
+      ],
+      "evidencia": [
+        "src/lib/sismos-oficiales.ts",
+        "src/lib/sismos-oficiales.test.ts",
+        "src/app/api/sismos/route.ts",
+        "src/components/sismos/AlarmaSismo.tsx",
+        "src/components/sismos/ListaSismos.tsx"
+      ],
+      "requiere_validacion_humana": true,
+      "nota_para_humano": "Dos cosas a validar. 1) El IGP es un servicio publico sin SLA ni terminos de uso publicados para este endpoint: confirmar que el equipo acepta esa dependencia para la demo (la app se degrada con aviso si falla). 2) El umbral de alerta (M3.5) y los radios por magnitud son criterio nuestro, no del IGP: revisarlos con alguien que sepa sismologia antes de presumirlos delante del jurado."
+    },
+    {
+      "id": "ADR-043",
+      "titulo": "Sin sesion, la app es la vitrina: historia en Inicio y mapa de incidentes con filtros",
+      "fecha": "2026-08-08",
+      "autor": "IA+Humano",
+      "estado": "aceptada",
+      "contexto": "Amend de ADR-035. Con la prueba de cuentas reales en la puerta, el equipo definio la experiencia del visitante: quien llega sin credenciales debe ver el mapa de incidentes con filtro de fechas y de tipo de hallazgo, poder sincronizar su ubicacion, y encontrar en Inicio — la historia del proyecto — un apartado prominente hacia el mapa. En ambas pantallas debe haber un boton de entrar con Google.",
+      "opciones": [
+        {
+          "nombre": "Mantener ADR-035 (arquitectura y cuenta abiertas sin sesion)",
+          "descartada_porque": "El equipo pidio explicitamente que sin credenciales se muestre solo el mapa (mas la historia). Una vitrina mas chica tambien hace mas claro que es lo que desbloquea la cuenta."
+        },
+        {
+          "nombre": "Incrustar el mapa de Leaflet real en la portada",
+          "descartada_porque": "Duplica el peso de Inicio para un fondo decorativo y compite en gestos con el scroll. El portal dibuja los reportes reales en un lienzo CSS y lleva al mapa completo a un toque."
+        },
+        {
+          "nombre": "Ocultar tambien el boton de reportar del mapa para visitantes",
+          "descartada_porque": "Reportar ya esta protegido por la puerta (ADR-035): al tocarlo sin sesion aparece el acceso. Quitarlo esconderia la accion principal del producto justo a quien queremos convertir."
+        }
+      ],
+      "decision": "Tres piezas. 1) rutaRequiereSesion() pasa a proteger /reportar, /circulo, /cuenta y /arquitectura; la vitrina publica es /, /mapa y /landing. 2) La barra en modo visitante (login configurado, sin sesion) muestra Inicio, Mapa y un boton central de Entrar con el mismo peso visual que Reportar; con sesion o sin login configurado, las seis pestanas de siempre. 3) El mapa gana filtro de fechas (hoy/7d/30d/todo) junto al de tipo, un AccesoRapido en la cabecera de su lista, y la seccion de sismos del IGP; Inicio gana el PortalMapa con los reportes reales latiendo en sus posiciones relativas.",
+      "consecuencias": [
+        "El visitante entiende el producto con el mapa y la historia, y todo lo demas queda a un toque de Entrar.",
+        "La puerta sigue dejando pasar todo cuando el despliegue no tiene credenciales: una beta sin variables no se bloquea sola.",
+        "La pestana Arquitectura — el escaparate tecnico ante el jurado — ahora pide cuenta. En la demo el equipo presenta con sesion iniciada, pero un jurado que explore solo desde su telefono no la vera sin entrar.",
+        "El filtro de fechas tiene 'Todo' porque la evidencia anclada no caduca: el historico es parte del valor.",
+        "La ubicacion del visitante ya se sincronizaba sin cuenta (ADR-023): el boton de ubicarme del mapa no cambio."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Devolver la lista de rutas protegidas de ADR-035 y quitar el modo visitante de la barra. El portal y los filtros no dependen del modo.",
+      "criterios_rubrica": [
+        "ux",
+        "pitch",
+        "problema"
+      ],
+      "evidencia": [
+        "src/lib/acceso.ts",
+        "src/lib/acceso.test.ts",
+        "src/components/navegacion/BarraPestanas.tsx",
+        "src/components/inicio/PortalMapa.tsx",
+        "src/components/mapa/MapaReportes.tsx"
+      ],
+      "requiere_validacion_humana": true,
+      "nota_para_humano": "Decision de producto que conviene confirmar antes del 12: la pestana Arquitectura queda detras del login. Es la pantalla que mas puntua con el jurado tecnico — si un juez explora la app por su cuenta sin entrar, no la va a ver. Alternativa barata si molesta: sacar /arquitectura de RUTAS_PROTEGIDAS (una linea con test)."
     }
   ]
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AccesoRapido } from "@/components/inicio/AccesoRapido";
+import { PortalMapa } from "@/components/inicio/PortalMapa";
 import { ResumenRed } from "@/components/inicio/ResumenRed";
 import { AlarmaSismo } from "@/components/sismos/AlarmaSismo";
 import { Icono } from "@/components/ui/Icono";
@@ -59,6 +60,11 @@ export default function PaginaInicio() {
       {/* Alarma desde el IGP (ADR-042): solo aparece si hay un sismo reciente y cercano. */}
       <section className="px-4 empty:hidden">
         <AlarmaSismo />
+      </section>
+
+      {/* La pieza central de la portada: el mapa en vivo, a un toque (ADR-043). */}
+      <section className="px-4">
+        <PortalMapa />
       </section>
 
       <section className="px-4">
