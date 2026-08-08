@@ -41,6 +41,20 @@ export interface ContactoCirculo {
   /** Ultima vez que llego su posicion. */
   actualizadoEn: number;
   radioAvisoM: number;
+  /**
+   * De donde sale su posicion (ADR-046):
+   *  - "vinculo": llega cifrada por el canal real; vinculoId y clave abren los sobres.
+   *  - "demo": contacto sembrado, se mueve con la simulacion (solo con datos de demo).
+   *  - "manual" (o ausente, datos viejos): solo nombre y telefono; sin posicion hasta
+   *    que la persona acepte un vinculo. Ya no se le inventa movimiento.
+   */
+  origen?: "vinculo" | "demo" | "manual";
+  /** Solo con origen "vinculo". */
+  vinculoId?: string;
+  /** Clave AES base64url del vinculo. Vive solo en este dispositivo. */
+  clave?: string;
+  /** El contacto corto el compartir (tumba recibida). Distinto de nunca haber compartido. */
+  dejoDeCompartir?: boolean;
 }
 
 export type EstadoContacto = "sin_compartir" | "sin_senal" | "en_linea";

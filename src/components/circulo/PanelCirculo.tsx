@@ -4,6 +4,7 @@ import { signIn } from "next-auth/react";
 import { useState } from "react";
 import { useApp } from "@/components/proveedores/AppProvider";
 import { useCirculo } from "@/components/proveedores/CirculoProvider";
+import { VincularCirculo } from "@/components/circulo/VincularCirculo";
 import { useGoogleDisponible } from "@/components/proveedores/SesionProvider";
 import { Icono } from "@/components/ui/Icono";
 import { Aviso, EtiquetaSimulado } from "@/components/ui/primitivos";
@@ -49,11 +50,16 @@ function FichaContacto({ contacto }: { contacto: ContactoCirculo }) {
   const cercano = estado === "en_linea" ? reporteMasCercano(contacto, reportes, ahora) : null;
   const enRiesgo = cercano !== null && cercano.distanciaM <= contacto.radioAvisoM;
 
-  const textoEstado = {
-    en_linea: `Compartiendo · ${tiempoRelativo(contacto.actualizadoEn, ahora)}`,
-    sin_senal: "Sin senal desde hace rato",
-    sin_compartir: "No esta compartiendo su ubicacion",
-  }[estado];
+  const textoEstado =
+    contacto.origen === "vinculo" && contacto.dejoDeCompartir
+      ? "Dejo de compartir su ubicacion"
+      : contacto.origen === "vinculo" && contacto.actualizadoEn === 0
+        ? "Esperando que acepte tu codigo"
+        : {
+            en_linea: `Compartiendo · ${tiempoRelativo(contacto.actualizadoEn, ahora)}`,
+            sin_senal: "Sin senal desde hace rato",
+            sin_compartir: "No esta compartiendo su ubicacion",
+          }[estado];
 
   const colorEstado = {
     en_linea: "text-marca",
@@ -77,10 +83,12 @@ function FichaContacto({ contacto }: { contacto: ContactoCirculo }) {
           </p>
         </div>
 
-        <BotonLlamar telefono={contacto.telefono} />
+        {contacto.telefono !== "" ? <BotonLlamar telefono={contacto.telefono} /> : null}
       </div>
 
-      <p className="mt-2.5 font-mono text-xs text-suave">{contacto.telefono}</p>
+      {contacto.telefono !== "" ? (
+        <p className="mt-2.5 font-mono text-xs text-suave">{contacto.telefono}</p>
+      ) : null}
 
       {enRiesgo && cercano ? (
         <div className="mt-3 rounded-xl border border-alerta/40 bg-alerta/10 p-3">
@@ -110,6 +118,12 @@ function FichaContacto({ contacto }: { contacto: ContactoCirculo }) {
 
       {abierto ? (
         <div className="mt-2 space-y-3 border-t border-borde pt-3">
+          {contacto.origen === "vinculo" ? (
+            <p className="text-[10px] leading-relaxed text-tenue">
+              Su posicion llega cifrada desde su telefono. Compartir, por cuanto tiempo y
+              cortar es SU decision (ADR-046): aqui no hay interruptor.
+            </p>
+          ) : (
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="text-xs text-texto">Comparte su ubicacion</p>
@@ -133,6 +147,7 @@ function FichaContacto({ contacto }: { contacto: ContactoCirculo }) {
               />
             </button>
           </div>
+          )}
 
           <div>
             <label htmlFor={`radio-${contacto.id}`} className="block text-xs text-texto">
@@ -390,10 +405,14 @@ export function PanelCirculo() {
         </Aviso>
       ) : null}
 
+      <VincularCirculo />
+
       <section>
         <div className="mb-2 flex items-center justify-between">
           <h2 className="etiqueta-seccion">Mi circulo ({contactos.length})</h2>
-          <EtiquetaSimulado titulo="La ubicacion de los contactos se mueve localmente; en la version real llega desde su dispositivo" />
+          {contactos.some((c) => c.origen === "demo") ? (
+            <EtiquetaSimulado titulo="Los contactos de demostracion se mueven con una simulacion local. Los vinculados por QR o enlace llegan cifrados de verdad (ADR-046)." />
+          ) : null}
         </div>
 
         {!listo ? (
@@ -421,8 +440,8 @@ export function PanelCirculo() {
             "Alguien de tu circulo comparte su ubicacion contigo. Es su decision, no la tuya.",
             "Si aparece un reporte dentro del radio que elegiste alrededor de esa persona, te avisamos.",
             "El aviso trae su telefono a un toque, porque lo primero que uno hace es llamar.",
-            "Los telefonos y las ubicaciones se quedan en tu dispositivo: no hay servidor que los guarde.",
-            "Lo unico simulado hoy es el envio de la ubicacion del contacto. Todo lo demas ya es real.",
+            "Los telefonos se quedan en tu dispositivo. Las posiciones viajan cifradas de extremo a extremo: el servidor solo ve sobres que no puede abrir (ADR-046).",
+            "Quien comparte elige por cuanto tiempo (15 min, 1 h, 8 h o indefinido) y puede cortar cuando quiera con Dejar de compartir.",
           ].map((linea) => (
             <li key={linea} className="flex gap-2 text-xs leading-relaxed text-suave">
               <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-marca" />
@@ -438,7 +457,7 @@ export function PanelCirculo() {
           onClick={reiniciarCirculo}
           className="toque w-full rounded-xl border border-borde bg-superficie-alta text-sm font-medium text-suave"
         >
-          Reiniciar circulo de demostracion
+          Vaciar mi circulo
         </button>
       </section>
     </div>

@@ -1,5 +1,6 @@
 import type { ContactoCirculo } from "./circulo";
 import { RADIO_AVISO_POR_DEFECTO_M } from "./circulo";
+import type { OtorgamientoCirculo } from "./circulo-vinculos";
 import type { Coordenada } from "./tipos";
 
 /**
@@ -11,6 +12,7 @@ import type { Coordenada } from "./tipos";
 
 const CLAVE_CONTACTOS = "vecino-seguro:circulo:v1";
 const CLAVE_AVISADOS = "vecino-seguro:circulo-avisados:v1";
+const CLAVE_OTORGADOS = "vecino-seguro:circulo-otorgados:v1";
 
 /**
  * Puntos base de los contactos sembrados. Estan junto a los reportes de demo para que
@@ -34,6 +36,7 @@ export function contactosSembrados(ahora: number): ContactoCirculo[] {
       coordenada: BASES_DEMO[0]?.base ?? null,
       actualizadoEn: ahora,
       radioAvisoM: RADIO_AVISO_POR_DEFECTO_M,
+      origen: "demo",
     },
     {
       id: "demo-hermana",
@@ -45,6 +48,7 @@ export function contactosSembrados(ahora: number): ContactoCirculo[] {
       coordenada: BASES_DEMO[1]?.base ?? null,
       actualizadoEn: ahora,
       radioAvisoM: 1000,
+      origen: "demo",
     },
     {
       id: "demo-papa",
@@ -57,6 +61,7 @@ export function contactosSembrados(ahora: number): ContactoCirculo[] {
       coordenada: null,
       actualizadoEn: 0,
       radioAvisoM: RADIO_AVISO_POR_DEFECTO_M,
+      origen: "demo",
     },
   ];
 }
@@ -117,7 +122,44 @@ export function limpiarCirculo(): void {
   try {
     window.localStorage.removeItem(CLAVE_CONTACTOS);
     window.localStorage.removeItem(CLAVE_AVISADOS);
+    window.localStorage.removeItem(CLAVE_OTORGADOS);
   } catch {
     // nada que limpiar
+  }
+}
+
+/* --- Otorgamientos: con quien compartes TU ubicacion (ADR-046) ----------------------- */
+
+function esOtorgamiento(valor: unknown): valor is OtorgamientoCirculo {
+  if (typeof valor !== "object" || valor === null) return false;
+  const v = valor as Record<string, unknown>;
+  return (
+    typeof v.vinculoId === "string" &&
+    typeof v.clave === "string" &&
+    typeof v.otorgadoEn === "number" &&
+    (v.expiraEn === null || typeof v.expiraEn === "number") &&
+    (v.revocadoEn === null || typeof v.revocadoEn === "number")
+  );
+}
+
+export function cargarOtorgamientos(): OtorgamientoCirculo[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const bruto = window.localStorage.getItem(CLAVE_OTORGADOS);
+    if (!bruto) return [];
+    const parseado: unknown = JSON.parse(bruto);
+    return Array.isArray(parseado) ? parseado.filter(esOtorgamiento) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function guardarOtorgamientos(otorgamientos: readonly OtorgamientoCirculo[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    // Los revocados y expirados viejos no hacen falta para siempre: se conservan pocos.
+    window.localStorage.setItem(CLAVE_OTORGADOS, JSON.stringify(otorgamientos.slice(0, 30)));
+  } catch {
+    console.warn("[vecino-seguro] no se pudieron guardar los otorgamientos del circulo");
   }
 }

@@ -11,6 +11,8 @@ import {
   type ReactNode,
 } from "react";
 import { useApp } from "@/components/proveedores/AppProvider";
+import { useGoogleDisponible } from "@/components/proveedores/SesionProvider";
+import { useUbicacion } from "@/components/proveedores/UbicacionProvider";
 import { obtenerCategoria } from "@/lib/categorias";
 import { CONFIG } from "@/lib/config";
 import {
@@ -19,13 +21,16 @@ import {
   type AvisoCercania,
   type ContactoCirculo,
 } from "@/lib/circulo";
+import { cifrarSobre, descifrarSobre, generarClave, generarVinculoId } from "@/lib/circulo-cifrado";
 import {
   BASES_DEMO,
   cargarAvisados,
   cargarContactos,
+  cargarOtorgamientos,
   contactosSembrados,
   guardarAvisados,
   guardarContactos,
+  guardarOtorgamientos,
   limpiarCirculo,
 } from "@/lib/circulo-repositorio";
 import {
@@ -34,6 +39,16 @@ import {
   posicionSimulada,
   semillaDeTexto,
 } from "@/lib/circulo-simulacion";
+import { borrarSobre, leerSobre, publicarSobre } from "@/lib/circulo-transporte";
+import {
+  duracionPorId,
+  enlaceDeInvitacion,
+  esPosicionCompartida,
+  vigenciaDe,
+  type InvitacionCirculo,
+  type OtorgamientoCirculo,
+  type PosicionCompartida,
+} from "@/lib/circulo-vinculos";
 import type { Coordenada } from "@/lib/tipos";
 
 /**
@@ -67,6 +82,8 @@ interface EstadoCirculo {
   avisos: AvisoCercania[];
   permiso: PermisoNotificacion;
   listo: boolean;
+  /** Con quien compartes TU ubicacion (ADR-046). */
+  otorgamientos: OtorgamientoCirculo[];
   agregarContacto: (datos: NuevoContacto) => void;
   eliminarContacto: (id: string) => void;
   alternarCompartir: (id: string) => void;
@@ -74,6 +91,15 @@ interface EstadoCirculo {
   descartarAviso: (clave: string) => void;
   solicitarPermiso: () => Promise<void>;
   reiniciarCirculo: () => void;
+  /**
+   * Crea el vinculo del lado de quien quiere VER (ADR-046): genera id y clave, agrega el
+   * contacto en estado "esperando" y devuelve la invitacion lista para QR o enlace.
+   */
+  crearInvitacion: (datos: NuevoContacto) => Promise<{ invitacion: InvitacionCirculo; enlace: string }>;
+  /** Acepta una invitacion leida de un QR o enlace: desde ahora TU compartes con esa persona. */
+  aceptarInvitacion: (invitacion: InvitacionCirculo, duracionId: string) => void;
+  /** Corta el compartir de inmediato, sin esperar el plazo. Decision unilateral de quien comparte. */
+  revocarOtorgamiento: (vinculoId: string) => void;
 }
 
 const Contexto = createContext<EstadoCirculo | null>(null);
@@ -87,13 +113,19 @@ function permisoActual(): PermisoNotificacion {
 }
 
 export function CirculoProvider({ children }: { children: ReactNode }) {
-  const { reportes, cuenta } = useApp();
-  const habilitado = cuenta !== null;
+  const { reportes, cuenta, identidad } = useApp();
+  const { coordenada: miPosicion, precisionM } = useUbicacion();
+  const googleDisponible = useGoogleDisponible();
+  // La misma valvula que la puerta y el canal (ADR-035/046): sin login configurado no
+  // puede existir sesion, y exigirla dejaria el circulo muerto en local y en despliegues
+  // sin variables. Con login configurado, la cuenta sigue siendo obligatoria (ADR-102).
+  const habilitado = cuenta !== null || !googleDisponible;
 
   const [contactos, setContactos] = useState<ContactoCirculo[]>([]);
   const [avisos, setAvisos] = useState<AvisoCercania[]>([]);
   const [permiso, setPermiso] = useState<PermisoNotificacion>("default");
   const [listo, setListo] = useState(false);
+  const [otorgamientos, setOtorgamientos] = useState<OtorgamientoCirculo[]>([]);
 
   /** Punto alrededor del cual vagabundea cada contacto. No se persiste: se recalcula. */
   const bases = useRef<Map<string, Coordenada>>(new Map());
@@ -128,26 +160,125 @@ export function CirculoProvider({ children }: { children: ReactNode }) {
 
     avisados.current = cargarAvisados();
     setContactos(iniciales);
+    setOtorgamientos(cargarOtorgamientos());
     setPermiso(permisoActual());
     setListo(true);
     if (!guardados) guardarContactos(iniciales);
   }, [habilitado, registrarBase]);
 
-  // Latido: mueve a quien esta compartiendo. Es lo unico simulado de la funcionalidad.
+  // Latido simulado: SOLO mueve a los contactos de demo (ADR-046). A una persona real
+  // no se le inventa movimiento — su posicion llega cifrada por el canal o no llega.
   useEffect(() => {
     if (!listo || !habilitado) return;
 
     const latir = () => {
       setContactos((previos) => {
-        const movidos = moverContactos(previos, bases.current, Date.now());
-        guardarContactos(movidos);
-        return movidos;
+        const demo = previos.filter((c) => c.origen === "demo");
+        if (demo.length === 0) return previos;
+        const movidos = moverContactos(demo, bases.current, Date.now());
+        const porId = new Map(movidos.map((c) => [c.id, c]));
+        const siguientes = previos.map((c) => porId.get(c.id) ?? c);
+        guardarContactos(siguientes);
+        return siguientes;
       });
     };
 
     const id = window.setInterval(latir, INTERVALO_SIMULACION_MS);
     return () => window.clearInterval(id);
   }, [habilitado, listo]);
+
+  // Observar vinculos (ADR-046): baja los sobres de quienes te comparten y los descifra
+  // con la clave que trajo la invitacion. El servidor nunca ve una posicion en claro.
+  useEffect(() => {
+    if (!listo || !habilitado) return;
+    let vigente = true;
+
+    const consultar = async () => {
+      const vinculados = contactos.filter(
+        (c) => c.origen === "vinculo" && c.vinculoId && c.clave,
+      );
+      if (vinculados.length === 0) return;
+
+      const ahora = Date.now();
+      const cambios = new Map<string, Partial<ContactoCirculo>>();
+
+      await Promise.all(
+        vinculados.map(async (contacto) => {
+          const sobre = await leerSobre(contacto.vinculoId ?? "");
+          if (!sobre) return;
+          const abierta = await descifrarSobre<PosicionCompartida>(contacto.clave ?? "", sobre);
+          if (!abierta || !esPosicionCompartida(abierta)) return;
+
+          if (abierta.revocado === true) {
+            cambios.set(contacto.id, {
+              compartiendo: false,
+              coordenada: null,
+              dejoDeCompartir: true,
+              actualizadoEn: abierta.timestamp,
+            });
+            return;
+          }
+          // El plazo viaja cifrado dentro del sobre: si ya vencio, se respeta aqui tambien.
+          if (abierta.expiraEn !== null && ahora >= abierta.expiraEn) return;
+
+          cambios.set(contacto.id, {
+            compartiendo: true,
+            dejoDeCompartir: false,
+            coordenada: abierta.coordenada,
+            actualizadoEn: abierta.timestamp,
+            alias: abierta.alias || contacto.alias,
+          });
+        }),
+      );
+
+      if (!vigente || cambios.size === 0) return;
+      setContactos((previos) => {
+        const siguientes = previos.map((c) =>
+          cambios.has(c.id) ? { ...c, ...cambios.get(c.id) } : c,
+        );
+        guardarContactos(siguientes);
+        return siguientes;
+      });
+    };
+
+    void consultar();
+    const id = window.setInterval(() => void consultar(), INTERVALO_SIMULACION_MS);
+    return () => {
+      vigente = false;
+      window.clearInterval(id);
+    };
+  }, [contactos, habilitado, listo]);
+
+  // Publicar mi posicion (ADR-046): un sobre cifrado por cada otorgamiento activo.
+  // Cuando el ultimo se revoca o expira, simplemente se deja de publicar y el TTL
+  // del canal hace desaparecer lo ya publicado.
+  useEffect(() => {
+    if (!listo || !habilitado || !miPosicion) return;
+    const activos = otorgamientos.filter((o) => vigenciaDe(o, Date.now()) === "activo");
+    if (activos.length === 0) return;
+
+    const publicar = async () => {
+      const ahora = Date.now();
+      await Promise.all(
+        activos.map(async (otorgamiento) => {
+          if (vigenciaDe(otorgamiento, ahora) !== "activo") return;
+          const contenido: PosicionCompartida = {
+            coordenada: miPosicion,
+            precisionM,
+            timestamp: ahora,
+            alias: identidad?.seudonimo ?? "vecino",
+            expiraEn: otorgamiento.expiraEn,
+          };
+          const sobre = await cifrarSobre(otorgamiento.clave, contenido);
+          await publicarSobre(otorgamiento.vinculoId, sobre, 300);
+        }),
+      );
+    };
+
+    void publicar();
+    const id = window.setInterval(() => void publicar(), INTERVALO_SIMULACION_MS);
+    return () => window.clearInterval(id);
+  }, [habilitado, identidad, listo, miPosicion, otorgamientos, precisionM]);
 
   // Evaluacion de cercania: corre con cada latido y con cada reporte nuevo.
   useEffect(() => {
@@ -264,8 +395,96 @@ export function CirculoProvider({ children }: { children: ReactNode }) {
     avisados.current = new Set();
     bases.current = new Map(BASES_DEMO.map(({ id, base }) => [id, base]));
     setAvisos([]);
-    persistir(contactosSembrados(ahora));
+    setOtorgamientos([]);
+    // Sin datos de demo (ADR-040), reiniciar es simplemente vaciar el circulo.
+    persistir(CONFIG.datosDemo ? contactosSembrados(ahora) : []);
   }, [persistir]);
+
+  const persistirOtorgamientos = useCallback((siguientes: OtorgamientoCirculo[]) => {
+    setOtorgamientos(siguientes);
+    guardarOtorgamientos(siguientes);
+  }, []);
+
+  const crearInvitacion = useCallback<EstadoCirculo["crearInvitacion"]>(
+    async (datos) => {
+      const invitacion: InvitacionCirculo = {
+        v: 1,
+        id: generarVinculoId(),
+        k: await generarClave(),
+        alias: identidad?.seudonimo ?? "vecino",
+      };
+
+      const contacto: ContactoCirculo = {
+        id: `v-${invitacion.id}`,
+        nombre: datos.nombre.trim() || "Sin nombre",
+        telefono: datos.telefono.trim(),
+        relacion: datos.relacion.trim() || "Contacto",
+        alias: "esperando aceptacion",
+        compartiendo: false,
+        coordenada: null,
+        actualizadoEn: 0,
+        radioAvisoM: datos.radioAvisoM || RADIO_AVISO_POR_DEFECTO_M,
+        origen: "vinculo",
+        vinculoId: invitacion.id,
+        clave: invitacion.k,
+      };
+      persistir([...contactos, contacto]);
+
+      return { invitacion, enlace: enlaceDeInvitacion(window.location.origin, invitacion) };
+    },
+    [contactos, identidad, persistir],
+  );
+
+  const aceptarInvitacion = useCallback<EstadoCirculo["aceptarInvitacion"]>(
+    (invitacion, duracionId) => {
+      const duracion = duracionPorId(duracionId);
+      if (!duracion) return;
+
+      const ahora = Date.now();
+      const nuevo: OtorgamientoCirculo = {
+        vinculoId: invitacion.id,
+        clave: invitacion.k,
+        aliasObservador: invitacion.alias,
+        otorgadoEn: ahora,
+        expiraEn: duracion.ms === null ? null : ahora + duracion.ms,
+        revocadoEn: null,
+      };
+      // Aceptar dos veces el mismo QR renueva el plazo en vez de duplicar la entrada.
+      persistirOtorgamientos([
+        nuevo,
+        ...otorgamientos.filter((o) => o.vinculoId !== invitacion.id),
+      ]);
+    },
+    [otorgamientos, persistirOtorgamientos],
+  );
+
+  const revocarOtorgamiento = useCallback<EstadoCirculo["revocarOtorgamiento"]>(
+    (vinculoId) => {
+      const ahora = Date.now();
+      const objetivo = otorgamientos.find((o) => o.vinculoId === vinculoId);
+      persistirOtorgamientos(
+        otorgamientos.map((o) => (o.vinculoId === vinculoId ? { ...o, revocadoEn: ahora } : o)),
+      );
+
+      // La tumba cifrada avisa al observador de inmediato; el TTL corto la disuelve sola.
+      if (objetivo) {
+        void (async () => {
+          try {
+            const tumba = await cifrarSobre(objetivo.clave, {
+              revocado: true,
+              timestamp: ahora,
+            });
+            await publicarSobre(vinculoId, tumba, 300);
+          } catch {
+            // Si la tumba no sale, el silencio hace el mismo trabajo mas lento:
+            // sin sobres nuevos, el ultimo caduca por TTL y el contacto queda sin senal.
+            await borrarSobre(vinculoId);
+          }
+        })();
+      }
+    },
+    [otorgamientos, persistirOtorgamientos],
+  );
 
   const valor = useMemo<EstadoCirculo>(
     () => ({
@@ -274,6 +493,7 @@ export function CirculoProvider({ children }: { children: ReactNode }) {
       avisos,
       permiso,
       listo,
+      otorgamientos,
       agregarContacto,
       eliminarContacto,
       alternarCompartir,
@@ -281,19 +501,26 @@ export function CirculoProvider({ children }: { children: ReactNode }) {
       descartarAviso,
       solicitarPermiso,
       reiniciarCirculo,
+      crearInvitacion,
+      aceptarInvitacion,
+      revocarOtorgamiento,
     }),
     [
+      aceptarInvitacion,
       agregarContacto,
       alternarCompartir,
       avisos,
       cambiarRadio,
       contactos,
+      crearInvitacion,
       descartarAviso,
       eliminarContacto,
       habilitado,
       listo,
+      otorgamientos,
       permiso,
       reiniciarCirculo,
+      revocarOtorgamiento,
       solicitarPermiso,
     ],
   );

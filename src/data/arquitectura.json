@@ -393,8 +393,8 @@
     },
     {
       "tema": "Círculo de cuidado",
-      "queHacemos": "Geometría, frescura de la ubicación, evaluación de cercanía y deduplicación de avisos, todo real y con tests. Avisos con la Notification API del navegador.",
-      "queFaltaria": "El transporte: hoy la ubicación del contacto se mueve localmente. El tiempo real entre dispositivos necesita servidor, y eso choca con la promesa de no guardar datos de nadie. Tampoco hay avisos con la app cerrada."
+      "queHacemos": "Vinculo por QR o enlace con consentimiento explicito (ADR-046): quien comparte elige el plazo (15 min a indefinido) y corta cuando quiere. La posicion viaja cifrada de extremo a extremo — la clave va dentro del QR/enlace y el servidor solo ve sobres opacos con TTL de minutos. Geometria, avisos de cercania y deduplicacion, con tests.",
+      "queFaltaria": "Solo publica con la app abierta: sin proceso de fondo no hay avisos con el telefono bloqueado. En Vercel el canal necesita un Redis de Upstash (dos variables); sin el, cada telefono puede caer en una instancia distinta. Los contactos de demo siguen simulados y etiquetados, solo con NEXT_PUBLIC_DATOS_DEMO=1."
     },
     {
       "tema": "Acceso con Google",

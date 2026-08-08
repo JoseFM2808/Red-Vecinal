@@ -4,7 +4,7 @@
 
 Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o por el equipo se registra aquí ANTES o AL MOMENTO de escribir el código que la implementa. `docs/DECISIONES.md` se genera desde este archivo (npm run docs) y la pestaña Arquitectura de la app lo renderiza.
 
-**47 decisiones registradas · 24 esperan validacion humana**
+**49 decisiones registradas · 25 esperan validacion humana**
 
 ## Esperan que una persona decida
 
@@ -34,6 +34,7 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | ADR-041 | Confirmar el reporte de otro exige estar a menos de 300 m del hecho | El equipo de contratos debe replicar esta regla en TokenReward.corroborate(): sin la comprobacion on-chain, el limite del cliente se salta llamando al contrato directo. Ver evaluarCorroboracion() y sus tests como especificacion. |
 | ADR-042 | Los sismos llegan del IGP y el vecino responde la intensidad, en vez de reportarlos | Dos cosas a validar. 1) El IGP es un servicio publico sin SLA ni terminos de uso publicados para este endpoint: confirmar que el equipo acepta esa dependencia para la demo (la app se degrada con aviso si falla). 2) El umbral de alerta (M3.5) y los radios por magnitud son criterio nuestro, no del IGP: revisarlos con alguien que sepa sismologia antes de presumirlos delante del jurado. |
 | ADR-043 | Sin sesion, la app es la vitrina: historia en Inicio y mapa de incidentes con filtros | Decision de producto que conviene confirmar antes del 12: la pestana Arquitectura queda detras del login. Es la pantalla que mas puntua con el jurado tecnico — si un juez explora la app por su cuenta sin entrar, no la va a ver. Alternativa barata si molesta: sacar /arquitectura de RUTAS_PROTEGIDAS (una linea con test). RESUELTO: el equipo decidio mantenerla publica — ver ADR-044. |
+| ADR-046 | El circulo se vincula por QR o enlace, con consentimiento, plazo y revocacion, cifrado de extremo a extremo | Dos cosas. 1) Para que el canal funcione entre telefonos EN VERCEL hay que provisionar un Redis de Upstash (gratis) y cargar UPSTASH_REDIS_REST_URL y UPSTASH_REDIS_REST_TOKEN como variables Sensitive; sin eso cada telefono puede caer en una instancia distinta y los sobres no se encuentran (la API responde efimero:true como sintoma). Coordinarlo con TI segun la regla de la organizacion sobre servicios nuevos. 2) Esto matiza la regla 'sin base de datos': es un buzon efimero de sobres cifrados con TTL de minutos, no un registro de datos — confirmar que el equipo lo acepta asi para poder defenderlo ante el jurado. |
 
 ## Indice
 
@@ -86,6 +87,8 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | [ADR-043](#adr-043) | Sin sesion, la app es la vitrina: historia en Inicio y mapa de incidentes con filtros | IA+Humano | aceptada | alta | Producto y UX, Pitch y demo, Problema e impacto |
 | [ADR-044](#adr-044) | La pestana Arquitectura vuelve a ser publica, sin sesion | Humano | aceptada | alta | Pitch y demo, Implementacion tecnica, Producto y UX |
 | [ADR-045](#adr-045) | Cerrar sesion vuelve a la home y la pantalla-porton de login desaparece | Humano | aceptada | alta | Producto y UX |
+| [ADR-046](#adr-046) | El circulo se vincula por QR o enlace, con consentimiento, plazo y revocacion, cifrado de extremo a extremo | IA+Humano | aceptada | media | Producto y UX, Problema e impacto, Implementacion tecnica |
+| [ADR-047](#adr-047) | Dependencia nueva: qrcode para generar el codigo del vinculo | IA+Humano | aceptada | alta | Implementacion tecnica, Producto y UX |
 
 ---
 
@@ -1560,3 +1563,69 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 **Sirve a.** Producto y UX
 
 **Evidencia en el codigo.** `src/components/acceso/PuertaAcceso.tsx`, `src/components/cuenta/AccesoGoogle.tsx`
+
+---
+
+## ADR-046
+
+### El circulo se vincula por QR o enlace, con consentimiento, plazo y revocacion, cifrado de extremo a extremo
+
+`2026-08-08` · autor: **IA+Humano** · estado: **aceptada** · reversibilidad: **media**
+
+**Contexto.** La prueba con cuentas reales destapo que el circulo mentia: el movimiento del contacto era una simulacion local, asi que una persona real aparecia en posiciones aleatorias. El equipo definio el modelo, calcado de WhatsApp: quien quiere ver muestra su QR (o manda el enlace, si no hay proximidad fisica); quien lo lee decide si comparte, POR CUANTO TIEMPO (15 min, 1 h, 8 h o indefinido) y puede cortar en cualquier momento de forma premeditada con Dejar de compartir. El limite declarado del circulo siempre fue el transporte: tiempo real entre dispositivos necesita servidor, y eso chocaba con la promesa de no guardar datos de nadie.
+
+**Alternativas descartadas.**
+
+- *Transporte por la cadena* — Publicar la posicion viva de una persona en un registro inmutable y publico es lo contrario de protegerla, y el costo por latido de 20 segundos no cierra ni en L2.
+- *Servidor que ve las posiciones en claro* — Rompe la promesa central del producto: el operador podria saber donde esta cada familiar de cada usuario. Un subpoena o una filtracion lo convierte en el peor incidente posible.
+- *Solo QR presencial, sin enlace* — El caso de uso real es la familia que NO esta junta: la madre en otro distrito no puede escanear tu pantalla. El enlace por WhatsApp es el mismo vinculo sin proximidad.
+- *Seguir simulando el movimiento* — Con cuentas reales ya no es una demo etiquetada: es informacion falsa sobre donde esta una persona real, en una app de seguridad.
+
+**Decision.** Vinculo con clave AES-128-GCM generada en el dispositivo de quien invita, que viaja SOLO dentro del QR o del fragmento # del enlace (el navegador nunca envia el fragmento al servidor). Quien acepta elige duracion y su telefono publica cada 20 s un sobre cifrado {iv, datos} en /api/circulo/[id] — un buzon efimero con TTL de minutos que, con UPSTASH_REDIS_REST_URL/TOKEN usa Redis y sin ellas cae a memoria del proceso (completo en dev; en Vercel exige el KV). El plazo viaja cifrado dentro del sobre y se respeta en ambos lados; la revocacion publica una tumba cifrada y deja de publicar. El observador descifra con la clave del vinculo y valida el contenido como dato hostil. El movimiento simulado queda restringido a los contactos de demo (origen demo, solo con NEXT_PUBLIC_DATOS_DEMO=1). Lector de QR con BarcodeDetector (Chrome/Android) y pegado de enlace como respaldo universal. Nueva dependencia qrcode para generar el codigo (ADR-047).
+
+**Consecuencias.**
+
+- El servidor y el proveedor del canal solo ven un id inadivinable y bytes opacos: la promesa de privacidad sobrevive al transporte real.
+- Verificado en el navegador de punta a punta: invitacion -> QR -> sobre cifrado publicado por el canal -> contacto pasa a Compartiendo con la coordenada y el alias exactos; consentimiento con las 4 duraciones; revocacion inmediata con tumba cifrada en el canal.
+- 18 tests nuevos de dominio y cifrado: ida y vuelta, clave equivocada -> null, sobre manipulado -> null (GCM autentica), IV unico por sobre, vigencias y revocacion.
+- El buzon exige sesion de Google cuando el login esta configurado; sin configurar aplica la misma valvula que la puerta (y se corrigio de paso el panel del circulo, que exigia cuenta incluso sin login configurado, contradiciendo el README).
+- Limites honestos que quedan: solo publica con la app abierta (sin service worker de fondo); en Vercel sin KV el canal es una loteria de instancias y responde efimero:true; el rate-limit del buzon es en memoria por instancia.
+- El plazo lo hace cumplir el cliente de quien comparte (deja de publicar) mas el TTL del canal; un observador malicioso no puede alargarlo porque nunca tiene mas que sobres viejos.
+
+**Costo de revertir.** Quitar la seccion de vincular y el canal; los vinculos otorgados se pierden. El movimiento simulado de demo queda intacto.
+
+**Sirve a.** Producto y UX, Problema e impacto, Implementacion tecnica
+
+**Evidencia en el codigo.** `src/lib/circulo-cifrado.ts`, `src/lib/circulo-vinculos.ts`, `src/lib/circulo-vinculos.test.ts`, `src/app/api/circulo/[vinculoId]/route.ts`, `src/components/circulo/VincularCirculo.tsx`, `src/components/proveedores/CirculoProvider.tsx`
+
+> **Necesita decision humana:** Dos cosas. 1) Para que el canal funcione entre telefonos EN VERCEL hay que provisionar un Redis de Upstash (gratis) y cargar UPSTASH_REDIS_REST_URL y UPSTASH_REDIS_REST_TOKEN como variables Sensitive; sin eso cada telefono puede caer en una instancia distinta y los sobres no se encuentran (la API responde efimero:true como sintoma). Coordinarlo con TI segun la regla de la organizacion sobre servicios nuevos. 2) Esto matiza la regla 'sin base de datos': es un buzon efimero de sobres cifrados con TTL de minutos, no un registro de datos — confirmar que el equipo lo acepta asi para poder defenderlo ante el jurado.
+
+---
+
+## ADR-047
+
+### Dependencia nueva: qrcode para generar el codigo del vinculo
+
+`2026-08-08` · autor: **IA+Humano** · estado: **aceptada** · reversibilidad: **alta**
+
+**Contexto.** El vinculo del circulo (ADR-046) se muestra como QR. Generar un QR correcto (Reed-Solomon, mascaras, versiones) no es codigo que convenga escribir a mano a cuatro dias de la entrega.
+
+**Alternativas descartadas.**
+
+- *Escribir el generador propio* — Cientos de lineas de codificacion propensa a errores para reinventar una rueda madura. Un QR sutilmente malo falla en el peor momento: delante del jurado.
+- *Un servicio externo de imagenes QR* — La invitacion CONTIENE la clave de cifrado: mandarla a un tercero para pintar la imagen destruye el diseno de extremo a extremo, y la CSP bloquea origenes nuevos.
+- *Solo enlace, sin QR* — El QR es el gesto presencial que pidio el equipo; el enlace queda como alternativa, no como reemplazo.
+
+**Decision.** qrcode@1.5.4 (mas @types/qrcode en dev). Es JavaScript puro, sin binarios nativos que puedan romper el build de Vercel, y genera un data URL local: la clave nunca sale del dispositivo. La leccion del QR se hace con BarcodeDetector, nativo del navegador, sin dependencia.
+
+**Consecuencias.**
+
+- Primera dependencia nueva desde el arranque del proyecto; queda registrada como exige la regla de CLAUDE.md.
+- El bundle de /circulo crece lo que pesa el generador; el resto de rutas no lo cargan.
+- Sin BarcodeDetector (iOS Safari) la lectura cae a pegar el enlace: el ciclo se completa igual.
+
+**Costo de revertir.** npm uninstall y mostrar solo el enlace.
+
+**Sirve a.** Implementacion tecnica, Producto y UX
+
+**Evidencia en el codigo.** `package.json`, `src/components/circulo/VincularCirculo.tsx`

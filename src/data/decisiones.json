@@ -1865,6 +1865,97 @@
         "src/components/cuenta/AccesoGoogle.tsx"
       ],
       "requiere_validacion_humana": false
+    },
+    {
+      "id": "ADR-046",
+      "titulo": "El circulo se vincula por QR o enlace, con consentimiento, plazo y revocacion, cifrado de extremo a extremo",
+      "fecha": "2026-08-08",
+      "autor": "IA+Humano",
+      "estado": "aceptada",
+      "contexto": "La prueba con cuentas reales destapo que el circulo mentia: el movimiento del contacto era una simulacion local, asi que una persona real aparecia en posiciones aleatorias. El equipo definio el modelo, calcado de WhatsApp: quien quiere ver muestra su QR (o manda el enlace, si no hay proximidad fisica); quien lo lee decide si comparte, POR CUANTO TIEMPO (15 min, 1 h, 8 h o indefinido) y puede cortar en cualquier momento de forma premeditada con Dejar de compartir. El limite declarado del circulo siempre fue el transporte: tiempo real entre dispositivos necesita servidor, y eso chocaba con la promesa de no guardar datos de nadie.",
+      "opciones": [
+        {
+          "nombre": "Transporte por la cadena",
+          "descartada_porque": "Publicar la posicion viva de una persona en un registro inmutable y publico es lo contrario de protegerla, y el costo por latido de 20 segundos no cierra ni en L2."
+        },
+        {
+          "nombre": "Servidor que ve las posiciones en claro",
+          "descartada_porque": "Rompe la promesa central del producto: el operador podria saber donde esta cada familiar de cada usuario. Un subpoena o una filtracion lo convierte en el peor incidente posible."
+        },
+        {
+          "nombre": "Solo QR presencial, sin enlace",
+          "descartada_porque": "El caso de uso real es la familia que NO esta junta: la madre en otro distrito no puede escanear tu pantalla. El enlace por WhatsApp es el mismo vinculo sin proximidad."
+        },
+        {
+          "nombre": "Seguir simulando el movimiento",
+          "descartada_porque": "Con cuentas reales ya no es una demo etiquetada: es informacion falsa sobre donde esta una persona real, en una app de seguridad."
+        }
+      ],
+      "decision": "Vinculo con clave AES-128-GCM generada en el dispositivo de quien invita, que viaja SOLO dentro del QR o del fragmento # del enlace (el navegador nunca envia el fragmento al servidor). Quien acepta elige duracion y su telefono publica cada 20 s un sobre cifrado {iv, datos} en /api/circulo/[id] — un buzon efimero con TTL de minutos que, con UPSTASH_REDIS_REST_URL/TOKEN usa Redis y sin ellas cae a memoria del proceso (completo en dev; en Vercel exige el KV). El plazo viaja cifrado dentro del sobre y se respeta en ambos lados; la revocacion publica una tumba cifrada y deja de publicar. El observador descifra con la clave del vinculo y valida el contenido como dato hostil. El movimiento simulado queda restringido a los contactos de demo (origen demo, solo con NEXT_PUBLIC_DATOS_DEMO=1). Lector de QR con BarcodeDetector (Chrome/Android) y pegado de enlace como respaldo universal. Nueva dependencia qrcode para generar el codigo (ADR-047).",
+      "consecuencias": [
+        "El servidor y el proveedor del canal solo ven un id inadivinable y bytes opacos: la promesa de privacidad sobrevive al transporte real.",
+        "Verificado en el navegador de punta a punta: invitacion -> QR -> sobre cifrado publicado por el canal -> contacto pasa a Compartiendo con la coordenada y el alias exactos; consentimiento con las 4 duraciones; revocacion inmediata con tumba cifrada en el canal.",
+        "18 tests nuevos de dominio y cifrado: ida y vuelta, clave equivocada -> null, sobre manipulado -> null (GCM autentica), IV unico por sobre, vigencias y revocacion.",
+        "El buzon exige sesion de Google cuando el login esta configurado; sin configurar aplica la misma valvula que la puerta (y se corrigio de paso el panel del circulo, que exigia cuenta incluso sin login configurado, contradiciendo el README).",
+        "Limites honestos que quedan: solo publica con la app abierta (sin service worker de fondo); en Vercel sin KV el canal es una loteria de instancias y responde efimero:true; el rate-limit del buzon es en memoria por instancia.",
+        "El plazo lo hace cumplir el cliente de quien comparte (deja de publicar) mas el TTL del canal; un observador malicioso no puede alargarlo porque nunca tiene mas que sobres viejos."
+      ],
+      "reversibilidad": "media",
+      "costo_de_revertir": "Quitar la seccion de vincular y el canal; los vinculos otorgados se pierden. El movimiento simulado de demo queda intacto.",
+      "criterios_rubrica": [
+        "ux",
+        "problema",
+        "tecnica"
+      ],
+      "evidencia": [
+        "src/lib/circulo-cifrado.ts",
+        "src/lib/circulo-vinculos.ts",
+        "src/lib/circulo-vinculos.test.ts",
+        "src/app/api/circulo/[vinculoId]/route.ts",
+        "src/components/circulo/VincularCirculo.tsx",
+        "src/components/proveedores/CirculoProvider.tsx"
+      ],
+      "requiere_validacion_humana": true,
+      "nota_para_humano": "Dos cosas. 1) Para que el canal funcione entre telefonos EN VERCEL hay que provisionar un Redis de Upstash (gratis) y cargar UPSTASH_REDIS_REST_URL y UPSTASH_REDIS_REST_TOKEN como variables Sensitive; sin eso cada telefono puede caer en una instancia distinta y los sobres no se encuentran (la API responde efimero:true como sintoma). Coordinarlo con TI segun la regla de la organizacion sobre servicios nuevos. 2) Esto matiza la regla 'sin base de datos': es un buzon efimero de sobres cifrados con TTL de minutos, no un registro de datos — confirmar que el equipo lo acepta asi para poder defenderlo ante el jurado."
+    },
+    {
+      "id": "ADR-047",
+      "titulo": "Dependencia nueva: qrcode para generar el codigo del vinculo",
+      "fecha": "2026-08-08",
+      "autor": "IA+Humano",
+      "estado": "aceptada",
+      "contexto": "El vinculo del circulo (ADR-046) se muestra como QR. Generar un QR correcto (Reed-Solomon, mascaras, versiones) no es codigo que convenga escribir a mano a cuatro dias de la entrega.",
+      "opciones": [
+        {
+          "nombre": "Escribir el generador propio",
+          "descartada_porque": "Cientos de lineas de codificacion propensa a errores para reinventar una rueda madura. Un QR sutilmente malo falla en el peor momento: delante del jurado."
+        },
+        {
+          "nombre": "Un servicio externo de imagenes QR",
+          "descartada_porque": "La invitacion CONTIENE la clave de cifrado: mandarla a un tercero para pintar la imagen destruye el diseno de extremo a extremo, y la CSP bloquea origenes nuevos."
+        },
+        {
+          "nombre": "Solo enlace, sin QR",
+          "descartada_porque": "El QR es el gesto presencial que pidio el equipo; el enlace queda como alternativa, no como reemplazo."
+        }
+      ],
+      "decision": "qrcode@1.5.4 (mas @types/qrcode en dev). Es JavaScript puro, sin binarios nativos que puedan romper el build de Vercel, y genera un data URL local: la clave nunca sale del dispositivo. La leccion del QR se hace con BarcodeDetector, nativo del navegador, sin dependencia.",
+      "consecuencias": [
+        "Primera dependencia nueva desde el arranque del proyecto; queda registrada como exige la regla de CLAUDE.md.",
+        "El bundle de /circulo crece lo que pesa el generador; el resto de rutas no lo cargan.",
+        "Sin BarcodeDetector (iOS Safari) la lectura cae a pegar el enlace: el ciclo se completa igual."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "npm uninstall y mostrar solo el enlace.",
+      "criterios_rubrica": [
+        "tecnica",
+        "ux"
+      ],
+      "evidencia": [
+        "package.json",
+        "src/components/circulo/VincularCirculo.tsx"
+      ],
+      "requiere_validacion_humana": false
     }
   ]
 }
