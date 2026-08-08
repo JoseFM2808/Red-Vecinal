@@ -68,6 +68,15 @@ import type { Coordenada } from "@/lib/tipos";
 
 export type PermisoNotificacion = NotificationPermission | "no_soportado";
 
+/**
+ * Salud del canal de sobres, vista desde quien comparte (ADR-046):
+ *  - "ok": las publicaciones llegan y el canal persiste entre instancias.
+ *  - "efimero": llegan, pero a memoria de un solo proceso (Vercel sin KV) — entre
+ *    telefonos distintos los sobres pueden no encontrarse.
+ *  - "fallando": las publicaciones estan fallando; el contacto vera "sin senal".
+ */
+export type EstadoCanal = "ok" | "efimero" | "fallando";
+
 export interface NuevoContacto {
   nombre: string;
   telefono: string;
@@ -84,6 +93,8 @@ interface EstadoCirculo {
   listo: boolean;
   /** Con quien compartes TU ubicacion (ADR-046). */
   otorgamientos: OtorgamientoCirculo[];
+  /** Salud del canal de sobres, para no fingir que se comparte cuando no llega. */
+  estadoCanal: EstadoCanal;
   agregarContacto: (datos: NuevoContacto) => void;
   eliminarContacto: (id: string) => void;
   alternarCompartir: (id: string) => void;
@@ -126,6 +137,7 @@ export function CirculoProvider({ children }: { children: ReactNode }) {
   const [permiso, setPermiso] = useState<PermisoNotificacion>("default");
   const [listo, setListo] = useState(false);
   const [otorgamientos, setOtorgamientos] = useState<OtorgamientoCirculo[]>([]);
+  const [estadoCanal, setEstadoCanal] = useState<EstadoCanal>("ok");
 
   /** Punto alrededor del cual vagabundea cada contacto. No se persiste: se recalcula. */
   const bases = useRef<Map<string, Coordenada>>(new Map());
@@ -187,14 +199,44 @@ export function CirculoProvider({ children }: { children: ReactNode }) {
     return () => window.clearInterval(id);
   }, [habilitado, listo]);
 
+  /*
+   * Los dos latidos de red (observar y publicar) leen el estado desde refs y sus efectos
+   * dependen solo de BOOLEANOS. La version anterior dependia de `contactos`, `miPosicion`
+   * y `otorgamientos` directamente, y eso creaba dos bugs reales detectados en auditoria:
+   *
+   *  1. Bucle de fetch: cada sobre recibido actualizaba `contactos`, el cambio reiniciaba
+   *     el efecto y el reinicio consultaba DE INMEDIATO — el latido de 20 s se convertia
+   *     en una consulta continua limitada solo por la latencia.
+   *  2. Tormenta de publicaciones: cada tick del GPS (watchPosition puede emitir por
+   *     segundo) reiniciaba el efecto publicador con publicacion inmediata, quemando el
+   *     limite de 12 escrituras/minuto del canal con 429.
+   */
+  const contactosRef = useRef<ContactoCirculo[]>([]);
+  const otorgamientosRef = useRef<OtorgamientoCirculo[]>([]);
+  const posicionRef = useRef<{ coordenada: Coordenada | null; precisionM: number | null }>({
+    coordenada: null,
+    precisionM: null,
+  });
+  const aliasRef = useRef("vecino");
+
+  contactosRef.current = contactos;
+  otorgamientosRef.current = otorgamientos;
+  posicionRef.current = { coordenada: miPosicion, precisionM };
+  aliasRef.current = identidad?.seudonimo ?? "vecino";
+
+  const hayVinculados = contactos.some((c) => c.origen === "vinculo" && c.vinculoId && c.clave);
+  const hayOtorgamientosActivos = otorgamientos.some(
+    (o) => vigenciaDe(o, Date.now()) === "activo",
+  );
+
   // Observar vinculos (ADR-046): baja los sobres de quienes te comparten y los descifra
   // con la clave que trajo la invitacion. El servidor nunca ve una posicion en claro.
   useEffect(() => {
-    if (!listo || !habilitado) return;
+    if (!listo || !habilitado || !hayVinculados) return;
     let vigente = true;
 
     const consultar = async () => {
-      const vinculados = contactos.filter(
+      const vinculados = contactosRef.current.filter(
         (c) => c.origen === "vinculo" && c.vinculoId && c.clave,
       );
       if (vinculados.length === 0) return;
@@ -208,6 +250,11 @@ export function CirculoProvider({ children }: { children: ReactNode }) {
           if (!sobre) return;
           const abierta = await descifrarSobre<PosicionCompartida>(contacto.clave ?? "", sobre);
           if (!abierta || !esPosicionCompartida(abierta)) return;
+
+          // Nada anterior al ultimo sobre aplicado cuenta: un sobre viejo re-publicado
+          // (o que sobrevivio en el canal) no puede resucitar un compartir ya cortado
+          // ni retroceder la posicion. El tiempo solo avanza.
+          if (abierta.timestamp <= contacto.actualizadoEn) return;
 
           if (abierta.revocado === true) {
             cambios.set(contacto.id, {
@@ -247,38 +294,50 @@ export function CirculoProvider({ children }: { children: ReactNode }) {
       vigente = false;
       window.clearInterval(id);
     };
-  }, [contactos, habilitado, listo]);
+  }, [habilitado, hayVinculados, listo]);
 
   // Publicar mi posicion (ADR-046): un sobre cifrado por cada otorgamiento activo.
-  // Cuando el ultimo se revoca o expira, simplemente se deja de publicar y el TTL
-  // del canal hace desaparecer lo ya publicado.
+  // La vigencia se re-verifica desde el ref EN CADA publicacion: una revocacion corta
+  // tambien a la publicacion que ya estaba en vuelo, sin closure viejo de por medio.
   useEffect(() => {
-    if (!listo || !habilitado || !miPosicion) return;
-    const activos = otorgamientos.filter((o) => vigenciaDe(o, Date.now()) === "activo");
-    if (activos.length === 0) return;
+    if (!listo || !habilitado || !hayOtorgamientosActivos) return;
 
     const publicar = async () => {
+      const { coordenada, precisionM: precision } = posicionRef.current;
+      if (!coordenada) return;
+
       const ahora = Date.now();
-      await Promise.all(
-        activos.map(async (otorgamiento) => {
-          if (vigenciaDe(otorgamiento, ahora) !== "activo") return;
+      const resultados = await Promise.all(
+        otorgamientosRef.current.map(async (otorgamiento) => {
+          if (vigenciaDe(otorgamiento, ahora) !== "activo") return null;
           const contenido: PosicionCompartida = {
-            coordenada: miPosicion,
-            precisionM,
+            coordenada,
+            precisionM: precision,
             timestamp: ahora,
-            alias: identidad?.seudonimo ?? "vecino",
+            alias: aliasRef.current,
             expiraEn: otorgamiento.expiraEn,
           };
           const sobre = await cifrarSobre(otorgamiento.clave, contenido);
-          await publicarSobre(otorgamiento.vinculoId, sobre, 300);
+          return publicarSobre(otorgamiento.vinculoId, sobre, 300);
         }),
       );
+
+      // La salud del canal se muestra, no se adivina: si las publicaciones fallan o el
+      // canal es efimero (Vercel sin KV), quien comparte tiene que poder verlo.
+      const efectivos = resultados.filter((r) => r !== null);
+      if (efectivos.length === 0) return;
+      const nuevoEstado = efectivos.some((r) => !r.ok)
+        ? "fallando"
+        : efectivos.some((r) => r.efimero)
+          ? "efimero"
+          : "ok";
+      setEstadoCanal((previo) => (previo === nuevoEstado ? previo : nuevoEstado));
     };
 
     void publicar();
     const id = window.setInterval(() => void publicar(), INTERVALO_SIMULACION_MS);
     return () => window.clearInterval(id);
-  }, [habilitado, identidad, listo, miPosicion, otorgamientos, precisionM]);
+  }, [habilitado, hayOtorgamientosActivos, listo]);
 
   // Evaluacion de cercania: corre con cada latido y con cada reporte nuevo.
   useEffect(() => {
@@ -474,7 +533,9 @@ export function CirculoProvider({ children }: { children: ReactNode }) {
               revocado: true,
               timestamp: ahora,
             });
-            await publicarSobre(vinculoId, tumba, 300);
+            // TTL maximo del canal: si el observador esta sin conexion mas de 15 min,
+            // vera "sin senal" en vez de "dejo de compartir" — anotado en REVISION-PENDIENTE.
+            await publicarSobre(vinculoId, tumba, 900);
           } catch {
             // Si la tumba no sale, el silencio hace el mismo trabajo mas lento:
             // sin sobres nuevos, el ultimo caduca por TTL y el contacto queda sin senal.
@@ -494,6 +555,7 @@ export function CirculoProvider({ children }: { children: ReactNode }) {
       permiso,
       listo,
       otorgamientos,
+      estadoCanal,
       agregarContacto,
       eliminarContacto,
       alternarCompartir,
@@ -515,6 +577,7 @@ export function CirculoProvider({ children }: { children: ReactNode }) {
       crearInvitacion,
       descartarAviso,
       eliminarContacto,
+      estadoCanal,
       habilitado,
       listo,
       otorgamientos,

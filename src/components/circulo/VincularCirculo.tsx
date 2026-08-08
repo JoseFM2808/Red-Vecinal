@@ -220,21 +220,41 @@ function LeerCodigo({
       return;
     }
 
+    /*
+     * OJO CON EL ORDEN (arreglo del bug "la camara no se abre"): el <video> esta SIEMPRE
+     * montado (oculto cuando no se escanea), asi que videoRef.current existe aqui mismo.
+     * La version anterior hacia setEscaneando(true) y leia el ref en la misma pasada —
+     * React aun no habia pintado el <video>, el ref era null y la funcion retornaba en
+     * silencio con el stream abierto pero sin conectar: camara encendida, pantalla negra.
+     */
+    const video = videoRef.current;
+    if (!video) {
+      setError("No se pudo preparar la camara. Pega el enlace de abajo.");
+      return;
+    }
+
+    let stream: MediaStream;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
+      stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "environment" },
       });
-      setEscaneando(true);
+    } catch {
+      // Permiso denegado, sin camara, o contexto no seguro (getUserMedia exige HTTPS).
+      setError("No se pudo abrir la camara. Revisa el permiso, o pega el enlace de abajo.");
+      return;
+    }
 
-      const video = videoRef.current;
-      if (!video) return;
+    try {
       video.srcObject = stream;
       await video.play();
+      setEscaneando(true);
+      setError(null);
 
       let activo = true;
       pararRef.current = () => {
         activo = false;
         for (const pista of stream.getTracks()) pista.stop();
+        video.srcObject = null;
         setEscaneando(false);
       };
 
@@ -255,7 +275,10 @@ function LeerCodigo({
       };
       void ciclo();
     } catch {
-      setError("No se pudo abrir la camara. Pega el enlace de abajo.");
+      // play() puede fallar (p. ej. pestana en segundo plano): soltar la camara siempre.
+      for (const pista of stream.getTracks()) pista.stop();
+      video.srcObject = null;
+      setError("No se pudo mostrar la camara. Pega el enlace de abajo.");
       setEscaneando(false);
     }
   };
@@ -266,9 +289,16 @@ function LeerCodigo({
     <div className="tarjeta space-y-3 p-4">
       <p className="text-sm font-medium text-texto">Leer el codigo de alguien</p>
 
-      {escaneando ? (
-        <video ref={videoRef} className="w-full rounded-xl" muted playsInline />
-      ) : (
+      {/* Siempre montado: el arreglo de la camara depende de que el ref exista ANTES
+          de escanear. Oculto no ocupa sitio ni pide nada. */}
+      <video
+        ref={videoRef}
+        className={escaneando ? "w-full rounded-xl" : "hidden"}
+        muted
+        playsInline
+        aria-label="Vista de la camara para escanear el codigo QR"
+      />
+      {!escaneando ? (
         <button
           type="button"
           onClick={() => void escanear()}
@@ -277,7 +307,7 @@ function LeerCodigo({
           <Icono nombre="camara" className="h-4 w-4" />
           Escanear QR
         </button>
-      )}
+      ) : null}
 
       <div className="flex items-center gap-2">
         <span className="h-px flex-1 bg-borde" />
@@ -397,15 +427,35 @@ function Consentimiento({
 type Vista = "cerrado" | "mostrar" | "leer";
 
 export function VincularCirculo() {
-  const { otorgamientos, revocarOtorgamiento } = useCirculo();
+  const { otorgamientos, revocarOtorgamiento, estadoCanal } = useCirculo();
   const [vista, setVista] = useState<Vista>("cerrado");
   const [pendiente, setPendiente] = useState<InvitacionCirculo | null>(null);
   const [ahora, setAhora] = useState(() => Date.now());
 
   // Si la persona llego con un enlace de invitacion (#v=...), se abre el consentimiento
   // directo: es el gesto de "el otro lo lee" hecho por WhatsApp en vez de camara.
+  // Tambien se revisa la invitacion que la puerta de acceso guardo si el enlace se abrio
+  // sin sesion: tras entrar y volver al circulo, el consentimiento reaparece solo.
   useEffect(() => {
-    const invitacion = decodificarInvitacion(window.location.hash);
+    let crudo = window.location.hash;
+    let guardada = false;
+    if (!crudo.startsWith("#v=")) {
+      try {
+        crudo = window.sessionStorage.getItem("vecino-seguro:invitacion-pendiente") ?? "";
+        guardada = crudo !== "";
+      } catch {
+        crudo = "";
+      }
+    }
+
+    const invitacion = decodificarInvitacion(crudo);
+    if (guardada) {
+      try {
+        window.sessionStorage.removeItem("vecino-seguro:invitacion-pendiente");
+      } catch {
+        // sin almacenamiento no hay nada que limpiar
+      }
+    }
     if (!invitacion) return;
     setPendiente(invitacion);
     // Se limpia el fragmento para que recargar no re-abra el consentimiento.
@@ -456,6 +506,21 @@ export function VincularCirculo() {
           }}
           onCerrar={() => setVista("cerrado")}
         />
+      ) : null}
+
+      {/* Si el canal no confirma, quien comparte lo VE — fingir que se comparte cuando
+          nada llega seria repetir la mentira que este rediseno vino a matar. */}
+      {activos.length > 0 && estadoCanal === "fallando" ? (
+        <Aviso tono="alerta" icono="alerta">
+          Tus posiciones no estan llegando al canal. Revisa tu conexion; tu contacto te vera
+          como &ldquo;sin senal&rdquo; mientras tanto.
+        </Aviso>
+      ) : null}
+      {activos.length > 0 && estadoCanal === "efimero" ? (
+        <Aviso tono="info" icono="alerta">
+          El canal esta en modo de un solo servidor: entre telefonos distintos puede no
+          funcionar. Si esto es un despliegue en Vercel, falta configurar el KV (ADR-046).
+        </Aviso>
       ) : null}
 
       {activos.length > 0 ? (

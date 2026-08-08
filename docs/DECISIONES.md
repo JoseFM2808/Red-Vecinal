@@ -4,7 +4,7 @@
 
 Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o por el equipo se registra aquí ANTES o AL MOMENTO de escribir el código que la implementa. `docs/DECISIONES.md` se genera desde este archivo (npm run docs) y la pestaña Arquitectura de la app lo renderiza.
 
-**49 decisiones registradas · 25 esperan validacion humana**
+**50 decisiones registradas · 25 esperan validacion humana**
 
 ## Esperan que una persona decida
 
@@ -86,9 +86,10 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | [ADR-042](#adr-042) | Los sismos llegan del IGP y el vecino responde la intensidad, en vez de reportarlos | IA+Humano | aceptada | media | Problema e impacto, Producto y UX, Implementacion tecnica |
 | [ADR-043](#adr-043) | Sin sesion, la app es la vitrina: historia en Inicio y mapa de incidentes con filtros | IA+Humano | aceptada | alta | Producto y UX, Pitch y demo, Problema e impacto |
 | [ADR-044](#adr-044) | La pestana Arquitectura vuelve a ser publica, sin sesion | Humano | aceptada | alta | Pitch y demo, Implementacion tecnica, Producto y UX |
-| [ADR-045](#adr-045) | Cerrar sesion vuelve a la home y la pantalla-porton de login desaparece | Humano | aceptada | alta | Producto y UX |
+| [ADR-045](#adr-045) | Cerrar sesion vuelve a la home y la pantalla-porton de login desaparece | Humano | reemplazada | alta | Producto y UX |
 | [ADR-046](#adr-046) | El circulo se vincula por QR o enlace, con consentimiento, plazo y revocacion, cifrado de extremo a extremo | IA+Humano | aceptada | media | Producto y UX, Problema e impacto, Implementacion tecnica |
 | [ADR-047](#adr-047) | Dependencia nueva: qrcode para generar el codigo del vinculo | IA+Humano | aceptada | alta | Implementacion tecnica, Producto y UX |
+| [ADR-048](#adr-048) | La ruta protegida sin sesion muestra un aviso con boton de entrar, no un rebote mudo | IA+Humano | aceptada | alta | Producto y UX |
 
 ---
 
@@ -1540,7 +1541,7 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 
 ### Cerrar sesion vuelve a la home y la pantalla-porton de login desaparece
 
-`2026-08-08` · autor: **Humano** · estado: **aceptada** · reversibilidad: **alta**
+`2026-08-08` · autor: **Humano** · estado: **reemplazada** · reversibilidad: **alta**
 
 **Contexto.** Cerrar sesion redirigia a /cuenta (signOut con redirectTo: /cuenta), que desde ADR-043 es ruta protegida: la persona recien deslogueada aterrizaba en la pantalla-porton de 'Continuar con Google'. Parecia que cerrar sesion era volver a entrar. El equipo ademas definio que esa pantalla dedicada ya no debe existir: el acceso a Google vive en los botones (AccesoRapido en Inicio y Mapa, Entrar al centro de la barra del visitante).
 
@@ -1629,3 +1630,33 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 **Sirve a.** Implementacion tecnica, Producto y UX
 
 **Evidencia en el codigo.** `package.json`, `src/components/circulo/VincularCirculo.tsx`
+
+---
+
+## ADR-048
+
+### La ruta protegida sin sesion muestra un aviso con boton de entrar, no un rebote mudo
+
+`2026-08-09` · autor: **IA+Humano** · estado: **aceptada** · reversibilidad: **alta**
+
+**Contexto.** Reemplaza a ADR-045. La redireccion silenciosa a la home tuvo el efecto contrario al buscado: en la prueba con cuentas reales, tocar 'Reportar ahora' sin sesion rebotaba a Inicio sin explicacion y el equipo lo reporto como 'el boton se rompio'. El problema del porton original (ADR-027/035) nunca fue el aviso en si — fue aparecer tras CERRAR sesion, porque signOut redirigia a una ruta protegida. Eso ya quedo resuelto en ADR-045 (signOut aterriza en la home) y no se toca.
+
+**Alternativas descartadas.**
+
+- *Mantener la redireccion muda de ADR-045* — El feedback real la describe como boton roto. Un rebote sin explicacion es peor que un aviso: la persona no sabe si la app fallo o si hizo algo mal.
+- *Modal de login sobre la pagina de origen en vez de aviso en la ruta* — Obliga a interceptar cada boton que lleve a una ruta protegida (Inicio, mapa, landing, barra) en vez de resolverlo una vez en la puerta. Mas superficie, mismo resultado.
+
+**Decision.** PuertaAcceso vuelve a pintar un aviso en la ruta protegida: copy especifico por ruta (reportar/circulo/cuenta), boton 'Continuar con Google' que regresa a la MISMA ruta tras entrar, y salida visible 'Volver al inicio'. El signOut sigue aterrizando en la home, asi que el aviso solo puede aparecer por navegacion intencional. La invitacion del circulo (#v=) se guarda en sessionStorage antes de que el OAuth se lleve la URL, porque el fragmento no sobrevive la vuelta de Google.
+
+**Consecuencias.**
+
+- Tocar Reportar sin sesion ahora explica y ofrece entrar, y despues de entrar te deja en Reportar, no en Inicio.
+- El caso que motivo ADR-045 (cerrar sesion aterrizaba en el porton) sigue resuelto: la home es el destino del signOut.
+- El enlace de invitacion abierto sin sesion completa el circulo: entra, vuelve a /circulo y el consentimiento reaparece solo.
+- Tercera iteracion de esta puerta en tres dias; la historia completa queda en la cabecera del componente para que nadie la repita.
+
+**Costo de revertir.** Restaurar el replace de ADR-045: una funcion.
+
+**Sirve a.** Producto y UX
+
+**Evidencia en el codigo.** `src/components/acceso/PuertaAcceso.tsx`
