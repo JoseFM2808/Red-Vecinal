@@ -28,7 +28,14 @@ describe("obtenerAdaptadorDeCadena — activacion por configuracion", { timeout:
     vi.unstubAllEnvs();
   });
 
+  /*
+   * Cada caso fija TODO su entorno con stubs, incluso los "vacios": la maquina de
+   * desarrollo tiene un .env.local con el modo arbitrum real (que vitest carga), y sin
+   * los stubs explicitos estos tests dependerian de que archivo tenga cada quien.
+   */
   it("sin ninguna variable de entorno, usa el adaptador simulado (comportamiento por defecto de la beta)", async () => {
+    vi.stubEnv("NEXT_PUBLIC_CHAIN_MODE", "");
+    vi.stubEnv("NEXT_PUBLIC_REPORT_REGISTRY_ADDRESS", "");
     const adaptador = await cargarAdaptador();
     expect(adaptador.id).toBe("simulado");
     expect(adaptador.simulado).toBe(true);
@@ -36,6 +43,7 @@ describe("obtenerAdaptadorDeCadena — activacion por configuracion", { timeout:
 
   it("con CHAIN_MODE=arbitrum pero sin direcciones, sigue en simulado sin intentar el adaptador real", async () => {
     vi.stubEnv("NEXT_PUBLIC_CHAIN_MODE", "arbitrum");
+    vi.stubEnv("NEXT_PUBLIC_REPORT_REGISTRY_ADDRESS", "");
     const adaptador = await cargarAdaptador();
     expect(adaptador.simulado).toBe(true);
   });

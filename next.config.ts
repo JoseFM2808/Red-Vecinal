@@ -41,12 +41,16 @@ const CSP = [
   // accounts.google.com: el login redirige alli tras el POST a /api/auth/signin.
   "form-action 'self' https://accounts.google.com",
   "script-src 'self' 'unsafe-inline'",
+  // auth.privy.io (ADR-050): el iframe donde vive la wallet embebida. Sin frame-src y
+  // child-src, la firma muere en produccion con la consola llena de violaciones CSP.
+  "frame-src 'self' https://auth.privy.io https://verify.walletconnect.com https://verify.walletconnect.org",
+  "child-src 'self' https://auth.privy.io",
   "style-src 'self' 'unsafe-inline'",
   // lh3.googleusercontent.com: foto de perfil de quien entra con Google.
   "img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.openstreetmap.org https://gateway.pinata.cloud https://*.mypinata.cloud https://lh3.googleusercontent.com",
   "font-src 'self' data:",
   // Arbitrum Sepolia y One, mas los gateways de Pinata: preparados para el siguiente paso.
-  "connect-src 'self' https://sepolia-rollup.arbitrum.io https://arb1.arbitrum.io https://*.arbitrum.io https://api.pinata.cloud https://gateway.pinata.cloud https://*.mypinata.cloud",
+  "connect-src 'self' https://sepolia-rollup.arbitrum.io https://arb1.arbitrum.io https://*.arbitrum.io https://api.pinata.cloud https://gateway.pinata.cloud https://*.mypinata.cloud https://auth.privy.io wss://relay.walletconnect.com wss://relay.walletconnect.org https://pulse.walletconnect.org https://api.web3modal.org",
   "manifest-src 'self'",
   "worker-src 'self' blob:",
   "upgrade-insecure-requests",
@@ -71,7 +75,11 @@ const nextConfig: NextConfig = {
     const seguras = [
       { key: "X-Content-Type-Options", value: "nosniff" },
       { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-      { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+      // same-origin-allow-popups y no same-origin: el login de Google de Privy (ADR-050)
+      // vive en un popup que necesita hablar con window.opener al volver. Con same-origin
+      // estricto, la persona se autentica en Google y el modal se queda esperando para
+      // siempre. La proteccion contra ventanas AJENAS se mantiene.
+      { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
       // geolocation y camara EXPLICITAMENTE permitidas en same-origin: la app las necesita
       // en el flujo de reporte. `(self)` es el valor por defecto de la spec, o sea que esto
       // no cambia el comportamiento propio; lo que hace es negarselas a cualquier iframe.

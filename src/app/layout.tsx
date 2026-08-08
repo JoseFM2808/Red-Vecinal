@@ -3,6 +3,7 @@ import "./globals.css";
 import { PuertaAcceso } from "@/components/acceso/PuertaAcceso";
 import { BarraPestanas } from "@/components/navegacion/BarraPestanas";
 import { AppProvider } from "@/components/proveedores/AppProvider";
+import { ProveedorPrivy } from "@/components/proveedores/ProveedorPrivy";
 import { CirculoProvider } from "@/components/proveedores/CirculoProvider";
 import { SesionProvider } from "@/components/proveedores/SesionProvider";
 import { UbicacionProvider } from "@/components/proveedores/UbicacionProvider";
@@ -57,6 +58,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-dvh bg-fondo text-texto antialiased">
         {/* El layout es server component: aqui se decide si hay login sin exponer credenciales. */}
         <SesionProvider googleDisponible={googleConfigurado()}>
+          {/* Privy (ADR-050): passthrough puro sin App ID. Va antes de AppProvider para
+              que la wallet embebida ya este registrada cuando alguien ancle un reporte. */}
+          <ProveedorPrivy>
           {/* Fuera de la sesion a proposito: la ubicacion no depende de tener cuenta. */}
           <UbicacionProvider>
             <AppProvider>
@@ -80,6 +84,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </CirculoProvider>
             </AppProvider>
           </UbicacionProvider>
+          </ProveedorPrivy>
         </SesionProvider>
       </body>
     </html>

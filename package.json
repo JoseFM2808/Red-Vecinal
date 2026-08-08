@@ -24,6 +24,8 @@
     "contracts:deploy:sepolia": "npm --prefix contracts run deploy:sepolia"
   },
   "dependencies": {
+    "@privy-io/react-auth": "^3.37.0",
+    "@stripe/stripe-js": "^9.13.0",
     "leaflet": "^1.9.4",
     "next": "^15.0.0",
     "next-auth": "5.0.0-beta.32",

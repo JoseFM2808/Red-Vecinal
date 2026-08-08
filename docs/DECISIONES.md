@@ -4,7 +4,7 @@
 
 Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o por el equipo se registra aquí ANTES o AL MOMENTO de escribir el código que la implementa. `docs/DECISIONES.md` se genera desde este archivo (npm run docs) y la pestaña Arquitectura de la app lo renderiza.
 
-**51 decisiones registradas · 26 esperan validacion humana**
+**52 decisiones registradas · 27 esperan validacion humana**
 
 ## Esperan que una persona decida
 
@@ -36,6 +36,7 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | ADR-043 | Sin sesion, la app es la vitrina: historia en Inicio y mapa de incidentes con filtros | Decision de producto que conviene confirmar antes del 12: la pestana Arquitectura queda detras del login. Es la pantalla que mas puntua con el jurado tecnico — si un juez explora la app por su cuenta sin entrar, no la va a ver. Alternativa barata si molesta: sacar /arquitectura de RUTAS_PROTEGIDAS (una linea con test). RESUELTO: el equipo decidio mantenerla publica — ver ADR-044. |
 | ADR-046 | El circulo se vincula por QR o enlace, con consentimiento, plazo y revocacion, cifrado de extremo a extremo | Dos cosas. 1) Para que el canal funcione entre telefonos EN VERCEL hay que provisionar un Redis de Upstash (gratis) y cargar UPSTASH_REDIS_REST_URL y UPSTASH_REDIS_REST_TOKEN como variables Sensitive; sin eso cada telefono puede caer en una instancia distinta y los sobres no se encuentran (la API responde efimero:true como sintoma). Coordinarlo con TI segun la regla de la organizacion sobre servicios nuevos. 2) Esto matiza la regla 'sin base de datos': es un buzon efimero de sobres cifrados con TTL de minutos, no un registro de datos — confirmar que el equipo lo acepta asi para poder defenderlo ante el jurado. |
 | ADR-049 | Sin wallet inyectada, el modo arbitrum ancla con comprobante simulado en vez de romper el reporte | Tres cosas. 1) Falta una variable en Vercel que no esta en tu lista: NEXT_PUBLIC_REPORT_REGISTRY_DEPLOY_BLOCK=295929385 (el bloque real del despliegue, verificado en Blockscout) — sin ella la primera carga del indice compartido pagina desde el bloque 0 y puede ser lenta o fallar con el RPC publico. 2) Confirmar con el equipo que la demo acepta las dos verdades etiquetadas (anclado real con wallet / comprobante simulado sin wallet) mientras el hueco de firma se cierra con relevo o Privy. 3) El anti-Sybil on-chain solo aplica a quien firma de verdad; el resto sigue bajo la politica del cliente. |
+| ADR-050 | Privy con wallet embebida cierra el hueco de firma: quien entra con Google ancla de verdad | Cuatro pasos que solo el equipo puede dar. 1) Cargar NEXT_PUBLIC_PRIVY_APP_ID en Vercel (no sensible) y redesplegar. 2) En el panel de Privy: Embedded wallets -> create on login, y Allowed domains con vecino-seguro.vercel.app y localhost:3000; en Google, credenciales vacias, Return OAuth tokens apagado, sin scopes extra. 3) GAS: gotear ~0.001 ETH de Sepolia desde la wallet del despliegue a cada wallet embebida de probador (la direccion sale en Cuenta -> Firma digital). 4) Probar el ciclo completo con una cuenta real: activar firma -> reportar -> ver el reporte en Arbiscan y en un segundo telefono. La app de Privy esta en modo development: suficiente para la demo, migrar a production despues. |
 
 ## Indice
 
@@ -92,6 +93,7 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | [ADR-047](#adr-047) | Dependencia nueva: qrcode para generar el codigo del vinculo | IA+Humano | aceptada | alta | Implementacion tecnica, Producto y UX |
 | [ADR-048](#adr-048) | La ruta protegida sin sesion muestra un aviso con boton de entrar, no un rebote mudo | IA+Humano | aceptada | alta | Producto y UX |
 | [ADR-049](#adr-049) | Sin wallet inyectada, el modo arbitrum ancla con comprobante simulado en vez de romper el reporte | IA+Humano | aceptada | alta | Ecosistema Arbitrum, Producto y UX, Implementacion tecnica |
+| [ADR-050](#adr-050) | Privy con wallet embebida cierra el hueco de firma: quien entra con Google ancla de verdad | IA+Humano | aceptada | media | Ecosistema Arbitrum, Producto y UX, Implementacion tecnica |
 
 ---
 
@@ -1695,3 +1697,39 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 **Evidencia en el codigo.** `src/lib/chain/index.ts`, `src/lib/chain/index.test.ts`, `docs/SIGUIENTES-PASOS-ARBITRUM.md`
 
 > **Necesita decision humana:** Tres cosas. 1) Falta una variable en Vercel que no esta en tu lista: NEXT_PUBLIC_REPORT_REGISTRY_DEPLOY_BLOCK=295929385 (el bloque real del despliegue, verificado en Blockscout) — sin ella la primera carga del indice compartido pagina desde el bloque 0 y puede ser lenta o fallar con el RPC publico. 2) Confirmar con el equipo que la demo acepta las dos verdades etiquetadas (anclado real con wallet / comprobante simulado sin wallet) mientras el hueco de firma se cierra con relevo o Privy. 3) El anti-Sybil on-chain solo aplica a quien firma de verdad; el resto sigue bajo la politica del cliente.
+
+---
+
+## ADR-050
+
+### Privy con wallet embebida cierra el hueco de firma: quien entra con Google ancla de verdad
+
+`2026-08-09` · autor: **IA+Humano** · estado: **aceptada** · reversibilidad: **media**
+
+**Contexto.** El hueco de firma (SIGUIENTES-PASOS §8.1-8.2) era el ultimo bloqueante real del producto: contratos desplegados y verificados en Sepolia, lecturas funcionando, pero ningun usuario de solo-Google podia firmar submitReport — sus reportes caian al comprobante simulado del ADR-049 y no se compartian entre telefonos. El equipo creo la app de Privy (App ID publico cmsjnlr3900eq0cl9g9jcxw5s) y CLAUDE.md siempre tuvo la wallet abstraction como decision pendiente entre Privy y Web3Auth.
+
+**Alternativas descartadas.**
+
+- *Web3Auth* — Mismo rol, pero el equipo ya provisiono Privy y el repo tenia NEXT_PUBLIC_PRIVY_APP_ID esperando desde el dia uno (preflight y .env.example). Cambiar de proveedor a 3 dias de la demo no compra nada.
+- *Relevo del servidor (la plataforma firma)* — Exige cambiar ReportRegistry (submitReportFor con rol de relevo) porque los rate-limits y el reporter son msg.sender — y los contratos YA estan desplegados y verificados. Ademas custodia la firma en la plataforma, que es exactamente lo que la wallet embebida evita.
+- *Unificar el login: Privy reemplaza a NextAuth* — Tocaria la puerta de acceso, la sesion del circulo y la derivacion de identidad en la semana de la entrega. Dos popups de Google es un costo visible pero acotado; la unificacion queda para despues del 12.
+- *Instalar con la resolucion de peers por defecto* — npm aborta: @privy-io/react-auth trae un peer OPCIONAL (permissionless, para smart wallets que no usamos) que pide ox@^0.8 mientras viem 2.55 usa ox@0.14. Se fija legacy-peer-deps en .npmrc con la justificacion escrita — el peer opcional ni se instala.
+
+**Decision.** Se integra @privy-io/react-auth 3.37 (segunda dependencia nueva del proyecto, con .npmrc documentado). ProveedorPrivy envuelve la app SOLO si hay App ID — sin el, passthrough puro y la beta sin variables no cambia. El PuenteFirma registra el proveedor EIP-1193 de la wallet embebida en proveedor-inyectado.ts — la costura que ADR-030 dejo preparada: el adaptador no se toca, y el respaldo del ADR-049 queda como red de seguridad. La sesion de la app sigue siendo NextAuth (ADR-021); Privy solo aporta la firma, activada desde una tarjeta en Cuenta (login de Google de Privy, embebida create-on-login, sin popups por firma via showWalletUIs:false). CSP ampliada con auth.privy.io (frame/child/connect) y los origenes de WalletConnect que el SDK toca.
+
+**Consecuencias.**
+
+- Quien active la firma ancla reportes reales: reporter propio en el evento, anti-Sybil on-chain por persona, y sus reportes visibles en todos los telefonos via el indice compartido.
+- La wallet embebida nace con 0 ETH de Sepolia: sin una gota de gas del equipo, la firma existe pero no paga. La tarjeta de Cuenta muestra la direccion para pasarsela a quien administra la wallet fondeada.
+- Dos popups de Google conviven (sesion y firma) y la tarjeta lo explica. Costo asumido hasta unificar post-demo.
+- El flujo sin activar la firma no cambia en nada: comprobante simulado etiquetado (ADR-049).
+- El bundle crece con el SDK de Privy; solo se paga cuando hay App ID configurado.
+- El toggle de 'Return OAuth tokens' de Privy queda apagado y los scopes en el minimo: no pedimos a Google nada mas que identidad.
+
+**Costo de revertir.** Quitar ProveedorPrivy del layout, la tarjeta de Cuenta y la dependencia; proveedor-inyectado vuelve a solo window.ethereum. Las wallets embebidas ya creadas viven en Privy, no en el repo.
+
+**Sirve a.** Ecosistema Arbitrum, Producto y UX, Implementacion tecnica
+
+**Evidencia en el codigo.** `src/components/proveedores/ProveedorPrivy.tsx`, `src/components/cuenta/FirmaDigital.tsx`, `src/lib/chain/proveedor-inyectado.ts`, `next.config.ts`, `.npmrc`
+
+> **Necesita decision humana:** Cuatro pasos que solo el equipo puede dar. 1) Cargar NEXT_PUBLIC_PRIVY_APP_ID en Vercel (no sensible) y redesplegar. 2) En el panel de Privy: Embedded wallets -> create on login, y Allowed domains con vecino-seguro.vercel.app y localhost:3000; en Google, credenciales vacias, Return OAuth tokens apagado, sin scopes extra. 3) GAS: gotear ~0.001 ETH de Sepolia desde la wallet del despliegue a cada wallet embebida de probador (la direccion sale en Cuenta -> Firma digital). 4) Probar el ciclo completo con una cuenta real: activar firma -> reportar -> ver el reporte en Arbiscan y en un segundo telefono. La app de Privy esta en modo development: suficiente para la demo, migrar a production despues.

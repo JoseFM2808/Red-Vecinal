@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useApp } from "@/components/proveedores/AppProvider";
 import { AccesoGoogle } from "@/components/cuenta/AccesoGoogle";
+import { FirmaDigital } from "@/components/cuenta/FirmaDigital";
 import { RevelacionSelectiva } from "@/components/cuenta/RevelacionSelectiva";
 import { HojaDetalle } from "@/components/reportes/HojaDetalle";
 import { TarjetaReporte } from "@/components/reportes/TarjetaReporte";
@@ -62,6 +63,9 @@ export function PanelCuenta() {
       </section>
 
       <AccesoGoogle />
+
+      {/* Firma embebida (ADR-050): solo existe con Privy configurado y cadena real. */}
+      <FirmaDigital />
 
       <section>
         <h2 className="etiqueta-seccion mb-2">Recompensas</h2>
