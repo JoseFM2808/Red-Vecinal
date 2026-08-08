@@ -141,7 +141,9 @@ export function AccesoGoogle() {
             disabled={ocupado}
             onClick={() => {
               setOcupado(true);
-              void signOut({ redirectTo: "/cuenta" });
+              // A la home, no a /cuenta: desde ADR-043 la cuenta es ruta protegida, y
+              // volver ahi recien deslogueado te plantaba en el acceso otra vez (ADR-045).
+              void signOut({ redirectTo: "/" });
             }}
             className="toque mt-3 w-full rounded-xl border border-borde bg-superficie-alta text-sm font-medium text-suave disabled:opacity-50"
           >

@@ -4,7 +4,7 @@
 
 Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o por el equipo se registra aquí ANTES o AL MOMENTO de escribir el código que la implementa. `docs/DECISIONES.md` se genera desde este archivo (npm run docs) y la pestaña Arquitectura de la app lo renderiza.
 
-**46 decisiones registradas · 24 esperan validacion humana**
+**47 decisiones registradas · 24 esperan validacion humana**
 
 ## Esperan que una persona decida
 
@@ -85,6 +85,7 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | [ADR-042](#adr-042) | Los sismos llegan del IGP y el vecino responde la intensidad, en vez de reportarlos | IA+Humano | aceptada | media | Problema e impacto, Producto y UX, Implementacion tecnica |
 | [ADR-043](#adr-043) | Sin sesion, la app es la vitrina: historia en Inicio y mapa de incidentes con filtros | IA+Humano | aceptada | alta | Producto y UX, Pitch y demo, Problema e impacto |
 | [ADR-044](#adr-044) | La pestana Arquitectura vuelve a ser publica, sin sesion | Humano | aceptada | alta | Pitch y demo, Implementacion tecnica, Producto y UX |
+| [ADR-045](#adr-045) | Cerrar sesion vuelve a la home y la pantalla-porton de login desaparece | Humano | aceptada | alta | Producto y UX |
 
 ---
 
@@ -1529,3 +1530,33 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 **Sirve a.** Pitch y demo, Implementacion tecnica, Producto y UX
 
 **Evidencia en el codigo.** `src/lib/acceso.ts`, `src/lib/acceso.test.ts`, `src/components/navegacion/BarraPestanas.tsx`
+
+---
+
+## ADR-045
+
+### Cerrar sesion vuelve a la home y la pantalla-porton de login desaparece
+
+`2026-08-08` · autor: **Humano** · estado: **aceptada** · reversibilidad: **alta**
+
+**Contexto.** Cerrar sesion redirigia a /cuenta (signOut con redirectTo: /cuenta), que desde ADR-043 es ruta protegida: la persona recien deslogueada aterrizaba en la pantalla-porton de 'Continuar con Google'. Parecia que cerrar sesion era volver a entrar. El equipo ademas definio que esa pantalla dedicada ya no debe existir: el acceso a Google vive en los botones (AccesoRapido en Inicio y Mapa, Entrar al centro de la barra del visitante).
+
+**Alternativas descartadas.**
+
+- *Solo corregir el redirect del signOut y conservar el porton* — Arregla el sintoma y deja dos puertas de entrada distintas conviviendo: el porton a pantalla completa y los botones. El equipo pidio explicitamente que el porton deje de existir.
+- *Redirigir las rutas protegidas al login de Google directamente* — Lanzar OAuth sin un gesto de la persona es el patron mas hostil que existe: quien pego un enlace de /reportar sin saber que pedia cuenta acabaria en una pantalla de Google sin contexto.
+
+**Decision.** signOut redirige a la home. PuertaAcceso deja de pintar la pantalla-porton: quien llega sin sesion a una ruta protegida (reportar, circulo, cuenta) es redirigido a la home con router.replace, donde estan los botones de entrar. Se conservan de la puerta original el aviso de error de login (?error=CODIGO en la raiz), la espera mientras se resuelve la sesion, y la valvula de despliegues sin credenciales, que siguen dejando pasar todo.
+
+**Consecuencias.**
+
+- Cerrar sesion aterriza en la portada en modo visitante, que es el estado real de la persona.
+- Hay un unico camino de entrada (los botones), no dos: menos pantallas que mantener y una historia mas simple que contar.
+- El copy dedicado por ruta del porton ('para reportar hace falta una cuenta') se pierde: la redireccion es silenciosa. Se acepta — en la barra del visitante esas pestanas ni aparecen, asi que el caso queda reducido a URLs pegadas a mano.
+- El aviso de error de login sigue funcionando porque auth.ts ya apuntaba pages.error a la raiz y el aviso vive en las rutas libres.
+
+**Costo de revertir.** Restaurar la pantalla-porton desde git y devolver el redirectTo del signOut. Nada mas depende de ella.
+
+**Sirve a.** Producto y UX
+
+**Evidencia en el codigo.** `src/components/acceso/PuertaAcceso.tsx`, `src/components/cuenta/AccesoGoogle.tsx`

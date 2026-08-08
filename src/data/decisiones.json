@@ -1830,6 +1830,41 @@
         "src/components/navegacion/BarraPestanas.tsx"
       ],
       "requiere_validacion_humana": false
+    },
+    {
+      "id": "ADR-045",
+      "titulo": "Cerrar sesion vuelve a la home y la pantalla-porton de login desaparece",
+      "fecha": "2026-08-08",
+      "autor": "Humano",
+      "estado": "aceptada",
+      "contexto": "Cerrar sesion redirigia a /cuenta (signOut con redirectTo: /cuenta), que desde ADR-043 es ruta protegida: la persona recien deslogueada aterrizaba en la pantalla-porton de 'Continuar con Google'. Parecia que cerrar sesion era volver a entrar. El equipo ademas definio que esa pantalla dedicada ya no debe existir: el acceso a Google vive en los botones (AccesoRapido en Inicio y Mapa, Entrar al centro de la barra del visitante).",
+      "opciones": [
+        {
+          "nombre": "Solo corregir el redirect del signOut y conservar el porton",
+          "descartada_porque": "Arregla el sintoma y deja dos puertas de entrada distintas conviviendo: el porton a pantalla completa y los botones. El equipo pidio explicitamente que el porton deje de existir."
+        },
+        {
+          "nombre": "Redirigir las rutas protegidas al login de Google directamente",
+          "descartada_porque": "Lanzar OAuth sin un gesto de la persona es el patron mas hostil que existe: quien pego un enlace de /reportar sin saber que pedia cuenta acabaria en una pantalla de Google sin contexto."
+        }
+      ],
+      "decision": "signOut redirige a la home. PuertaAcceso deja de pintar la pantalla-porton: quien llega sin sesion a una ruta protegida (reportar, circulo, cuenta) es redirigido a la home con router.replace, donde estan los botones de entrar. Se conservan de la puerta original el aviso de error de login (?error=CODIGO en la raiz), la espera mientras se resuelve la sesion, y la valvula de despliegues sin credenciales, que siguen dejando pasar todo.",
+      "consecuencias": [
+        "Cerrar sesion aterriza en la portada en modo visitante, que es el estado real de la persona.",
+        "Hay un unico camino de entrada (los botones), no dos: menos pantallas que mantener y una historia mas simple que contar.",
+        "El copy dedicado por ruta del porton ('para reportar hace falta una cuenta') se pierde: la redireccion es silenciosa. Se acepta — en la barra del visitante esas pestanas ni aparecen, asi que el caso queda reducido a URLs pegadas a mano.",
+        "El aviso de error de login sigue funcionando porque auth.ts ya apuntaba pages.error a la raiz y el aviso vive en las rutas libres."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Restaurar la pantalla-porton desde git y devolver el redirectTo del signOut. Nada mas depende de ella.",
+      "criterios_rubrica": [
+        "ux"
+      ],
+      "evidencia": [
+        "src/components/acceso/PuertaAcceso.tsx",
+        "src/components/cuenta/AccesoGoogle.tsx"
+      ],
+      "requiere_validacion_humana": false
     }
   ]
 }
