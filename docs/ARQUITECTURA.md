@@ -62,7 +62,7 @@ Repositorio de reportes con persistencia en el dispositivo y datos sembrados de 
 
 ### Capa de cadena (Arbitrum) `cadena` — Simulado
 
-Interfaz ChainAdapter: anclar reporte, consultar recompensa, resolver enlaces al explorador, leer el índice compartido. La beta corre el adaptador simulado por defecto; ArbitrumChainAdapter (ADR-030) implementa la misma interfaz con viem y firma con wallet inyectada. Los tres contratos (ReportRegistry, TokenReward, IdentityEscrow) ya están escritos y testeados en contracts/ (ADR-033, ADR-034) — falta solo desplegarlos con una wallet fondeada y cargar las direcciones: activar es un despliegue y variables de entorno, no escribir código.
+Interfaz ChainAdapter: anclar reporte, consultar recompensa, resolver enlaces al explorador, leer el índice compartido. Los tres contratos (ReportRegistry, TokenReward, IdentityEscrow) están escritos, testeados, desplegados en Arbitrum Sepolia y verificados en Arbiscan (2026-08-08). ArbitrumChainAdapter (ADR-030) implementa la interfaz con viem y firma con wallet inyectada. La beta sigue corriendo en modo simulado en producción hasta que las direcciones se carguen como variables de entorno en Vercel y se redespliegue — el código y los contratos ya no son lo que falta.
 
 - Tecnologias: Arbitrum Sepolia (421614), Arbitrum One (42161), ABIs tipadas, viem
 - Codigo: `src/lib/chain/types.ts`, `src/lib/chain/mock-adapter.ts`, `src/lib/chain/arbitrum-adapter.ts`, `src/lib/chain/proveedor-inyectado.ts`, `src/lib/chain/eventos.ts`, `src/lib/chain/redes.ts`, `src/lib/chain/abis.ts`

@@ -92,12 +92,17 @@ navegador) que:
 
 ### Resultado real obtenido
 
+> ⚠️ **Nada de lo que sigue existe en la Arbitrum Sepolia pública.** El `txHash`, las
+> direcciones y el link de Arbiscan de abajo son de un nodo local que ya no corre — no
+> intentes abrirlos ni copiarlos como si fueran un despliegue real. Sirven solo como evidencia
+> de que el código funcionó, ese día, contra esa red local.
+
 ```
 Recibo real del nodo local: {
   txHash: '0x64af99b682769cf04938ed12372ea536fb3eb97c365af1af5798434da7a6a9a7',
   bloque: 5,
   chainId: 421614,
-  urlExplorador: 'https://sepolia.arbiscan.io/tx/0x64af99b6...',
+  urlExplorador: 'https://sepolia.arbiscan.io/tx/0x64af99b6...', // <- NO es un link real, no abrir
   costoGasUsd: 0.68,
   simulado: false
 }

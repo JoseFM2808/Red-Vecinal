@@ -29,3 +29,11 @@
 
 # Snapshot cheatcodes output
 /snapshots
+
+# Estado de despliegues de Hardhat Ignition. Nunca se commitea: un deploy local de prueba
+# (ej. `arbitrumLocal`, que imita el chainId de Arbitrum Sepolia para poder testear con el
+# codigo real) usa la misma carpeta `chain-421614` que usaria un despliegue real, y confundir
+# uno con el otro ya causo un problema real (direcciones de un nodo local que no existen en
+# ningun lado, commiteadas por error). Las direcciones de un despliegue real viven en las
+# variables de entorno de Vercel, no en este repo.
+/ignition/deployments

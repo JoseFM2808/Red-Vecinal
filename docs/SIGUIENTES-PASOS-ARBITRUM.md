@@ -172,10 +172,21 @@ NEXT_PUBLIC_REPORT_REGISTRY_DEPLOY_BLOCK=0
 
 `NEXT_PUBLIC_REPORT_REGISTRY_DEPLOY_BLOCK` es nuevo: el bloque en el que quedó desplegado
 `ReportRegistry`. El índice compartido (§6) pagina `getLogs` desde ahí — sin este valor pagina
-desde el bloque 0, que en un RPC público puede fallar o ser lento.
+desde el bloque 0, que en un RPC público puede fallar o ser lento. **Dejarlo en `0` no rompe
+nada** (`eventos.ts` pagina en lotes de 100k bloques igual), solo es más lento la primera carga.
+
+**Cómo encontrar el número de bloque** (el CLI de Ignition solo imprime direcciones, no el
+bloque): abrir la dirección de `ReportRegistry` en `sepolia.arbiscan.io`, entrar a la pestaña
+"Contract Creation" y leer el número de bloque de esa transacción.
 
 Las etiquetas `Simulado` de la interfaz desaparecen solas cuando el adaptador reporta
 `simulado: false`. No hay que buscarlas y borrarlas.
+
+**Estado local del despliegue**: `contracts/ignition/deployments/` está en `.gitignore` a
+propósito — no commitear nunca esa carpeta. Un despliegue de prueba contra un nodo local ya
+quedó commiteado por error una vez, en una carpeta `chain-421614` idéntica a la que usaría un
+despliegue real, y generó la impresión de que algo estaba desplegado cuando no lo estaba. Las
+direcciones reales viven en las variables de entorno de Vercel, no en el repo.
 
 ---
 
@@ -292,13 +303,24 @@ Ya hecho — contratos (ADR-033, ADR-034):
 - [x] Decidido mint optimista vs conservador (ADR-014 → conservador, patrón pull en ADR-034)
 - [x] Módulo de despliegue (`contracts/ignition/modules/VecinoSeguro.ts`) listo para correr
 
-Pendiente — necesita una wallet fondeada, ninguna IA debe tenerla:
+Hecho — desplegado y verificado el 2026-08-08 (requirió una wallet fondeada, la tuvo el equipo):
 
-- [ ] Los tres contratos desplegados en Arbitrum Sepolia (`npm run contracts:deploy:sepolia`)
-- [ ] Código fuente verificado en Arbiscan (`npm run --prefix contracts verify:sepolia`)
-- [ ] Variables de entorno cargadas en Vercel (incluye `NEXT_PUBLIC_REPORT_REGISTRY_DEPLOY_BLOCK`)
+- [x] Los tres contratos desplegados en Arbitrum Sepolia:
+      - `ReportRegistry`: `0x322a2862C2218136124DF6f1d030E9942aBe43Ba`
+      - `TokenReward`: `0x6E1B4747913431343196FD1D4b6772c5d43E9Fa5`
+      - `IdentityEscrow`: `0x84F39967863b42D4041988ADc9a88F8D32729eF2`
+- [x] Código fuente verificado en Arbiscan, Blockscout y Sourcify (`npm run --prefix contracts verify:sepolia` —
+      el script necesitaba `--network arbitrumSepolia`, ya corregido)
+- [x] `.env.local` cargado con las tres direcciones para desarrollo local
+
+Pendiente:
+
+- [ ] Variables de entorno cargadas en **Vercel** (Project Settings → Environment Variables) y
+      redeploy — `.env.local` no llega a Vercel, hay que copiarlas ahí también
 - [ ] Costo real por anclaje medido → reemplazar la estimación en `src/lib/chain/redes.ts`
-- [ ] Probar `ArbitrumChainAdapter` end-to-end contra los contratos reales (no fue posible antes del despliegue)
+- [ ] Probar `ArbitrumChainAdapter` end-to-end contra los contratos reales, desde la app y con
+      una wallet inyectada de verdad (MetaMask) — la validación hecha hasta ahora fue contra un
+      nodo local, no contra estos contratos ya desplegados
 
 Pendiente, del frontend, fuera de esta pasada:
 
@@ -306,3 +328,18 @@ Pendiente, del frontend, fuera de esta pasada:
 - [ ] Sincronizar corroboraciones desde `TokenReward.corroborate()` en el índice compartido
 - [ ] Si se decide verificar distancia on-chain en `corroborate()`, extender su ABI con
       coordenadas y recién ahí medir si Stylus se justifica (§7)
+- [ ] **`IdentityEscrow` no está conectado a ninguna pantalla.** Desplegarlo y cargar
+      `NEXT_PUBLIC_IDENTITY_ESCROW_ADDRESS` activa `ReportRegistry`/`TokenReward`, pero
+      `RevelacionSelectiva.tsx` (pestaña Cuenta) sigue siendo una demo puramente client-side,
+      con su `EtiquetaSimulado` puesta a propósito — nada llama a `bindIdentity`,
+      `requestDisclosure` ni `approveDisclosure` todavía. No bloquea el flujo de reportar/
+      recompensar, que es independiente.
+
+### Verificación de que esto está listo (auditoría del 2026-08-07)
+
+Se comparó `src/lib/chain/abis.ts` contra los tres `.sol` función por función y evento por
+evento: coinciden exactamente (tipos, orden de parámetros, `indexed`). No hay ninguna firma que
+vaya a fallar al conectar contra un despliegue real. El módulo de Ignition, la red
+`arbitrumSepolia` de `hardhat.config.ts` y los scripts de `npm run contracts:*` se revisaron de
+punta a punta — nada de eso es un placeholder, es código que ya corrió (local, no en Sepolia
+real) y compiló/testeó en verde. El único bloqueante real es una wallet con ETH de testnet.

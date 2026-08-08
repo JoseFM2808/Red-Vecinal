@@ -69,6 +69,7 @@ const PUBLICAS_CONOCIDAS = new Set([
   "NEXT_PUBLIC_REPORT_REGISTRY_ADDRESS",
   "NEXT_PUBLIC_TOKEN_REWARD_ADDRESS",
   "NEXT_PUBLIC_IDENTITY_ESCROW_ADDRESS",
+  "NEXT_PUBLIC_REPORT_REGISTRY_DEPLOY_BLOCK",
   "NEXT_PUBLIC_PRIVY_APP_ID",
   "NEXT_PUBLIC_IPFS_GATEWAY",
   "NEXT_PUBLIC_SITE_URL",
@@ -164,16 +165,10 @@ if (modo !== "simulado" && modo !== "arbitrum") {
   );
 }
 
-if (modo === "arbitrum") {
-  if (!definida("NEXT_PUBLIC_REPORT_REGISTRY_ADDRESS")) {
-    avisos.push(
-      "NEXT_PUBLIC_CHAIN_MODE=arbitrum pero falta NEXT_PUBLIC_REPORT_REGISTRY_ADDRESS. " +
-        "La app seguira con el adaptador simulado.",
-    );
-  }
+if (modo === "arbitrum" && !definida("NEXT_PUBLIC_REPORT_REGISTRY_ADDRESS")) {
   avisos.push(
-    "Recordatorio: el modo arbitrum tambien necesita que exista ArbitrumChainAdapter " +
-      "(ver docs/SIGUIENTES-PASOS-ARBITRUM.md). Sin el, solo se emite un console.warn.",
+    "NEXT_PUBLIC_CHAIN_MODE=arbitrum pero falta NEXT_PUBLIC_REPORT_REGISTRY_ADDRESS. " +
+      "La app seguira con el adaptador simulado.",
   );
 }
 
