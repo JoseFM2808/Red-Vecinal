@@ -106,17 +106,20 @@
     {
       "id": "cadena",
       "nombre": "Capa de cadena (Arbitrum)",
-      "rol": "Interfaz ChainAdapter: anclar reporte, consultar recompensa, resolver enlaces al explorador. La beta corre el adaptador simulado; el adaptador de Arbitrum implementa la misma interfaz.",
-      "estado": "pendiente-equipo",
+      "rol": "Interfaz ChainAdapter: anclar reporte, consultar recompensa, resolver enlaces al explorador, leer el índice compartido. La beta corre el adaptador simulado por defecto; ArbitrumChainAdapter (ADR-030) implementa la misma interfaz con viem y firma con wallet inyectada. Los tres contratos (ReportRegistry, TokenReward, IdentityEscrow) ya están escritos y testeados en contracts/ (ADR-033, ADR-034) — falta solo desplegarlos con una wallet fondeada y cargar las direcciones: activar es un despliegue y variables de entorno, no escribir código.",
+      "estado": "simulado",
       "tecnologias": [
         "Arbitrum Sepolia (421614)",
         "Arbitrum One (42161)",
         "ABIs tipadas",
-        "viem (a integrar)"
+        "viem"
       ],
       "archivos": [
         "src/lib/chain/types.ts",
         "src/lib/chain/mock-adapter.ts",
+        "src/lib/chain/arbitrum-adapter.ts",
+        "src/lib/chain/proveedor-inyectado.ts",
+        "src/lib/chain/eventos.ts",
         "src/lib/chain/redes.ts",
         "src/lib/chain/abis.ts"
       ]
@@ -432,33 +435,33 @@
   "siguientesPasos": [
     {
       "titulo": "Desplegar los tres contratos en Arbitrum Sepolia",
-      "responsable": "Equipo de contratos",
-      "detalle": "Publicar direcciones en las variables NEXT_PUBLIC_*_ADDRESS. Los ABIs esperados ya están en src/lib/chain/abis.ts.",
+      "responsable": "Quien tenga una wallet con ETH de testnet",
+      "detalle": "Los contratos ya están escritos, compilados y con 27 tests en verde (contracts/, ADR-033, ADR-034) — no falta código, falta una wallet fondeada. Correr `npm run contracts:deploy:sepolia` tras llenar contracts/.env (ver contracts/.env.example) y publicar las tres direcciones en las variables NEXT_PUBLIC_*_ADDRESS.",
       "bloquea": "Anclaje real, recompensa real, índice compartido"
     },
     {
-      "titulo": "Implementar ArbitrumChainAdapter",
-      "responsable": "Equipo de contratos",
-      "detalle": "Un archivo que implemente la interfaz ChainAdapter con viem. No hay que tocar ninguna pantalla.",
-      "bloquea": "Cambiar el modo de cadena"
+      "titulo": "Verificar el código fuente en Arbiscan",
+      "responsable": "Quien despliegue",
+      "detalle": "`npm run --prefix contracts verify:sepolia` (o `hardhat ignition verify`) con ARBISCAN_API_KEY en contracts/.env. Sin esto el contrato es una caja negra para el jurado.",
+      "bloquea": "Que el criterio de Arbitrum se pueda verificar de verdad, no solo argumentar"
     },
     {
-      "titulo": "Portar la política anti-Sybil a TokenReward.sol",
-      "responsable": "Equipo de contratos",
-      "detalle": "Las constantes de src/lib/antisybil.ts son la especificación. Los tests describen los casos límite.",
-      "bloquea": "Que la recompensa mostrada coincida con la que la cadena aprueba"
-    },
-    {
-      "titulo": "Hidratar el mapa desde eventos ReportSubmitted",
-      "responsable": "Equipo de contratos + frontend",
-      "detalle": "Sustituir la lectura del repositorio local por una lectura por RPC en el mismo punto de entrada.",
-      "bloquea": "Demo con varios teléfonos a la vez"
+      "titulo": "Probar ArbitrumChainAdapter contra Sepolia real",
+      "responsable": "Frontend",
+      "detalle": "El adaptador (src/lib/chain/arbitrum-adapter.ts) y la lectura de eventos (src/lib/chain/eventos.ts) ya están implementados y gateados por NEXT_PUBLIC_CHAIN_MODE (ADR-030, ADR-032), firmando con wallet inyectada. Falta solo que existan direcciones desplegadas para verificar end-to-end.",
+      "bloquea": "Confirmar el formato de zoneId (hoy keccak256 del string, ver ADR-030) y medir el costo real de gas"
     },
     {
       "titulo": "Conectar Privy o Web3Auth",
       "responsable": "Frontend",
-      "detalle": "Reemplazar el proveedor de identidad local. La interfaz ya está aislada.",
-      "bloquea": "Firmar transacciones reales sin seed phrase"
+      "detalle": "Reemplazar la wallet inyectada interina (src/lib/chain/proveedor-inyectado.ts) por la wallet embebida. La interfaz ya está aislada para que sea un cambio de un archivo.",
+      "bloquea": "Firmar transacciones reales sin que el vecino instale una wallet aparte"
+    },
+    {
+      "titulo": "Sincronizar corroboraciones desde TokenReward.corroborate()",
+      "responsable": "Frontend",
+      "detalle": "El índice compartido (ADR-032) hoy reconstruye reportes remotos sin corroboraciones ni descripción. Leer también estos eventos para que la recompensa mostrada coincida entre dispositivos.",
+      "bloquea": "Que el saldo mostrado sea el mismo en todos los teléfonos"
     },
     {
       "titulo": "Evaluar Stylus para verificación geoespacial",

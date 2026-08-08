@@ -12,6 +12,8 @@ import {
 import { useSession } from "next-auth/react";
 import { POLITICA_RECOMPENSA, recompensaTrasCorroborar } from "@/lib/antisybil";
 import { obtenerAdaptadorDeCadena } from "@/lib/chain";
+import { fusionarConCadena, leerReportesDesdeCadena } from "@/lib/chain/eventos";
+import { CONFIG } from "@/lib/config";
 import { distanciaMetros } from "@/lib/geo";
 import { cargarOCrearIdentidad, derivarIdentidadDeCuenta } from "@/lib/identidad";
 import {
@@ -126,6 +128,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setReportes(iniciales);
       setCargando(false);
       if (!guardados) guardarReportes(iniciales);
+
+      // Indice compartido (ADR-032): solo cuando el adaptador ya no es el simulado.
+      // Nunca bloquea la carga inicial ni se persiste — se vuelve a leer en cada
+      // montaje, la cadena es la fuente de verdad, no el dispositivo.
+      const cadena = obtenerAdaptadorDeCadena();
+      if (cadena.simulado) return;
+
+      try {
+        const remotos = await leerReportesDesdeCadena(CONFIG);
+        if (!vigente) return;
+        setReportes((actuales) => fusionarConCadena(actuales, remotos));
+      } catch (error) {
+        console.warn("[vecino-seguro] no se pudo leer el indice compartido desde Arbitrum", error);
+      }
     };
 
     void iniciar();

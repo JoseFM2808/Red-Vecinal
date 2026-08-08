@@ -1197,6 +1197,208 @@
         "src/components/reportes/HojaDetalle.tsx"
       ],
       "requiere_validacion_humana": false
+    },
+    {
+      "id": "ADR-030",
+      "titulo": "ArbitrumChainAdapter se construye ahora, firmando con wallet inyectada como paso intermedio",
+      "fecha": "2026-08-07",
+      "autor": "IA",
+      "estado": "aceptada",
+      "contexto": "docs/SIGUIENTES-PASOS-ARBITRUM.md asignaba `ArbitrumChainAdapter` al equipo de contratos porque dependia de que ellos definieran el patron de firma. Pero la interfaz `AdaptadorCadena` ya estaba cerrada (ADR-001) y esperar bloquea la activacion el dia que entreguen las direcciones: ese dia deberia ser solo cargar variables de entorno.",
+      "opciones": [
+        {
+          "nombre": "Esperar a que el equipo de contratos escriba el adaptador",
+          "descartada_porque": "Es exactamente el riesgo que ADR-001 ya evito para el resto del frontend: concentrar trabajo critico en los ultimos dias."
+        },
+        {
+          "nombre": "Bloquear el adaptador hasta decidir Privy vs Web3Auth",
+          "descartada_porque": "La firma de transacciones y la wallet abstraction para UX son dos problemas distintos. Una wallet inyectada (MetaMask) firma perfectamente mientras tanto, y expone el mismo tipo de proveedor EIP-1193 que usara una wallet embebida despues."
+        }
+      ],
+      "decision": "`src/lib/chain/arbitrum-adapter.ts` implementa `AdaptadorCadena` con `viem`, firmando con lo que devuelva `src/lib/chain/proveedor-inyectado.ts` (hoy: `window.ethereum`). `chain/index.ts` intenta este adaptador cuando `integracionCadenaLista()`; si falla al construirlo (por ejemplo, sin wallet inyectada en ese momento), cae al simulado con aviso en consola, igual que el comportamiento previo.",
+      "consecuencias": [
+        "El dia que el equipo de contratos entregue las 3 direcciones, activar es cargar variables de entorno en Vercel y redesplegar: cero codigo nuevo.",
+        "Cuando se decida Privy/Web3Auth, el cambio se limita a `proveedor-inyectado.ts`; el adaptador no se reescribe.",
+        "Mientras tanto, anclar un reporte de verdad requiere que el vecino tenga una wallet inyectada instalada — no aplica a la demo con el adaptador simulado, que sigue siendo el modo por defecto."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Bajo: borrar arbitrum-adapter.ts y la rama de chain/index.ts que lo invoca; el simulado sigue funcionando igual.",
+      "criterios_rubrica": [
+        "tecnica",
+        "arbitrum"
+      ],
+      "evidencia": [
+        "src/lib/chain/arbitrum-adapter.ts",
+        "src/lib/chain/proveedor-inyectado.ts",
+        "src/lib/chain/index.ts"
+      ],
+      "requiere_validacion_humana": true,
+      "nota_para_humano": "Confirmar con el equipo de contratos que firmar con una wallet inyectada (no Privy/Web3Auth) es aceptable para las pruebas en Sepolia, y que ArbitrumChainAdapter ya no es una tarea suya sino del frontend."
+    },
+    {
+      "id": "ADR-031",
+      "titulo": "El evento ReportSubmitted necesita llevar el CID: el ABI esperado original no lo tenia",
+      "fecha": "2026-08-07",
+      "autor": "IA",
+      "estado": "aceptada",
+      "contexto": "docs/SIGUIENTES-PASOS-ARBITRUM.md §6 pide 'resolver el CID de cada reporte contra el gateway de IPFS' al leer el indice compartido desde eventos, pero el ABI esperado en src/lib/chain/abis.ts (y la interfaz EntradaAnclaje que ya recibe `cid`) nunca lo enviaba a `submitReport` ni lo emitia en `ReportSubmitted`. Sin ese campo, un reporte de otro dispositivo no puede mostrar su evidencia: no hay ningun otro lugar on-chain de donde leerlo.",
+      "opciones": [
+        {
+          "nombre": "Mantener el ABI como estaba y resolver el CID con un indice off-chain aparte",
+          "descartada_porque": "Reintroduce una base de datos centralizada por la puerta trasera, justo lo que ADR-009 y ADR-012 evitan a proposito: la cadena es la fuente de verdad compartida."
+        },
+        {
+          "nombre": "No sincronizar evidencia de otros dispositivos, solo descripcion vacia y sin foto",
+          "descartada_porque": "Es peor que la alternativa elegida sin ganar nada a cambio: el campo cuesta lo mismo agregarlo al evento que no agregarlo, y sin el la funcionalidad principal de la seccion 6 del handoff queda coja para siempre, no solo para el MVP."
+        }
+      ],
+      "decision": "`submitReport` gana un parametro `string cid` y `ReportSubmitted` lo emite (no indexado, no cambia los topics existentes). Documentado en abis.ts como el contrato de interfaz vigente.",
+      "consecuencias": [
+        "Los tres puntos que ya usaban la firma anterior (submitReport, getReport, el evento) cambian a la vez: es una correccion, no una extension incremental.",
+        "El equipo de contratos tiene que confirmar esto antes de fijar ReportRegistry.sol — todavia no esta desplegado, asi que el costo de este cambio es minimo si se avisa ahora.",
+        "Sin esta correccion, la lectura de eventos (ADR-032) no podria mostrar evidencia de reportes ajenos nunca, ni siquiera en produccion."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Bajo mientras no haya contratos desplegados: es cambiar 3 lineas en abis.ts. Alto despues del despliegue.",
+      "criterios_rubrica": [
+        "tecnica",
+        "arbitrum"
+      ],
+      "evidencia": [
+        "src/lib/chain/abis.ts",
+        "docs/SIGUIENTES-PASOS-ARBITRUM.md"
+      ],
+      "requiere_validacion_humana": true,
+      "nota_para_humano": "Avisar al equipo de contratos ANTES de que escriban ReportRegistry.sol: submitReport necesita un parametro `cid` adicional que no estaba en la version anterior del handoff."
+    },
+    {
+      "id": "ADR-032",
+      "titulo": "El indice compartido fusiona lo local completo con lo remoto best-effort, por contentHash",
+      "fecha": "2026-08-07",
+      "autor": "IA",
+      "estado": "aceptada",
+      "contexto": "docs/SIGUIENTES-PASOS-ARBITRUM.md §6 pide reconstruir el mapa multi-dispositivo leyendo `ReportSubmitted` con `getLogs`. El evento (incluso corregido por ADR-031) no lleva descripcion ni corroboraciones — esos datos solo existen en el dispositivo que reporto o en eventos de TokenReward que esta version no lee.",
+      "opciones": [
+        {
+          "nombre": "No mostrar reportes remotos hasta tener todos sus campos",
+          "descartada_porque": "Deja el mapa multi-dispositivo vacio hasta un trabajo que no esta planeado para el MVP; peor que mostrar una version incompleta y etiquearlo."
+        },
+        {
+          "nombre": "Sincronizar tambien corroboraciones leyendo TokenReward.corroborate()",
+          "descartada_porque": "Expande el alcance de esta pasada sin que el equipo lo haya pedido. Se anota como siguiente paso, no se construye ahora (REGLAS-IA.md: no expandir sin justificacion fuerte)."
+        }
+      ],
+      "decision": "`src/lib/chain/eventos.ts` expone `leerReportesDesdeCadena` (IO: getLogs + `TokenReward.pendingReward` por reporte) y `fusionarConCadena` (pura, con test): si el `contentHash` de un evento ya existe en los reportes locales, gana la version local completa; si no, se reconstruye una version con seudonimo, zona y evidencia (via el cid del evento) pero con `corroboraciones: []` y `descripcion: \"\"`.",
+      "consecuencias": [
+        "El vecino ve reportes de otros dispositivos apenas hay contratos desplegados, sin esperar a un indexador aparte.",
+        "Los reportes remotos se ven visiblemente mas pobres que los propios (sin descripcion, sin foto salvo que haya cid) — es honesto, no oculta el limite.",
+        "Las corroboraciones de otros dispositivos no se reflejan todavia: la recompensa mostrada para un reporte remoto puede no coincidir con la que otro vecino ve en su propio dispositivo hasta que se lea TokenReward.corroborate().",
+        "AppProvider vuelve a leer la cadena en cada carga (no se persiste en localStorage), asi que el costo es una llamada RPC extra al abrir la app en modo arbitrum."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Bajo: quitar la llamada en AppProvider deja el mapa solo con reportes locales, como hoy.",
+      "criterios_rubrica": [
+        "tecnica",
+        "arbitrum",
+        "ux"
+      ],
+      "evidencia": [
+        "src/lib/chain/eventos.ts",
+        "src/lib/chain/eventos.test.ts",
+        "src/components/proveedores/AppProvider.tsx"
+      ],
+      "requiere_validacion_humana": false
+    },
+    {
+      "id": "ADR-033",
+      "titulo": "Los tres contratos se escriben ahora, con Hardhat 3 aislado en contracts/ como proyecto propio",
+      "fecha": "2026-08-07",
+      "autor": "IA",
+      "estado": "aceptada",
+      "contexto": "Verificado: cero archivos .sol existian en el repo. Las tres interfaces (ABIs, constantes de antisybil.ts, indices de categoria) ya estaban cerradas, asi que no hacia falta esperar a nadie mas para escribirlas. `npm install` de Hardhat resolvio a la version 3, que es ESM puro y no puede compartir el package.json de la raiz (CommonJS, usado por Next.js).",
+      "opciones": [
+        {
+          "nombre": "Foundry en vez de Hardhat",
+          "descartada_porque": "forge/cast/anvil no estan instalados en este entorno y el instalador agrega friccion y riesgo a 5 dias del 12 de agosto. Hardhat es un paquete npm mas, y npm ya funciona probado en este repo."
+        },
+        {
+          "nombre": "hardhat.config.ts en la raiz del repo, compartiendo package.json con el frontend",
+          "descartada_porque": "Hardhat 3 exige `\"type\": \"module\"` en el package.json mas cercano; forzarlo en la raiz habria convertido todo el proyecto Next.js (CommonJS hoy) a ESM de un cambio, un riesgo desproporcionado para lo que se necesitaba."
+        },
+        {
+          "nombre": "Esperar a que el equipo de contratos escriba esto en otro repo",
+          "descartada_porque": "Es la misma logica que ya goberno ADR-001 y ADR-030: esperar concentra el riesgo en los ultimos dias y dejaria la demo sin nada real que mostrar en Arbiscan."
+        }
+      ],
+      "decision": "`contracts/` es un proyecto npm anidado, independiente, con su propio package.json (`\"type\": \"module\"`), su propio node_modules y su propio hardhat.config.ts. Se excluyo de `tsconfig.json` y `eslint.config.mjs` de la raiz (que por defecto incluyen **/*.ts sin acotar a src/). El frontend gana tres scripts de conveniencia (`contracts:compile`, `contracts:test`, `contracts:deploy:sepolia`) que llaman a `npm --prefix contracts`, pero **no** se agregaron a `npm run check` ni a `npm run build`: Solidity no puede romper el build de Vercel. Se escribieron los tres contratos completos (ReportRegistry, TokenReward, IdentityEscrow) con tests — 26 tests en Solidity (forge-std, incluye replicar los casos aplicables de antisybil.test.ts) y 1 test de integracion en TypeScript con viem — pero no se desplegaron: eso requiere una wallet con fondos que la IA no tiene ni debe pedir.",
+      "consecuencias": [
+        "`npm run check` en la raiz sigue exactamente igual (verificado: mismos 93 tests, mismo resultado) antes y despues de este cambio.",
+        "Instalar dependencias de contratos requiere `cd contracts && npm install` una vez, aparte del `npm install` del frontend — documentado en docs/SIGUIENTES-PASOS-ARBITRUM.md.",
+        "El deploy real a Arbitrum Sepolia y la verificacion en Arbiscan quedan como accion manual de quien tenga una wallet fondeada — el modulo de Hardhat Ignition (`contracts/ignition/modules/VecinoSeguro.ts`) y `contracts/.env.example` ya estan listos para que sea solo correr un comando."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Bajo mientras no haya deploy real: borrar la carpeta contracts/ y las tres lineas de exclusion en tsconfig/eslint.",
+      "criterios_rubrica": [
+        "tecnica",
+        "arbitrum"
+      ],
+      "evidencia": [
+        "contracts/hardhat.config.ts",
+        "contracts/package.json",
+        "contracts/contracts/ReportRegistry.sol",
+        "contracts/contracts/TokenReward.sol",
+        "contracts/contracts/IdentityEscrow.sol",
+        "contracts/ignition/modules/VecinoSeguro.ts",
+        "tsconfig.json",
+        "eslint.config.mjs"
+      ],
+      "requiere_validacion_humana": true,
+      "nota_para_humano": "Quien tenga acceso a una wallet con ETH de testnet de Arbitrum Sepolia tiene que correr `npm run contracts:deploy:sepolia` (llenando antes contracts/.env con DEPLOYER_PRIVATE_KEY) para que esto deje de ser codigo listo y pase a ser contratos reales en cadena."
+    },
+    {
+      "id": "ADR-034",
+      "titulo": "Donde vive el limite de frecuencia, y por que corroborate() no revalida geometria on-chain",
+      "fecha": "2026-08-07",
+      "autor": "IA",
+      "estado": "aceptada",
+      "contexto": "src/lib/antisybil.ts dice literalmente 'ESTE ARCHIVO ES LA ESPECIFICACION DE TokenReward.sol', pero TokenReward no tiene ninguna funcion que se llame al momento de reportar — submitReport vive en ReportRegistry. Si el limite de 3 reportes/hora y 15 min/zona no se aplica en algun punto de la cadena, la frase 'el cliente valida antes de gastar gas; la cadena revalida y tiene la ultima palabra' (comentario del propio antisybil.ts) seria falsa: cualquiera podria llamar submitReport sin pasar por el frontend. Ademas, el ABI de corroborate(reportId) (src/lib/chain/abis.ts) no recibe coordenadas del corroborador, asi que el contrato no puede repetir el chequeo de radio de 300 m que si hace buscarCorroboraciones() en el cliente.",
+      "opciones": [
+        {
+          "nombre": "Dejar el limite de frecuencia sin aplicar en ningun contrato, tal como sugeria la atribucion literal a TokenReward.sol",
+          "descartada_porque": "TokenReward no tiene ningun punto de entrada al que llegue una wallet en el momento de reportar. Atribuirle el limite sin darle una funcion que lo aplique lo habria dejado como comentario, no como regla."
+        },
+        {
+          "nombre": "Cambiar el ABI de corroborate() para que reciba latE6/lngE6 y repetir el calculo de distancia (haversine) en Solidity",
+          "descartada_porque": "Es otro cambio de interfaz — el pedido de esta sesion fue seguir las reglas ya establecidas, no volver a cambiarlas. Ademas, haversine en punto fijo es cara en la EVM: es exactamente el argumento que ya sostiene a Stylus como candidato de roadmap en arquitectura.json, no algo para resolver a las apuradas."
+        },
+        {
+          "nombre": "Recompensa optimista: mintear en submitReport, sin esperar corroboracion",
+          "descartada_porque": "ADR-014 ya decidio el modelo conservador para el frontend (recompensa.estado se muestra 'pendiente_corroboracion' sin corroborar). El contrato tiene que ser consistente con lo que la UI ya promete."
+        }
+      ],
+      "decision": "El limite de frecuencia se aplica dentro de ReportRegistry.submitReport (el unico punto de entrada real), con errores custom (LimiteHorarioExcedido, ZonaEnEspera) y storage O(1) por wallet. TokenReward se queda con la parte economica: corroborate(reportId) valida lo que puede sin coordenadas (que quien corrobora no sea el autor, que no repita corroboracion sobre el mismo reporte, que ocurra dentro de los 30 minutos de POLITICA_RECOMPENSA.ventanaCorroboracionMs) pero NO repite el chequeo de radio — es una senal solo del cliente en esta version, limite declarado y no oculto (coherente con 'el anti-Sybil del MVP es basico', ya admitido en docs/PROYECTO.md). El patron de recompensa es conservador y pull en dos pasos: corroborate() fija el monto final (10 VSG base x 1.5 en la primera corroboracion) sin mintear nada; claim() — solo el autor, solo una vez, solo si ya esta liberado — es quien de verdad emite el ERC-20.",
+      "consecuencias": [
+        "Un reporte que nunca se corrobora nunca paga nada, ni siquiera la base — es literalmente lo que dice ADR-014 ('sin corroboracion la recompensa queda pendiente_corroboracion'), sin ningun plazo de expiracion inventado. Puede ser duro para produccion; para la demo del hackathon es facil de escenificar corroborando.",
+        "Las corroboraciones no verifican distancia on-chain: alguien podria corroborar un reporte al otro lado de la ciudad y el contrato no lo detectaria. El cliente si lo filtra hoy; si esto preocupa para produccion, la solucion correcta es extender el ABI de corroborate() con coordenadas, medir el costo real en gas, y recien ahi decidir si vale la pena Stylus.",
+        "IdentityEscrow implementa 2-de-3 = sujeto + plataforma (owner del contrato) + una direccion de autoridad configurable — coincide con UMBRAL_REVELACION de abis.ts y con la descripcion de docs/PROYECTO.md."
+      ],
+      "reversibilidad": "media",
+      "costo_de_revertir": "Medio si ya hay contratos desplegados con vecinos usandolos (migrar balances y estado de reportes); bajo mientras siga sin desplegar.",
+      "criterios_rubrica": [
+        "tecnica",
+        "arbitrum",
+        "problema"
+      ],
+      "evidencia": [
+        "contracts/contracts/ReportRegistry.sol",
+        "contracts/contracts/TokenReward.sol",
+        "contracts/contracts/IdentityEscrow.sol",
+        "contracts/contracts/ReportRegistry.t.sol",
+        "contracts/contracts/TokenReward.t.sol",
+        "contracts/contracts/IdentityEscrow.t.sol"
+      ],
+      "requiere_validacion_humana": true,
+      "nota_para_humano": "Dos cosas para confirmar antes de un despliegue que no sea solo de demo: (1) que un reporte jamas corroborado no pague nada es aceptable, y (2) que corroborate() sin verificacion de distancia on-chain es un riesgo asumible para el MVP."
     }
   ]
 }
