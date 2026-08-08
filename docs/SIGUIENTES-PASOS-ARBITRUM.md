@@ -172,10 +172,21 @@ NEXT_PUBLIC_REPORT_REGISTRY_DEPLOY_BLOCK=0
 
 `NEXT_PUBLIC_REPORT_REGISTRY_DEPLOY_BLOCK` es nuevo: el bloque en el que quedó desplegado
 `ReportRegistry`. El índice compartido (§6) pagina `getLogs` desde ahí — sin este valor pagina
-desde el bloque 0, que en un RPC público puede fallar o ser lento.
+desde el bloque 0, que en un RPC público puede fallar o ser lento. **Dejarlo en `0` no rompe
+nada** (`eventos.ts` pagina en lotes de 100k bloques igual), solo es más lento la primera carga.
+
+**Cómo encontrar el número de bloque** (el CLI de Ignition solo imprime direcciones, no el
+bloque): abrir la dirección de `ReportRegistry` en `sepolia.arbiscan.io`, entrar a la pestaña
+"Contract Creation" y leer el número de bloque de esa transacción.
 
 Las etiquetas `Simulado` de la interfaz desaparecen solas cuando el adaptador reporta
 `simulado: false`. No hay que buscarlas y borrarlas.
+
+**Estado local del despliegue**: `contracts/ignition/deployments/` está en `.gitignore` a
+propósito — no commitear nunca esa carpeta. Un despliegue de prueba contra un nodo local ya
+quedó commiteado por error una vez, en una carpeta `chain-421614` idéntica a la que usaría un
+despliegue real, y generó la impresión de que algo estaba desplegado cuando no lo estaba. Las
+direcciones reales viven en las variables de entorno de Vercel, no en el repo.
 
 ---
 
@@ -236,3 +247,18 @@ Pendiente, del frontend, fuera de esta pasada:
 - [ ] Sincronizar corroboraciones desde `TokenReward.corroborate()` en el índice compartido
 - [ ] Si se decide verificar distancia on-chain en `corroborate()`, extender su ABI con
       coordenadas y recién ahí medir si Stylus se justifica (§7)
+- [ ] **`IdentityEscrow` no está conectado a ninguna pantalla.** Desplegarlo y cargar
+      `NEXT_PUBLIC_IDENTITY_ESCROW_ADDRESS` activa `ReportRegistry`/`TokenReward`, pero
+      `RevelacionSelectiva.tsx` (pestaña Cuenta) sigue siendo una demo puramente client-side,
+      con su `EtiquetaSimulado` puesta a propósito — nada llama a `bindIdentity`,
+      `requestDisclosure` ni `approveDisclosure` todavía. No bloquea el flujo de reportar/
+      recompensar, que es independiente.
+
+### Verificación de que esto está listo (auditoría del 2026-08-07)
+
+Se comparó `src/lib/chain/abis.ts` contra los tres `.sol` función por función y evento por
+evento: coinciden exactamente (tipos, orden de parámetros, `indexed`). No hay ninguna firma que
+vaya a fallar al conectar contra un despliegue real. El módulo de Ignition, la red
+`arbitrumSepolia` de `hardhat.config.ts` y los scripts de `npm run contracts:*` se revisaron de
+punta a punta — nada de eso es un placeholder, es código que ya corrió (local, no en Sepolia
+real) y compiló/testeó en verde. El único bloqueante real es una wallet con ETH de testnet.
