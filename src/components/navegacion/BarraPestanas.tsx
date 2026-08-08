@@ -58,8 +58,11 @@ export function BarraPestanas() {
   // Sin credenciales en el despliegue, la barra completa sigue: no hay forma de entrar.
   const visitante = googleDisponible && !cuenta;
 
+  // La vitrina del visitante: historia, mapa y arquitectura (ADR-044 — el escaparate
+  // tecnico se queda abierto). Reportar, circulo y cuenta llegan al entrar.
+  const RUTAS_VISITANTE = ["/", "/mapa", "/arquitectura"];
   const visibles = visitante
-    ? PESTANAS.filter((p) => p.href === "/" || p.href === "/mapa")
+    ? PESTANAS.filter((p) => RUTAS_VISITANTE.includes(p.href))
     : PESTANAS.filter((p) => !p.requiereSesion || circuloHabilitado);
 
   return (
@@ -101,8 +104,11 @@ export function BarraPestanas() {
         ) : null}
         {visibles.map((pestana, indice) => {
           const activa = ruta === pestana.href;
-          // En modo visitante, Inicio va antes y Mapa despues del boton de Entrar.
-          const orden = visitante ? (indice === 0 ? "order-1" : "order-3") : "";
+          // En modo visitante el boton de Entrar (order-2) parte la fila: Inicio queda
+          // antes y Mapa y Arquitectura despues, en su orden de siempre. Clases literales
+          // a proposito: Tailwind no genera nombres interpolados.
+          const ORDEN_VISITANTE = ["order-1", "order-3", "order-4"] as const;
+          const orden = visitante ? (ORDEN_VISITANTE[indice] ?? "order-5") : "";
 
           if (pestana.destacada) {
             return (

@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { rutaRequiereSesion } from "./acceso";
 
-describe("rutaRequiereSesion (ADR-043)", () => {
-  it("la vitrina publica no exige sesion: inicio, mapa y landing", () => {
+describe("rutaRequiereSesion (ADR-043 + ADR-044)", () => {
+  it("la vitrina publica no exige sesion: inicio, mapa, landing y arquitectura", () => {
     expect(rutaRequiereSesion("/")).toBe(false);
     expect(rutaRequiereSesion("/mapa")).toBe(false);
     expect(rutaRequiereSesion("/landing")).toBe(false);
+    // ADR-044: el escaparate tecnico se queda abierto aunque no haya sesion.
+    expect(rutaRequiereSesion("/arquitectura")).toBe(false);
   });
 
   it("exige sesion para reportar", () => {
@@ -16,9 +18,8 @@ describe("rutaRequiereSesion (ADR-043)", () => {
     expect(rutaRequiereSesion("/circulo")).toBe(true);
   });
 
-  it("exige sesion para la cuenta y la arquitectura", () => {
+  it("exige sesion para la cuenta", () => {
     expect(rutaRequiereSesion("/cuenta")).toBe(true);
-    expect(rutaRequiereSesion("/arquitectura")).toBe(true);
   });
 
   it("tambien protege subrutas", () => {

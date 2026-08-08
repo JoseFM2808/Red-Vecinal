@@ -4,7 +4,7 @@
 
 Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o por el equipo se registra aquí ANTES o AL MOMENTO de escribir el código que la implementa. `docs/DECISIONES.md` se genera desde este archivo (npm run docs) y la pestaña Arquitectura de la app lo renderiza.
 
-**45 decisiones registradas · 24 esperan validacion humana**
+**46 decisiones registradas · 24 esperan validacion humana**
 
 ## Esperan que una persona decida
 
@@ -33,7 +33,7 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | ADR-039 | La vista agregada de eventos se abre al visitante sin cuenta, como gancho de registro | Confirmar donde queda la linea entre lo abierto y lo de pago. Hoy se abre: conteo de reportes, numero de zonas activas, corroborados, ranking de las 4 zonas mas activas y los 5 ultimos avisos con categoria, zona y antiguedad. Se mantiene cerrado: descripcion, coordenada exacta, autor, quien corroboro, historico mas alla de 24 h y cualquier exportacion. Si el plan comercial para aseguradoras y juntas necesita que el ranking por zona sea de pago, hay que recortar esta vista antes de hablar con el primer cliente. |
 | ADR-041 | Confirmar el reporte de otro exige estar a menos de 300 m del hecho | El equipo de contratos debe replicar esta regla en TokenReward.corroborate(): sin la comprobacion on-chain, el limite del cliente se salta llamando al contrato directo. Ver evaluarCorroboracion() y sus tests como especificacion. |
 | ADR-042 | Los sismos llegan del IGP y el vecino responde la intensidad, en vez de reportarlos | Dos cosas a validar. 1) El IGP es un servicio publico sin SLA ni terminos de uso publicados para este endpoint: confirmar que el equipo acepta esa dependencia para la demo (la app se degrada con aviso si falla). 2) El umbral de alerta (M3.5) y los radios por magnitud son criterio nuestro, no del IGP: revisarlos con alguien que sepa sismologia antes de presumirlos delante del jurado. |
-| ADR-043 | Sin sesion, la app es la vitrina: historia en Inicio y mapa de incidentes con filtros | Decision de producto que conviene confirmar antes del 12: la pestana Arquitectura queda detras del login. Es la pantalla que mas puntua con el jurado tecnico — si un juez explora la app por su cuenta sin entrar, no la va a ver. Alternativa barata si molesta: sacar /arquitectura de RUTAS_PROTEGIDAS (una linea con test). |
+| ADR-043 | Sin sesion, la app es la vitrina: historia en Inicio y mapa de incidentes con filtros | Decision de producto que conviene confirmar antes del 12: la pestana Arquitectura queda detras del login. Es la pantalla que mas puntua con el jurado tecnico — si un juez explora la app por su cuenta sin entrar, no la va a ver. Alternativa barata si molesta: sacar /arquitectura de RUTAS_PROTEGIDAS (una linea con test). RESUELTO: el equipo decidio mantenerla publica — ver ADR-044. |
 
 ## Indice
 
@@ -84,6 +84,7 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | [ADR-041](#adr-041) | Confirmar el reporte de otro exige estar a menos de 300 m del hecho | IA+Humano | aceptada | media | Implementacion tecnica, Ecosistema Arbitrum, Problema e impacto |
 | [ADR-042](#adr-042) | Los sismos llegan del IGP y el vecino responde la intensidad, en vez de reportarlos | IA+Humano | aceptada | media | Problema e impacto, Producto y UX, Implementacion tecnica |
 | [ADR-043](#adr-043) | Sin sesion, la app es la vitrina: historia en Inicio y mapa de incidentes con filtros | IA+Humano | aceptada | alta | Producto y UX, Pitch y demo, Problema e impacto |
+| [ADR-044](#adr-044) | La pestana Arquitectura vuelve a ser publica, sin sesion | Humano | aceptada | alta | Pitch y demo, Implementacion tecnica, Producto y UX |
 
 ---
 
@@ -1497,4 +1498,34 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 
 **Evidencia en el codigo.** `src/lib/acceso.ts`, `src/lib/acceso.test.ts`, `src/components/navegacion/BarraPestanas.tsx`, `src/components/inicio/PortalMapa.tsx`, `src/components/mapa/MapaReportes.tsx`
 
-> **Necesita decision humana:** Decision de producto que conviene confirmar antes del 12: la pestana Arquitectura queda detras del login. Es la pantalla que mas puntua con el jurado tecnico — si un juez explora la app por su cuenta sin entrar, no la va a ver. Alternativa barata si molesta: sacar /arquitectura de RUTAS_PROTEGIDAS (una linea con test).
+> **Necesita decision humana:** Decision de producto que conviene confirmar antes del 12: la pestana Arquitectura queda detras del login. Es la pantalla que mas puntua con el jurado tecnico — si un juez explora la app por su cuenta sin entrar, no la va a ver. Alternativa barata si molesta: sacar /arquitectura de RUTAS_PROTEGIDAS (una linea con test). RESUELTO: el equipo decidio mantenerla publica — ver ADR-044.
+
+---
+
+## ADR-044
+
+### La pestana Arquitectura vuelve a ser publica, sin sesion
+
+`2026-08-08` · autor: **Humano** · estado: **aceptada** · reversibilidad: **alta**
+
+**Contexto.** ADR-043 dejo /arquitectura detras del login y marco esa parte como pendiente de validacion humana, advirtiendo el costo: es la pantalla que mas puntua ante el jurado tecnico, y un juez que explore la app sin cuenta no la veria. El equipo respondio la pregunta: la Arquitectura debe seguir visible aunque el usuario no este logueado.
+
+**Alternativas descartadas.**
+
+- *Mantenerla detras del login (como quedo en ADR-043)* — El escaparate tecnico existe para ser visto sin fricciones. La pestana no actua ni guarda datos de nadie: no hay nada que proteger, solo transparencia que perder.
+- *Version publica recortada y version completa con sesion* — Dos variantes de la misma pantalla a cuatro dias de la entrega es mantenimiento doble para un beneficio que nadie pidio.
+
+**Decision.** /arquitectura sale de RUTAS_PROTEGIDAS y entra a la vitrina del visitante junto a Inicio, Mapa y la landing. La barra en modo visitante muestra cuatro destinos: Inicio, Entrar, Mapa y Arquitectura. Las rutas que siguen pidiendo cuenta son las que actuan o guardan datos de la persona: reportar, circulo y cuenta.
+
+**Consecuencias.**
+
+- Un jurado que explora sin cuenta ve capas, contratos, decisiones y limites: el escaparate cumple su funcion.
+- El criterio de proteccion queda mas nitido y facil de defender: se protege lo que actua en nombre de alguien o guarda sus datos, no lo que informa.
+- El enlace a la arquitectura desde la landing y desde Inicio vuelve a funcionar para visitantes, sin pantalla de acceso interpuesta.
+- La barra del visitante pasa de tres a cuatro elementos; verificado que entran en 360 px porque son menos que los seis del modo con sesion.
+
+**Costo de revertir.** Devolver /arquitectura a RUTAS_PROTEGIDAS y quitarla de la vitrina de la barra: dos lineas y un test.
+
+**Sirve a.** Pitch y demo, Implementacion tecnica, Producto y UX
+
+**Evidencia en el codigo.** `src/lib/acceso.ts`, `src/lib/acceso.test.ts`, `src/components/navegacion/BarraPestanas.tsx`

@@ -1791,7 +1791,45 @@
         "src/components/mapa/MapaReportes.tsx"
       ],
       "requiere_validacion_humana": true,
-      "nota_para_humano": "Decision de producto que conviene confirmar antes del 12: la pestana Arquitectura queda detras del login. Es la pantalla que mas puntua con el jurado tecnico — si un juez explora la app por su cuenta sin entrar, no la va a ver. Alternativa barata si molesta: sacar /arquitectura de RUTAS_PROTEGIDAS (una linea con test)."
+      "nota_para_humano": "Decision de producto que conviene confirmar antes del 12: la pestana Arquitectura queda detras del login. Es la pantalla que mas puntua con el jurado tecnico — si un juez explora la app por su cuenta sin entrar, no la va a ver. Alternativa barata si molesta: sacar /arquitectura de RUTAS_PROTEGIDAS (una linea con test). RESUELTO: el equipo decidio mantenerla publica — ver ADR-044."
+    },
+    {
+      "id": "ADR-044",
+      "titulo": "La pestana Arquitectura vuelve a ser publica, sin sesion",
+      "fecha": "2026-08-08",
+      "autor": "Humano",
+      "estado": "aceptada",
+      "contexto": "ADR-043 dejo /arquitectura detras del login y marco esa parte como pendiente de validacion humana, advirtiendo el costo: es la pantalla que mas puntua ante el jurado tecnico, y un juez que explore la app sin cuenta no la veria. El equipo respondio la pregunta: la Arquitectura debe seguir visible aunque el usuario no este logueado.",
+      "opciones": [
+        {
+          "nombre": "Mantenerla detras del login (como quedo en ADR-043)",
+          "descartada_porque": "El escaparate tecnico existe para ser visto sin fricciones. La pestana no actua ni guarda datos de nadie: no hay nada que proteger, solo transparencia que perder."
+        },
+        {
+          "nombre": "Version publica recortada y version completa con sesion",
+          "descartada_porque": "Dos variantes de la misma pantalla a cuatro dias de la entrega es mantenimiento doble para un beneficio que nadie pidio."
+        }
+      ],
+      "decision": "/arquitectura sale de RUTAS_PROTEGIDAS y entra a la vitrina del visitante junto a Inicio, Mapa y la landing. La barra en modo visitante muestra cuatro destinos: Inicio, Entrar, Mapa y Arquitectura. Las rutas que siguen pidiendo cuenta son las que actuan o guardan datos de la persona: reportar, circulo y cuenta.",
+      "consecuencias": [
+        "Un jurado que explora sin cuenta ve capas, contratos, decisiones y limites: el escaparate cumple su funcion.",
+        "El criterio de proteccion queda mas nitido y facil de defender: se protege lo que actua en nombre de alguien o guarda sus datos, no lo que informa.",
+        "El enlace a la arquitectura desde la landing y desde Inicio vuelve a funcionar para visitantes, sin pantalla de acceso interpuesta.",
+        "La barra del visitante pasa de tres a cuatro elementos; verificado que entran en 360 px porque son menos que los seis del modo con sesion."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Devolver /arquitectura a RUTAS_PROTEGIDAS y quitarla de la vitrina de la barra: dos lineas y un test.",
+      "criterios_rubrica": [
+        "pitch",
+        "tecnica",
+        "ux"
+      ],
+      "evidencia": [
+        "src/lib/acceso.ts",
+        "src/lib/acceso.test.ts",
+        "src/components/navegacion/BarraPestanas.tsx"
+      ],
+      "requiere_validacion_humana": false
     }
   ]
 }

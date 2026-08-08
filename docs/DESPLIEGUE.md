@@ -167,8 +167,9 @@ Para el ensayo con los compañeros, cada uno con su cuenta de Google:
 3. Cada persona abre `https://<tu-proyecto>.vercel.app` en **su propio celular con datos
    móviles** (no la misma red WiFi de la laptop, para que la prueba sea honesta).
 4. Sin sesión debe ver: Inicio con el portal del mapa, el mapa con filtros de fecha y
-   tipo, y el botón **Entrar** al centro de la barra. Nada más.
-5. Al entrar con Google: aparecen Reportar, Círculo, Cuenta y Arquitectura. El alias
+   tipo, la pestaña **Arquitectura** (pública a propósito, ADR-044) y el botón
+   **Entrar** al centro de la barra. Nada más.
+5. Al entrar con Google: aparecen Reportar, Círculo y Cuenta. El alias
    `vecino-XXXX` se deriva de la cuenta — entrar desde otro teléfono da el mismo.
 6. Probar el ciclo completo entre dos personas: A reporta, B lo ve en el mapa **de su
    propio dispositivo** — ojo: sin contrato desplegado el índice compartido no existe,
