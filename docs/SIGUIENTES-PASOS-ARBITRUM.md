@@ -1,9 +1,13 @@
 # Siguientes pasos — integración con Arbitrum
 
-Documento de handoff para el equipo de contratos. El frontend ya está construido contra
-la interfaz de abajo: cuando la implementen, **no hay que tocar ninguna pantalla**.
+Estado actual: `NEXT_PUBLIC_CHAIN_MODE=simulado`. El frontend (adaptador, lectura de eventos) y
+los tres contratos ya están escritos y testeados (ADR-030 a ADR-034). **No queda código por
+escribir para activar la integración real** — falta una wallet con ETH de testnet para
+desplegar, y después cargar tres direcciones en Vercel.
 
-Estado actual: `NEXT_PUBLIC_CHAIN_MODE=simulado`. Todo lo que falta está listado aquí.
+Los contratos viven en [`contracts/`](../contracts), un proyecto Hardhat 3 + viem separado del
+frontend (tiene su propio `package.json`, no afecta `npm run check` ni `npm run build`). Antes
+de tocarlo: `cd contracts && npm install`.
 
 ---
 
@@ -20,7 +24,11 @@ Estado actual: `NEXT_PUBLIC_CHAIN_MODE=simulado`. Todo lo que falta está listad
 
 ---
 
-## 2. Contratos a desplegar en Arbitrum Sepolia (chainId 421614)
+## 2. Contratos — ya escritos en `contracts/contracts/` (ADR-033, ADR-034)
+
+Los tres contratos están completos, compilan y tienen 27 tests en verde (26 en Solidity con
+`forge-std`, 1 de integración en TypeScript con viem — correr con `npm run contracts:test` desde
+la raíz). Lo de abajo describe lo que **ya implementan**, no una especificación por escribir.
 
 ### `ReportRegistry.sol`
 
@@ -30,7 +38,8 @@ function submitReport(
     int32   latE6,
     int32   lngE6,
     uint8   category,
-    bytes32 zoneId
+    bytes32 zoneId,
+    string  calldata cid
 ) external returns (uint256 reportId);
 
 event ReportSubmitted(
@@ -40,9 +49,15 @@ event ReportSubmitted(
     int32   latE6,
     int32   lngE6,
     uint8   category,
-    uint64  timestamp
+    uint64  timestamp,
+    string  cid
 );
 ```
+
+> **Cambio sobre la versión anterior de este documento (ADR-031):** `submitReport` gana el
+> parámetro `cid` y el evento lo emite. Sin él, un vecino no puede ver la evidencia de un
+> reporte hecho desde otro teléfono — no hay ningún otro lugar on-chain de donde leerlo, y el
+> índice compartido (§6) ya está construido asumiendo que este campo existe.
 
 - `contentHash` = SHA-256 del payload canónico (ver §4). Son 32 bytes exactos.
 - `latE6` / `lngE6` = grados × 1e6, ya truncados a 4 decimales por el cliente. Entran en `int32`.
@@ -50,8 +65,10 @@ event ReportSubmitted(
   **Los índices no se reordenan nunca**: los que ya están escritos en cadena no se pueden
   cambiar (`src/lib/categorias.ts`). No pongan un máximo de 2 categorías en el contrato —
   la tercera se agregó el 7 de agosto (ADR-019) y puede haber más después del hackathon.
-- `zoneId`: celda de ~550 m. Hoy el cliente la manda como string `z-2391_-15409`; decidan si la
-  quieren como `keccak256(zoneId)` y avisen — es un cambio de una línea en `flujo-reporte.ts`.
+- `zoneId`: celda de ~550 m. El cliente la calcula como string (`z-2391_-15409`) y el adaptador
+  del frontend la manda como `keccak256(zoneId)` (ADR-030) — es la opción que este documento
+  dejaba abierta. Si prefieren otro formato, es una función en `arbitrum-adapter.ts`, avisen.
+- `cid`: string del CID de IPFS, o cadena vacía si el reporte no lleva evidencia.
 
 ### `TokenReward.sol` (ERC-20, símbolo `VSG`)
 
@@ -68,61 +85,42 @@ aplica antes de enviar y los mensajes de error al vecino se basan en ellas:
 | `ventanaCorroboracionMs` | 30 min | Ventana temporal de corroboración |
 | `multiplicadorCorroborado` | 1.5× | Multiplicador con ≥1 corroboración independiente |
 
-Orden de las reglas (los tests lo verifican): **primero el límite horario, después el de zona**.
-Los 18 tests de `src/lib/antisybil.test.ts` describen los casos borde — úsenlos como lista de
-casos para los tests de Solidity.
+Orden de las reglas (los tests lo verifican, en ambos lados): **primero el límite horario,
+después el de zona**. Los 18 tests de `src/lib/antisybil.test.ts` describen los casos borde;
+`contracts/contracts/ReportRegistry.t.sol` y `TokenReward.t.sol` cubren los que tienen un
+análogo on-chain (no todos: los que dependen de geometría o de comparar strings en mayúsculas no
+aplican a una `address` de Solidity — ver ADR-034 para el detalle completo).
 
-> **Decisión pendiente (ADR-014):** ¿el mint es optimista al reportar, o solo tras corroborarse?
-> El frontend implementa el conservador: sin corroboración la recompensa queda
-> `pendiente_corroboracion`. Si eligen el optimista, avísennos.
+> **ADR-014 resuelta:** el mint es conservador y en dos pasos (ADR-034). `corroborate(reportId)`
+> no mintea nada, solo fija el monto final la primera vez que alguien distinto del autor
+> corrobora dentro de los 30 minutos. `claim(reportId)` — solo el autor, solo una vez, solo si ya
+> está liberado — es quien de verdad emite el ERC-20. **Consecuencia a tener presente:** un
+> reporte que nunca se corrobora nunca paga nada, ni la base.
+>
+> **Límite declarado:** `corroborate()` no repite el chequeo de radio de 300 m que sí hace el
+> cliente, porque el ABI no le pasa coordenadas del corroborador — es una señal solo del cliente
+> en esta versión. Extender el ABI para que las reciba (y entonces sí valdría la pena medir
+> Stylus, ver §7) es un cambio de interfaz que no se tomó sin que el equipo lo pida.
 
 ### `IdentityEscrow.sol`
 
-Multisig 2-de-3 (usuario + plataforma + autoridad). Sin circuitos ZK para el MVP.
-Lo importante del diseño: **toda solicitud de revelación deja rastro público en cadena**.
+Multisig 2-de-3 (sujeto + plataforma + autoridad, con la dirección de autoridad configurable por
+el owner). Sin circuitos ZK para el MVP. Lo importante del diseño: **toda solicitud de
+revelación deja rastro público en cadena** (eventos `DisclosureRequested`/`DisclosureApproved`).
 
 ---
 
-## 3. Implementar `ArbitrumChainAdapter`
+## 3. `ArbitrumChainAdapter` — ya implementado (ADR-030)
 
-Crear `src/lib/chain/arbitrum-adapter.ts` implementando la interfaz de `src/lib/chain/types.ts`:
+Ya no es tarea del equipo de contratos. `src/lib/chain/arbitrum-adapter.ts` implementa
+`AdaptadorCadena` con `viem`, y `src/lib/chain/index.ts` ya intenta usarlo cuando hay direcciones
+cargadas (con fallback seguro al simulado si falla). Nada de esto cambia cuando desplieguen:
+solo hace falta que las variables de entorno del §5 apunten a contratos reales.
 
-```ts
-export interface AdaptadorCadena {
-  readonly id: "simulado" | "arbitrum";
-  readonly red: RedArbitrum;
-  readonly simulado: boolean;
-  readonly explicacion: string;
-  anclarReporte(entrada: EntradaAnclaje): Promise<ReciboCadena>;
-  saldoRecompensas(direccion: string): Promise<number>;
-}
-```
-
-Y cambiar **una sola línea** en `src/lib/chain/index.ts`:
-
-```ts
-if (integracionCadenaLista()) return crearAdaptadorArbitrum(CONFIG);
-```
-
-Esqueleto sugerido con viem (agregar `viem` como dependencia y registrar el ADR correspondiente
-según `docs/REGLAS-IA.md`):
-
-```ts
-import { createPublicClient, createWalletClient, custom, http, parseAbi } from "viem";
-import { arbitrumSepolia } from "viem/chains";
-import { ABI_REPORT_REGISTRY } from "./abis";
-
-const abi = parseAbi(ABI_REPORT_REGISTRY);
-// submitReport(contentHash, latE6, lngE6, category, zoneId)
-```
-
-Puntos a respetar para que la UI siga funcionando sin cambios:
-
-- `anclarReporte` devuelve `ReciboCadena` con `txHash`, `bloque`, `chainId`, `urlExplorador`,
-  `costoGasUsd` y `simulado: false`.
-- `urlExplorador` se arma con `urlTransaccion(chainId, txHash)` de `src/lib/chain/redes.ts`.
-- Si la transacción falla, lanzar `Error` con mensaje en español: el flujo ya lo captura y lo
-  muestra al vecino sin romperse.
+Un detalle a conocer: el adaptador firma con lo que devuelva `src/lib/chain/proveedor-inyectado.ts`
+(hoy, `window.ethereum` — MetaMask u otra wallet inyectada), porque el frontend todavía no decidió
+Privy vs Web3Auth. Para probar el adaptador contra Sepolia hace falta una wallet inyectada con esa
+red configurada y con fondos de un faucet.
 
 ---
 
@@ -142,9 +140,26 @@ y aplica SHA-256. Ejemplo verificable en `src/lib/hash.test.ts`.
 
 ---
 
-## 5. Activar la integración
+## 5. Cómo desplegar y activar la integración
 
-Una vez desplegados, en Vercel (Project Settings → Environment Variables):
+Con una wallet nueva (nunca una con fondos reales) fondeada desde un faucet de Arbitrum Sepolia:
+
+```bash
+cd contracts
+cp .env.example .env        # completar DEPLOYER_PRIVATE_KEY como minimo
+npm install                 # si no se hizo antes
+npm run compile
+npm run test                # 27 tests, deberian pasar todos antes de desplegar
+npm run deploy:sepolia      # corre el modulo de Hardhat Ignition, imprime las 3 direcciones
+npm run verify:sepolia      # opcional pero recomendado: verifica el codigo fuente en Arbiscan
+```
+
+`contracts/ignition/modules/VecinoSeguro.ts` despliega los tres en el orden correcto
+(`ReportRegistry` primero, `TokenReward` depende de su dirección) y usa la misma cuenta como
+owner/autoridad de `IdentityEscrow` por defecto — para una autoridad distinta, agregar
+`--parameters '{"VecinoSeguro":{"autoridad":"0x..."}}'` al comando de deploy.
+
+Con las tres direcciones ya impresas, en Vercel (Project Settings → Environment Variables):
 
 ```
 NEXT_PUBLIC_CHAIN_MODE=arbitrum
@@ -152,23 +167,26 @@ NEXT_PUBLIC_CHAIN_ID=421614
 NEXT_PUBLIC_REPORT_REGISTRY_ADDRESS=0x...
 NEXT_PUBLIC_TOKEN_REWARD_ADDRESS=0x...
 NEXT_PUBLIC_IDENTITY_ESCROW_ADDRESS=0x...
+NEXT_PUBLIC_REPORT_REGISTRY_DEPLOY_BLOCK=0
 ```
+
+`NEXT_PUBLIC_REPORT_REGISTRY_DEPLOY_BLOCK` es nuevo: el bloque en el que quedó desplegado
+`ReportRegistry`. El índice compartido (§6) pagina `getLogs` desde ahí — sin este valor pagina
+desde el bloque 0, que en un RPC público puede fallar o ser lento.
 
 Las etiquetas `Simulado` de la interfaz desaparecen solas cuando el adaptador reporta
 `simulado: false`. No hay que buscarlas y borrarlas.
 
 ---
 
-## 6. Índice compartido entre dispositivos
+## 6. Índice compartido entre dispositivos — ya implementado (ADR-032)
 
-Hoy los reportes viven en el dispositivo (ADR-009). Para que dos teléfonos vean el mismo mapa
-—lo que la demo en vivo necesita— hay que reconstruir la lista desde los eventos:
-
-1. `getLogs` sobre `ReportSubmitted` en `ReportRegistry`.
-2. Resolver el CID de cada reporte contra el gateway de IPFS.
-3. Sustituir `cargarReportes()` en `src/lib/repositorio.ts` por esa lectura.
-
-Nada más cambia: las pantallas solo conocen esas cuatro funciones del repositorio.
+Ya no es tarea del equipo de contratos. `src/lib/chain/eventos.ts` reconstruye la lista leyendo
+`getLogs` sobre `ReportSubmitted`, resuelve la evidencia con el `cid` del evento (§2), y
+`AppProvider` la combina con lo que ya hay en el dispositivo la primera vez que carga en modo
+`arbitrum`. Limitación conocida y declarada (no oculta): un reporte que llega solo por evento no
+trae descripción ni las corroboraciones de otros dispositivos todavía — ver la nota_para_humano
+de ADR-032 y el paso "Sincronizar corroboraciones" en la pestaña Arquitectura.
 
 ---
 
@@ -185,13 +203,36 @@ evaluado, que es más creíble que un logo en una slide.
 
 ## Checklist de entrega
 
-- [ ] Los tres contratos desplegados en Arbitrum Sepolia y verificados en Arbiscan
-- [ ] Constantes de `antisybil.ts` portadas a `TokenReward.sol`
-- [ ] Tests de Solidity cubriendo los 18 casos de `antisybil.test.ts`
-- [ ] Decidido SHA-256 vs keccak256 (ADR-003)
-- [ ] Decidido mint optimista vs conservador (ADR-014)
-- [ ] Decidido formato de `zoneId` (string vs keccak256)
-- [ ] `ArbitrumChainAdapter` implementado y `chain/index.ts` actualizado
-- [ ] Variables de entorno cargadas en Vercel
+Ya hecho — frontend (ADR-030, ADR-031, ADR-032):
+
+- [x] `ArbitrumChainAdapter` implementado y `chain/index.ts` actualizado, con fallback seguro
+- [x] Mapa hidratado desde eventos `ReportSubmitted` (best-effort, ver §6)
+- [x] Formato de `zoneId` resuelto: `keccak256` del string, aplicado en el adaptador
+- [x] ABI corregido para incluir `cid` en `submitReport`/`ReportSubmitted`
+
+Ya hecho — contratos (ADR-033, ADR-034):
+
+- [x] Los tres contratos escritos: `ReportRegistry.sol`, `TokenReward.sol`, `IdentityEscrow.sol`
+- [x] Constantes de `antisybil.ts` portadas a `ReportRegistry`/`TokenReward` (rate-limit en el
+      registro, economía en el token — ver ADR-034 para por qué se dividió así)
+- [x] 27 tests en verde: 26 en Solidity cubriendo los casos aplicables de `antisybil.test.ts`,
+      1 de integración en TypeScript con viem contra el flujo completo
+- [x] Confirmado SHA-256 vs keccak256 (ADR-003, sin cambios: `bytes32` acepta cualquiera) y
+      `keccak256(zoneId)` (ADR-030) del lado del contrato
+- [x] Decidido mint optimista vs conservador (ADR-014 → conservador, patrón pull en ADR-034)
+- [x] Módulo de despliegue (`contracts/ignition/modules/VecinoSeguro.ts`) listo para correr
+
+Pendiente — necesita una wallet fondeada, ninguna IA debe tenerla:
+
+- [ ] Los tres contratos desplegados en Arbitrum Sepolia (`npm run contracts:deploy:sepolia`)
+- [ ] Código fuente verificado en Arbiscan (`npm run --prefix contracts verify:sepolia`)
+- [ ] Variables de entorno cargadas en Vercel (incluye `NEXT_PUBLIC_REPORT_REGISTRY_DEPLOY_BLOCK`)
 - [ ] Costo real por anclaje medido → reemplazar la estimación en `src/lib/chain/redes.ts`
-- [ ] Mapa hidratado desde eventos `ReportSubmitted`
+- [ ] Probar `ArbitrumChainAdapter` end-to-end contra los contratos reales (no fue posible antes del despliegue)
+
+Pendiente, del frontend, fuera de esta pasada:
+
+- [ ] Conectar Privy o Web3Auth en vez de la wallet inyectada interina
+- [ ] Sincronizar corroboraciones desde `TokenReward.corroborate()` en el índice compartido
+- [ ] Si se decide verificar distancia on-chain en `corroborate()`, extender su ABI con
+      coordenadas y recién ahí medir si Stylus se justifica (§7)

@@ -1,0 +1,49 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_28-76e3769d5985e52d0891070b154a428af716a6b8",
+  "solcVersion": "0.8.28",
+  "solcLongVersion": "0.8.28+commit.7893614a",
+  "compilerType": "solc",
+  "toolVersions": {
+    "hardhat": "3.12.0"
+  },
+  "userSourceNameMap": {
+    "contracts/ReportRegistry.sol": "project/contracts/ReportRegistry.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "cancun",
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode.linkReferences",
+            "evm.bytecode.object",
+            "evm.bytecode.opcodes",
+            "evm.bytecode.sourceMap",
+            "evm.deployedBytecode.immutableReferences",
+            "evm.deployedBytecode.linkReferences",
+            "evm.deployedBytecode.object",
+            "evm.deployedBytecode.opcodes",
+            "evm.deployedBytecode.sourceMap",
+            "evm.methodIdentifiers"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/ReportRegistry.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.28;\n\n/// @title ReportRegistry\n/// @notice Ancla el hash de un reporte vecinal (foto/video via IPFS + coordenada + categoria +\n/// timestamp) sin guardar identidad real. La direccion que llama es pseudonima por diseno\n/// (src/lib/identidad.ts en el frontend).\n///\n/// El limite de frecuencia (maxReportesPorVentana / esperaMismaZonaMs de src/lib/antisybil.ts)\n/// se aplica ACA, no en TokenReward: este es el unico punto de entrada real al que puede llegar\n/// cualquier wallet, con o sin pasar por la app. Sin este chequeo aqui, \"la cadena revalida y\n/// tiene la ultima palabra\" (comentario de antisybil.ts) seria falso.\ncontract ReportRegistry {\n  struct Report {\n    bytes32 contentHash;\n    address reporter;\n    int32 latE6;\n    int32 lngE6;\n    uint8 category;\n    uint64 timestamp;\n    string cid;\n  }\n\n  /// @dev Especificacion: src/lib/antisybil.ts POLITICA_RECOMPENSA.\n  uint256 public constant VENTANA_HORARIA = 1 hours;\n  uint256 public constant MAX_REPORTES_POR_VENTANA = 3;\n  uint256 public constant ESPERA_MISMA_ZONA = 15 minutes;\n\n  uint256 public totalReports;\n  mapping(uint256 => Report) private _reports;\n\n  /// @dev Buffer circular de los ultimos MAX_REPORTES_POR_VENTANA timestamps por wallet, mas\n  /// un contador de cuantas posiciones son datos reales (tope 3). El contador es necesario:\n  /// no basta con \"posicion en 0 = nunca reporto\", porque en una red simulada de test\n  /// block.timestamp puede empezar cerca de la epoca y un timestamp real temprano se\n  /// confundiria con una posicion vacia.\n  mapping(address => uint256[3]) private _ultimosTimestamps;\n  mapping(address => uint8) private _cursorRingBuffer;\n  mapping(address => uint8) private _reportesRegistrados;\n\n  mapping(address => mapping(bytes32 => uint256)) private _ultimoEnZona;\n\n  event ReportSubmitted(\n    uint256 indexed reportId,\n    address indexed reporter,\n    bytes32 contentHash,\n    int32 latE6,\n    int32 lngE6,\n    uint8 category,\n    uint64 timestamp,\n    string cid\n  );\n\n  error HashInvalido();\n  error LimiteHorarioExcedido(uint256 proximoPermitidoEn);\n  error ZonaEnEspera(uint256 proximoPermitidoEn);\n  error ReporteInexistente();\n\n  function submitReport(\n    bytes32 contentHash,\n    int32 latE6,\n    int32 lngE6,\n    uint8 category,\n    bytes32 zoneId,\n    string calldata cid\n  ) external returns (uint256 reportId) {\n    if (contentHash == bytes32(0)) revert HashInvalido();\n\n    // Regla 1 (prioridad sobre la 2, igual que evaluarReporte en antisybil.ts): frecuencia\n    // por wallet. El mas antiguo de los ultimos 3 define si el 4to reporte en la hora entra.\n    // Solo se aplica si ya hizo al menos 3 reportes: antes de eso no puede haber alcanzado\n    // el limite todavia.\n    if (uint256(_reportesRegistrados[msg.sender]) >= MAX_REPORTES_POR_VENTANA) {\n      uint256 masAntiguo = _masAntiguoDeLosUltimos(msg.sender);\n      if (block.timestamp - masAntiguo < VENTANA_HORARIA) {\n        revert LimiteHorarioExcedido(masAntiguo + VENTANA_HORARIA);\n      }\n    }\n\n    // Regla 2: espera por zona.\n    uint256 ultimoZona = _ultimoEnZona[msg.sender][zoneId];\n    if (ultimoZona != 0 && block.timestamp - ultimoZona < ESPERA_MISMA_ZONA) {\n      revert ZonaEnEspera(ultimoZona + ESPERA_MISMA_ZONA);\n    }\n\n    _registrarEnvio(msg.sender, zoneId);\n\n    reportId = ++totalReports;\n    _reports[reportId] = Report({\n      contentHash: contentHash,\n      reporter: msg.sender,\n      latE6: latE6,\n      lngE6: lngE6,\n      category: category,\n      timestamp: uint64(block.timestamp),\n      cid: cid\n    });\n\n    emit ReportSubmitted(\n      reportId,\n      msg.sender,\n      contentHash,\n      latE6,\n      lngE6,\n      category,\n      uint64(block.timestamp),\n      cid\n    );\n  }\n\n  function getReport(\n    uint256 reportId\n  )\n    external\n    view\n    returns (\n      bytes32 contentHash,\n      address reporter,\n      int32 latE6,\n      int32 lngE6,\n      uint8 category,\n      uint64 timestamp,\n      string memory cid\n    )\n  {\n    if (reportId == 0 || reportId > totalReports) revert ReporteInexistente();\n    Report storage r = _reports[reportId];\n    return (r.contentHash, r.reporter, r.latE6, r.lngE6, r.category, r.timestamp, r.cid);\n  }\n\n  function _masAntiguoDeLosUltimos(address wallet) private view returns (uint256) {\n    uint256[3] storage ts = _ultimosTimestamps[wallet];\n    uint256 menor = ts[0];\n    if (ts[1] < menor) menor = ts[1];\n    if (ts[2] < menor) menor = ts[2];\n    return menor;\n  }\n\n  function _registrarEnvio(address wallet, bytes32 zoneId) private {\n    uint8 cursor = _cursorRingBuffer[wallet];\n    _ultimosTimestamps[wallet][cursor] = block.timestamp;\n    _cursorRingBuffer[wallet] = (cursor + 1) % 3;\n    _ultimoEnZona[wallet][zoneId] = block.timestamp;\n\n    // Tope en 3: es todo lo que _masAntiguoDeLosUltimos necesita saber, y evita que un\n    // reportero muy activo desborde un uint8 despues de 255 reportes.\n    if (uint256(_reportesRegistrados[wallet]) < MAX_REPORTES_POR_VENTANA) {\n      _reportesRegistrados[wallet] += 1;\n    }\n  }\n}\n"
+      }
+    }
+  }
+}

@@ -60,12 +60,12 @@ Repositorio de reportes con persistencia en el dispositivo y datos sembrados de 
 - Tecnologias: React Context, localStorage
 - Codigo: `src/lib/repositorio.ts`, `src/lib/seed.ts`, `src/components/proveedores/AppProvider.tsx`
 
-### Capa de cadena (Arbitrum) `cadena` — Pendiente (equipo de contratos)
+### Capa de cadena (Arbitrum) `cadena` — Simulado
 
-Interfaz ChainAdapter: anclar reporte, consultar recompensa, resolver enlaces al explorador. La beta corre el adaptador simulado; el adaptador de Arbitrum implementa la misma interfaz.
+Interfaz ChainAdapter: anclar reporte, consultar recompensa, resolver enlaces al explorador, leer el índice compartido. La beta corre el adaptador simulado por defecto; ArbitrumChainAdapter (ADR-030) implementa la misma interfaz con viem y firma con wallet inyectada. Los tres contratos (ReportRegistry, TokenReward, IdentityEscrow) ya están escritos y testeados en contracts/ (ADR-033, ADR-034) — falta solo desplegarlos con una wallet fondeada y cargar las direcciones: activar es un despliegue y variables de entorno, no escribir código.
 
-- Tecnologias: Arbitrum Sepolia (421614), Arbitrum One (42161), ABIs tipadas, viem (a integrar)
-- Codigo: `src/lib/chain/types.ts`, `src/lib/chain/mock-adapter.ts`, `src/lib/chain/redes.ts`, `src/lib/chain/abis.ts`
+- Tecnologias: Arbitrum Sepolia (421614), Arbitrum One (42161), ABIs tipadas, viem
+- Codigo: `src/lib/chain/types.ts`, `src/lib/chain/mock-adapter.ts`, `src/lib/chain/arbitrum-adapter.ts`, `src/lib/chain/proveedor-inyectado.ts`, `src/lib/chain/eventos.ts`, `src/lib/chain/redes.ts`, `src/lib/chain/abis.ts`
 
 ### Evidencia (IPFS) `storage` — Simulado
 
@@ -83,7 +83,7 @@ Ruta API que valida el aviso y genera folio para serenazgo, policía o ambulanci
 
 ### Identidad, acceso y revelación selectiva `identidad` — Simulado
 
-Puerta de acceso con Google: sin sesion no se entra (ADR-027). El alias publico se deriva de la cuenta, asi que entrar desde otro telefono devuelve el mismo. La cuenta nunca se muestra a la red ni toca la cadena: es la identidad real que IdentityEscrow custodiaria bajo 2-de-3.
+Puerta de acceso selectiva con Google (ADR-035, amend de ADR-027): navegar la app es libre, reportar y el circulo exigen sesion. El alias publico se deriva de la cuenta, asi que entrar desde otro telefono devuelve el mismo. La cuenta nunca se muestra a la red ni toca la cadena: es la identidad real que IdentityEscrow custodiaria bajo 2-de-3.
 
 - Tecnologias: Auth.js v5 (Google), JWT en cookie, sin base de datos, Privy o Web3Auth (a integrar), IdentityEscrow.sol
 - Codigo: `src/auth.ts`, `src/lib/identidad.ts`, `src/components/cuenta/AccesoGoogle.tsx`, `src/components/cuenta/RevelacionSelectiva.tsx`
@@ -186,7 +186,7 @@ Red: Arbitrum Sepolia → Arbitrum One
 | Anclaje on-chain | El adaptador simulado produce un hash de transacción y un enlace al explorador con el formato real. | Desplegar ReportRegistry y activar NEXT_PUBLIC_CHAIN_MODE=arbitrum. |
 | Anti-Sybil | Límite por wallet y por zona, más multiplicador por corroboración independiente. | Un adversario con varios dispositivos todavía puede farmear. La prueba de presencia criptográfica es roadmap y así se dice en el pitch. |
 | Círculo de cuidado | Geometría, frescura de la ubicación, evaluación de cercanía y deduplicación de avisos, todo real y con tests. Avisos con la Notification API del navegador. | El transporte: hoy la ubicación del contacto se mueve localmente. El tiempo real entre dispositivos necesita servidor, y eso choca con la promesa de no guardar datos de nadie. Tampoco hay avisos con la app cerrada. |
-| Acceso con Google | Puerta de acceso con Auth.js: sin sesion no se entra. El alias se deriva de la cuenta, asi que entrar desde otro telefono devuelve el mismo seudonimo. Sin base de datos: la sesion es una cookie firmada en el dispositivo. | Si el despliegue no tiene credenciales de Google, la puerta se abre sola para no dejar la app inaccesible. La derivacion del alias es de demostracion, no una KDF. |
+| Acceso con Google | Puerta de acceso selectiva con Auth.js (ADR-035): navegar no pide sesion, reportar y el circulo si. El alias se deriva de la cuenta, asi que entrar desde otro telefono devuelve el mismo seudonimo. Sin base de datos: la sesion es una cookie firmada en el dispositivo. | Si el despliegue no tiene credenciales de Google, tambien reportar y el circulo se abren solos para no dejar esas rutas inaccesibles. La derivacion del alias es de demostracion, no una KDF. |
 | Revelación selectiva | Demostración del mecanismo 2-de-3 y del rastro público de cada solicitud. | Integración legal real con el Poder Judicial y custodia de claves por un tercero acreditado. |
 | Escalamiento a la autoridad | Ruta API que valida y emite folio; reenvía a un webhook real si está configurado. | Convenio con un municipio y su endpoint de recepción. |
 | Índice compartido | Los reportes persisten en el dispositivo; la app arranca con datos sembrados de Lima. | Leer eventos de ReportSubmitted por RPC para que dos teléfonos vean el mismo mapa. |
@@ -196,16 +196,16 @@ Red: Arbitrum Sepolia → Arbitrum One
 
 ## Siguientes pasos
 
-- **Desplegar los tres contratos en Arbitrum Sepolia** (Equipo de contratos) — Publicar direcciones en las variables NEXT_PUBLIC_*_ADDRESS. Los ABIs esperados ya están en src/lib/chain/abis.ts.
+- **Desplegar los tres contratos en Arbitrum Sepolia** (Quien tenga una wallet con ETH de testnet) — Los contratos ya están escritos, compilados y con 27 tests en verde (contracts/, ADR-033, ADR-034) — no falta código, falta una wallet fondeada. Correr `npm run contracts:deploy:sepolia` tras llenar contracts/.env (ver contracts/.env.example) y publicar las tres direcciones en las variables NEXT_PUBLIC_*_ADDRESS.
   <br>Desbloquea: Anclaje real, recompensa real, índice compartido
-- **Implementar ArbitrumChainAdapter** (Equipo de contratos) — Un archivo que implemente la interfaz ChainAdapter con viem. No hay que tocar ninguna pantalla.
-  <br>Desbloquea: Cambiar el modo de cadena
-- **Portar la política anti-Sybil a TokenReward.sol** (Equipo de contratos) — Las constantes de src/lib/antisybil.ts son la especificación. Los tests describen los casos límite.
-  <br>Desbloquea: Que la recompensa mostrada coincida con la que la cadena aprueba
-- **Hidratar el mapa desde eventos ReportSubmitted** (Equipo de contratos + frontend) — Sustituir la lectura del repositorio local por una lectura por RPC en el mismo punto de entrada.
-  <br>Desbloquea: Demo con varios teléfonos a la vez
-- **Conectar Privy o Web3Auth** (Frontend) — Reemplazar el proveedor de identidad local. La interfaz ya está aislada.
-  <br>Desbloquea: Firmar transacciones reales sin seed phrase
+- **Verificar el código fuente en Arbiscan** (Quien despliegue) — `npm run --prefix contracts verify:sepolia` (o `hardhat ignition verify`) con ARBISCAN_API_KEY en contracts/.env. Sin esto el contrato es una caja negra para el jurado.
+  <br>Desbloquea: Que el criterio de Arbitrum se pueda verificar de verdad, no solo argumentar
+- **Probar ArbitrumChainAdapter contra Sepolia real** (Frontend) — El adaptador (src/lib/chain/arbitrum-adapter.ts) y la lectura de eventos (src/lib/chain/eventos.ts) ya están implementados y gateados por NEXT_PUBLIC_CHAIN_MODE (ADR-030, ADR-032), firmando con wallet inyectada. Falta solo que existan direcciones desplegadas para verificar end-to-end.
+  <br>Desbloquea: Confirmar el formato de zoneId (hoy keccak256 del string, ver ADR-030) y medir el costo real de gas
+- **Conectar Privy o Web3Auth** (Frontend) — Reemplazar la wallet inyectada interina (src/lib/chain/proveedor-inyectado.ts) por la wallet embebida. La interfaz ya está aislada para que sea un cambio de un archivo.
+  <br>Desbloquea: Firmar transacciones reales sin que el vecino instale una wallet aparte
+- **Sincronizar corroboraciones desde TokenReward.corroborate()** (Frontend) — El índice compartido (ADR-032) hoy reconstruye reportes remotos sin corroboraciones ni descripción. Leer también estos eventos para que la recompensa mostrada coincida entre dispositivos.
+  <br>Desbloquea: Que el saldo mostrado sea el mismo en todos los teléfonos
 - **Evaluar Stylus para verificación geoespacial** (Equipo de contratos) — Medir el costo en gas del cálculo de distancia en Solidity contra Rust/Stylus antes de prometerlo en el pitch.
   <br>Desbloquea: Nada del MVP; es argumento de escalabilidad
 

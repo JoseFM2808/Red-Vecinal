@@ -13,7 +13,7 @@ en un deploy de preview. Un build que falla a las 3 p.m. cuesta más que cualqui
 | Dominio de producción | `https://vecino-seguro.vercel.app` ← **este es el que se comparte** |
 | Rama de producción | `main` |
 
-El repositorio y el proyecto de Vercel se renombraron el 7 de agosto (ADR-030). El dominio
+El repositorio y el proyecto de Vercel se renombraron el 7 de agosto (ADR-036). El dominio
 anterior `red-vecinal-chi.vercel.app` **ya no existe**: responde 404. Cualquier enlace, código
 QR o diapositiva que lo mencione hay que rehacerlo.
 
@@ -207,7 +207,7 @@ Hacerlo con **días** de anticipación, no la mañana del 12.
 
 - [ ] `npm run check` y `npm run build` en verde en local
 - [ ] Último commit pusheado y su deploy en Vercel marcado **Ready**
-- [ ] **Redeploy hecho después del rename** (ADR-030), y comprobado que la tarjeta de enlace
+- [ ] **Redeploy hecho después del rename** (ADR-036), y comprobado que la tarjeta de enlace
       ya no apunta al dominio muerto:
       `curl -s https://vecino-seguro.vercel.app | grep 'og:url'` debe decir `vecino-seguro`
 - [ ] `https://vecino-seguro.vercel.app/api/auth/callback/google` registrada en Google Cloud

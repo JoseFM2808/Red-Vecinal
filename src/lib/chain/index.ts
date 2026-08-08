@@ -1,4 +1,5 @@
 import { CONFIG, integracionCadenaLista } from "../config";
+import { crearAdaptadorArbitrum } from "./arbitrum-adapter";
 import { crearAdaptadorSimulado } from "./mock-adapter";
 import type { AdaptadorCadena } from "./types";
 
@@ -12,21 +13,24 @@ let cache: AdaptadorCadena | null = null;
  * Unico punto de entrada a la cadena. Las pantallas llaman a esto y nunca
  * importan un adaptador concreto.
  *
- * Cuando el equipo de contratos entregue `arbitrum-adapter.ts`, la unica linea
- * que cambia en todo el frontend es la de abajo:
- *
- *   if (integracionCadenaLista()) return crearAdaptadorArbitrum(CONFIG);
+ * Con las direcciones cargadas (ADR-030), se intenta el adaptador real. Si
+ * construirlo falla — por ejemplo, sin wallet inyectada en el navegador todavia —
+ * se cae al simulado en vez de dejar la demo en blanco delante del jurado.
  */
 export function obtenerAdaptadorDeCadena(): AdaptadorCadena {
   if (cache) return cache;
 
   if (integracionCadenaLista()) {
-    // Todavia no existe el adaptador real: se avisa en consola y se sigue con el
-    // simulado en vez de dejar la demo en blanco delante del jurado.
-    console.warn(
-      "[vecino-seguro] NEXT_PUBLIC_CHAIN_MODE=arbitrum pero aun no hay ArbitrumChainAdapter. " +
-        "Ver docs/SIGUIENTES-PASOS-ARBITRUM.md. Se usa el adaptador simulado.",
-    );
+    try {
+      cache = crearAdaptadorArbitrum(CONFIG);
+      return cache;
+    } catch (error) {
+      console.warn(
+        "[vecino-seguro] NEXT_PUBLIC_CHAIN_MODE=arbitrum pero el adaptador real no se pudo crear. " +
+          "Se usa el adaptador simulado.",
+        error,
+      );
+    }
   }
 
   cache = crearAdaptadorSimulado(CONFIG.chainId);

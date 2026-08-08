@@ -26,6 +26,17 @@ function leerChainId(): number {
   return Number.isFinite(bruto) && bruto > 0 ? bruto : CHAIN_ID_POR_DEFECTO;
 }
 
+/** Bloque de despliegue de ReportRegistry: evita paginar getLogs desde el genesis. */
+function leerBloqueDespliegue(): bigint {
+  const bruto = process.env.NEXT_PUBLIC_REPORT_REGISTRY_DEPLOY_BLOCK;
+  try {
+    const valor = bruto ? BigInt(bruto) : 0n;
+    return valor >= 0n ? valor : 0n;
+  } catch {
+    return 0n;
+  }
+}
+
 export const CONFIG = {
   version: "0.1.0-beta.2",
   modoCadena: leerModo(),
@@ -35,6 +46,7 @@ export const CONFIG = {
     tokenReward: process.env.NEXT_PUBLIC_TOKEN_REWARD_ADDRESS ?? "",
     identityEscrow: process.env.NEXT_PUBLIC_IDENTITY_ESCROW_ADDRESS ?? "",
   },
+  reportRegistryDeployBlock: leerBloqueDespliegue(),
   walletAbstraction: {
     privyAppId: process.env.NEXT_PUBLIC_PRIVY_APP_ID ?? "",
   },

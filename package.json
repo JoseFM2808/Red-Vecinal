@@ -18,7 +18,10 @@
     "docs:check": "node scripts/generate-docs.mjs --check",
     "validate": "node scripts/validate-data.mjs",
     "preflight": "node scripts/preflight-env.mjs",
-    "check": "npm run preflight && npm run validate && npm run docs:check && npm run typecheck && npm run lint && npm run test"
+    "check": "npm run preflight && npm run validate && npm run docs:check && npm run typecheck && npm run lint && npm run test",
+    "contracts:compile": "npm --prefix contracts run compile",
+    "contracts:test": "npm --prefix contracts test",
+    "contracts:deploy:sepolia": "npm --prefix contracts run deploy:sepolia"
   },
   "dependencies": {
     "leaflet": "^1.9.4",
@@ -26,7 +29,8 @@
     "next-auth": "5.0.0-beta.32",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-leaflet": "^5.0.0"
+    "react-leaflet": "^5.0.0",
+    "viem": "^2.55.11"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.1.0",

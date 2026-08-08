@@ -6,11 +6,16 @@
  * se avisa y se registra en src/data/decisiones.json.
  */
 
+/** Exportado aparte (no solo dentro del arreglo) para que src/lib/chain/eventos.ts lo
+ *  pueda pasar a `parseAbiItem` con el tipo literal completo, sin depender de un indice. */
+export const EVENTO_REPORT_SUBMITTED =
+  "event ReportSubmitted(uint256 indexed reportId, address indexed reporter, bytes32 contentHash, int32 latE6, int32 lngE6, uint8 category, uint64 timestamp, string cid)" as const;
+
 export const ABI_REPORT_REGISTRY = [
-  "function submitReport(bytes32 contentHash, int32 latE6, int32 lngE6, uint8 category, bytes32 zoneId) returns (uint256 reportId)",
-  "function getReport(uint256 reportId) view returns (bytes32 contentHash, address reporter, int32 latE6, int32 lngE6, uint8 category, uint64 timestamp)",
+  "function submitReport(bytes32 contentHash, int32 latE6, int32 lngE6, uint8 category, bytes32 zoneId, string cid) returns (uint256 reportId)",
+  "function getReport(uint256 reportId) view returns (bytes32 contentHash, address reporter, int32 latE6, int32 lngE6, uint8 category, uint64 timestamp, string cid)",
   "function totalReports() view returns (uint256)",
-  "event ReportSubmitted(uint256 indexed reportId, address indexed reporter, bytes32 contentHash, int32 latE6, int32 lngE6, uint8 category, uint64 timestamp)",
+  EVENTO_REPORT_SUBMITTED,
 ] as const;
 
 export const ABI_TOKEN_REWARD = [
