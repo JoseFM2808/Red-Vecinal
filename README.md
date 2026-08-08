@@ -4,6 +4,8 @@ Red vecinal de reporte de seguridad con geolocalización y evidencia anclada en 
 Hackathon Ethereum Lima 2026.
 
 **Demo en vivo: https://vecino-seguro.vercel.app**
+**Si llegas en frio, empieza por aqui: [/landing](https://vecino-seguro.vercel.app/landing)** — que problema
+resuelve, por que en Arbitrum y que funciona de verdad hoy. Dos minutos, sin cuenta.
 
 El vecino reporta en tres toques desde el celular. La evidencia va a IPFS, su hash se ancla en
 Arbitrum y la red vecinal se entera al instante. Un botón aparte escala a serenazgo, policía o
@@ -96,6 +98,7 @@ npm run build     # build de produccion (lo mismo que corre Vercel)
 src/
 ├─ app/                    6 pestañas + rutas API de escalamiento y de sesión
 │  ├─ page.tsx             Inicio — problema, impacto y estado de la red
+│  ├─ landing/             Landing auto explicativa (ADR-037), publica y fuera de la barra
 │  ├─ mapa/                Mapa vecinal (Leaflet + OpenStreetMap, sin API key)
 │  ├─ reportar/            Flujo de reporte en 3 pasos
 │  ├─ circulo/             Círculo de cuidado (requiere sesión)

@@ -2,7 +2,12 @@ import type { MetadataRoute } from "next";
 import { urlBase } from "@/lib/url-base";
 import { ARQUITECTURA } from "@/lib/arquitectura";
 
-const RUTAS = ["/", "/mapa", "/reportar", "/cuenta", "/arquitectura"] as const;
+// /circulo queda fuera a proposito: exige sesion (ADR-102), asi que indexarla solo
+// llevaria a un muro. /landing si entra, y con prioridad alta: es la URL que se comparte
+// con el jurado y con quien llega en frio (ADR-037).
+const RUTAS = ["/", "/landing", "/mapa", "/reportar", "/cuenta", "/arquitectura"] as const;
+
+const PRIORIDAD: Record<string, number> = { "/": 1, "/landing": 0.9 };
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = urlBase();
@@ -14,6 +19,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     url: new URL(ruta, base).toString(),
     lastModified: modificado,
     changeFrequency: "daily",
-    priority: ruta === "/" ? 1 : 0.7,
+    priority: PRIORIDAD[ruta] ?? 0.7,
   }));
 }

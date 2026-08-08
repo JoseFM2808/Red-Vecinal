@@ -12,7 +12,18 @@ async function cargarAdaptador() {
   return mod.obtenerAdaptadorDeCadena();
 }
 
-describe("obtenerAdaptadorDeCadena — activacion por configuracion", () => {
+/**
+ * Timeout de 30 s y no los 5 s por defecto.
+ *
+ * `vi.resetModules()` obliga a reimportar `./index`, que arrastra el adaptador de Arbitrum
+ * y con el todo el grafo de viem. La primera vez que Vitest lo transforma, en una maquina
+ * lenta o con el cache frio, eso pasa de 5 s y el test cae por timeout aunque el codigo
+ * bajo prueba sea instantaneo — medido: 3.5 s con cache caliente, mas de 5 s en frio.
+ *
+ * El margen es para la transformacion, no para la logica: si `obtenerAdaptadorDeCadena()`
+ * empezara a tardar de verdad, seguiria fallando por las aserciones y no por el reloj.
+ */
+describe("obtenerAdaptadorDeCadena — activacion por configuracion", { timeout: 30_000 }, () => {
   afterEach(() => {
     vi.unstubAllEnvs();
   });

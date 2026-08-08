@@ -383,8 +383,8 @@
   "limites": [
     {
       "tema": "Anclaje on-chain",
-      "queHacemos": "El adaptador simulado produce un hash de transacción y un enlace al explorador con el formato real.",
-      "queFaltaria": "Desplegar ReportRegistry y activar NEXT_PUBLIC_CHAIN_MODE=arbitrum."
+      "queHacemos": "ArbitrumChainAdapter está implementado con viem y firma con la wallet inyectada del navegador; el adaptador simulado sigue siendo el que corre por defecto y produce un hash y un enlace al explorador con el formato real.",
+      "queFaltaria": "Desplegar los tres contratos en Arbitrum Sepolia con una wallet fondeada y cargar las direcciones en NEXT_PUBLIC_*_ADDRESS. No falta código: el despliegue guardado en contracts/ignition/deployments/chain-421614 se hizo contra un nodo Hardhat local que imita ese chainId, y esas direcciones no existen en la red real (ADR-038)."
     },
     {
       "tema": "Anti-Sybil",
@@ -413,8 +413,8 @@
     },
     {
       "tema": "Índice compartido",
-      "queHacemos": "Los reportes persisten en el dispositivo; la app arranca con datos sembrados de Lima.",
-      "queFaltaria": "Leer eventos de ReportSubmitted por RPC para que dos teléfonos vean el mismo mapa."
+      "queHacemos": "La lectura de eventos ReportSubmitted por RPC está implementada y fusiona lo local completo con lo remoto best-effort (ADR-032). Mientras no haya contrato desplegado, lo que se ve son los reportes del dispositivo más los datos sembrados de Lima.",
+      "queFaltaria": "Un contrato desplegado del que leer. Las corroboraciones aún no se sincronizan: un reporte reconstruido desde el evento llega sin descripción ni conteo de corroboraciones."
     },
     {
       "tema": "Detección de distrito",
@@ -494,7 +494,7 @@
       "peso": 25,
       "evidencia": [
         "Adaptadores con interfaz para cadena, storage e identidad.",
-        "Reglas de dominio como funciones puras con 59 tests en Vitest.",
+        "Reglas de dominio como funciones puras con 112 tests en Vitest, incluidos el adaptador de Arbitrum y la lectura de eventos.",
         "npm run check: preflight de entorno, validación de datos, docs sincronizados, tipos, lint y tests.",
         "CSP y cabeceras de seguridad verificadas contra el build real, no asumidas.",
         "El build aborta si alguien expone un secreto con prefijo NEXT_PUBLIC_."

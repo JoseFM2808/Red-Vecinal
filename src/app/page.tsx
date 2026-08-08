@@ -114,7 +114,24 @@ export default function PaginaInicio() {
         </Tarjeta>
       </section>
 
-      <section className="px-4">
+      <section className="space-y-2 px-4">
+        {/* La landing (ADR-037) es la URL que se comparte fuera; desde dentro es un destino mas. */}
+        <Link
+          href="/landing"
+          className="tarjeta flex items-center gap-3 px-4 py-3.5 transition active:scale-[0.99]"
+        >
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-superficie-alta text-marca">
+            <Icono nombre="escudo" className="h-4 w-4" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-medium text-texto">Que es Vecino Seguro</span>
+            <span className="block text-xs text-tenue">
+              El problema, por que en Arbitrum y que funciona de verdad · 2 min
+            </span>
+          </span>
+          <Icono nombre="flecha" className="h-4 w-4 shrink-0 text-tenue" />
+        </Link>
+
         <Link
           href="/arquitectura"
           className="tarjeta flex items-center gap-3 px-4 py-3.5 transition active:scale-[0.99]"

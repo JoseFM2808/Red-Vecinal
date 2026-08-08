@@ -183,13 +183,13 @@ Red: Arbitrum Sepolia → Arbitrum One
 
 | Tema | Que hace hoy | Que falta |
 | --- | --- | --- |
-| Anclaje on-chain | El adaptador simulado produce un hash de transacción y un enlace al explorador con el formato real. | Desplegar ReportRegistry y activar NEXT_PUBLIC_CHAIN_MODE=arbitrum. |
+| Anclaje on-chain | ArbitrumChainAdapter está implementado con viem y firma con la wallet inyectada del navegador; el adaptador simulado sigue siendo el que corre por defecto y produce un hash y un enlace al explorador con el formato real. | Desplegar los tres contratos en Arbitrum Sepolia con una wallet fondeada y cargar las direcciones en NEXT_PUBLIC_*_ADDRESS. No falta código: el despliegue guardado en contracts/ignition/deployments/chain-421614 se hizo contra un nodo Hardhat local que imita ese chainId, y esas direcciones no existen en la red real (ADR-038). |
 | Anti-Sybil | Límite por wallet y por zona, más multiplicador por corroboración independiente. | Un adversario con varios dispositivos todavía puede farmear. La prueba de presencia criptográfica es roadmap y así se dice en el pitch. |
 | Círculo de cuidado | Geometría, frescura de la ubicación, evaluación de cercanía y deduplicación de avisos, todo real y con tests. Avisos con la Notification API del navegador. | El transporte: hoy la ubicación del contacto se mueve localmente. El tiempo real entre dispositivos necesita servidor, y eso choca con la promesa de no guardar datos de nadie. Tampoco hay avisos con la app cerrada. |
 | Acceso con Google | Puerta de acceso selectiva con Auth.js (ADR-035): navegar no pide sesion, reportar y el circulo si. El alias se deriva de la cuenta, asi que entrar desde otro telefono devuelve el mismo seudonimo. Sin base de datos: la sesion es una cookie firmada en el dispositivo. | Si el despliegue no tiene credenciales de Google, tambien reportar y el circulo se abren solos para no dejar esas rutas inaccesibles. La derivacion del alias es de demostracion, no una KDF. |
 | Revelación selectiva | Demostración del mecanismo 2-de-3 y del rastro público de cada solicitud. | Integración legal real con el Poder Judicial y custodia de claves por un tercero acreditado. |
 | Escalamiento a la autoridad | Ruta API que valida y emite folio; reenvía a un webhook real si está configurado. | Convenio con un municipio y su endpoint de recepción. |
-| Índice compartido | Los reportes persisten en el dispositivo; la app arranca con datos sembrados de Lima. | Leer eventos de ReportSubmitted por RPC para que dos teléfonos vean el mismo mapa. |
+| Índice compartido | La lectura de eventos ReportSubmitted por RPC está implementada y fusiona lo local completo con lo remoto best-effort (ADR-032). Mientras no haya contrato desplegado, lo que se ve son los reportes del dispositivo más los datos sembrados de Lima. | Un contrato desplegado del que leer. Las corroboraciones aún no se sincronizan: un reporte reconstruido desde el evento llega sin descripción ni conteo de corroboraciones. |
 | Detección de distrito | 49 distritos de referencia de Lima y Callao, resueltos en el dispositivo. Si el punto no cae claramente dentro de uno, se dice 'Cerca de X' en vez de afirmarlo, y el vecino puede corregirlo a mano. | Cerca del borde de un distrito grande la estimación puede apuntar al vecino de al lado. No se usa geocoding externo a propósito: enviaría la coordenada del vecino a un tercero. |
 | Detección de sismos | Agrega los reportes de vecinos: si varios coinciden en media hora, muestra el mapa comunitario por zonas. | No hay medición sismológica. Un detector real es procesamiento de señal sobre acelerómetros, un proyecto aparte. |
 | Evidencia en IPFS | CID determinista calculado desde el hash del archivo. | Pinata con JWT en variables de entorno de Vercel. |
@@ -226,7 +226,7 @@ Red: Arbitrum Sepolia → Arbitrum One
 ### Implementación técnica — 25%
 
 - Adaptadores con interfaz para cadena, storage e identidad.
-- Reglas de dominio como funciones puras con 59 tests en Vitest.
+- Reglas de dominio como funciones puras con 112 tests en Vitest, incluidos el adaptador de Arbitrum y la lectura de eventos.
 - npm run check: preflight de entorno, validación de datos, docs sincronizados, tipos, lint y tests.
 - CSP y cabeceras de seguridad verificadas contra el build real, no asumidas.
 - El build aborta si alguien expone un secreto con prefijo NEXT_PUBLIC_.

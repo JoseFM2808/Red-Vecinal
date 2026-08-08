@@ -4,7 +4,7 @@
 
 Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o por el equipo se registra aquí ANTES o AL MOMENTO de escribir el código que la implementa. `docs/DECISIONES.md` se genera desde este archivo (npm run docs) y la pestaña Arquitectura de la app lo renderiza.
 
-**38 decisiones registradas · 19 esperan validacion humana**
+**41 decisiones registradas · 21 esperan validacion humana**
 
 ## Esperan que una persona decida
 
@@ -29,6 +29,8 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | ADR-034 | Donde vive el limite de frecuencia, y por que corroborate() no revalida geometria on-chain | Dos cosas para confirmar antes de un despliegue que no sea solo de demo: (1) que un reporte jamas corroborado no pague nada es aceptable, y (2) que corroborate() sin verificacion de distancia on-chain es un riesgo asumible para el MVP. |
 | ADR-035 | El acceso vuelve a ser mixto: navegar es libre, reportar exige cuenta real | ADR-027 ya habia pasado por validacion humana con la advertencia explicita de que se perdia el argumento de 'reportar sin registro'. Esta decision lo recupera a medias (navegar si, reportar no) — confirmar que el equipo esta de acuerdo con el punto medio y no esperaba una reversion total. |
 | ADR-036 | Renombrar el repositorio y el proyecto de Vercel a Vecino Seguro | Quedan tres pasos manuales que la IA no puede hacer y que rompen la demo si se olvidan. 1) Redeploy en Vercel: los metadatos de Open Graph se congelan en el build y el deploy actual todavia anuncia red-vecinal-chi.vercel.app, que ya da 404. 2) Antes del Redeploy, revisar que NEXT_PUBLIC_SITE_URL no este fijada al dominio viejo en las variables de Vercel: tiene prioridad sobre la deteccion automatica y sobrevivria al Redeploy. 3) Anadir https://vecino-seguro.vercel.app/api/auth/callback/google como URI de redireccion autorizada en Google Cloud Console. |
+| ADR-038 | El despliegue guardado en chain-421614 es de un nodo local, no de Arbitrum Sepolia | Para pasar a Arbitrum Sepolia real hacen falta cuatro cosas que la IA no puede hacer. 1) Llenar contracts/.env con DEPLOYER_PRIVATE_KEY (una wallet con ETH de testnet) y ARBITRUM_SEPOLIA_RPC_URL. 2) Desplegar contra --network arbitrumSepolia, NO arbitrumLocal. 3) Cargar las tres direcciones reales en NEXT_PUBLIC_REPORT_REGISTRY_ADDRESS, NEXT_PUBLIC_TOKEN_REWARD_ADDRESS y NEXT_PUBLIC_IDENTITY_ESCROW_ADDRESS, mas NEXT_PUBLIC_CHAIN_MODE=arbitrum y NEXT_PUBLIC_REPORT_REGISTRY_DEPLOY_BLOCK con el bloque real: sin ese bloque, eventos.ts pagina getLogs desde el bloque 0 y el RPC publico falla. 4) Redeploy en Vercel, porque las NEXT_PUBLIC_* se congelan en el build. |
+| ADR-039 | La vista agregada de eventos se abre al visitante sin cuenta, como gancho de registro | Confirmar donde queda la linea entre lo abierto y lo de pago. Hoy se abre: conteo de reportes, numero de zonas activas, corroborados, ranking de las 4 zonas mas activas y los 5 ultimos avisos con categoria, zona y antiguedad. Se mantiene cerrado: descripcion, coordenada exacta, autor, quien corroboro, historico mas alla de 24 h y cualquier exportacion. Si el plan comercial para aseguradoras y juntas necesita que el ranking por zona sea de pago, hay que recortar esta vista antes de hablar con el primer cliente. |
 
 ## Indice
 
@@ -72,6 +74,9 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | [ADR-034](#adr-034) | Donde vive el limite de frecuencia, y por que corroborate() no revalida geometria on-chain | IA | aceptada | media | Implementacion tecnica, Ecosistema Arbitrum, Problema e impacto |
 | [ADR-035](#adr-035) | El acceso vuelve a ser mixto: navegar es libre, reportar exige cuenta real | IA+Humano | aceptada | alta | Producto y UX, Problema e impacto, Pitch y demo |
 | [ADR-036](#adr-036) | Renombrar el repositorio y el proyecto de Vercel a Vecino Seguro | IA+Humano | aceptada | alta | Pitch y demo, Implementacion tecnica |
+| [ADR-037](#adr-037) | Una landing auto explicativa en /landing, fuera de la barra de pestanas | IA+Humano | aceptada | alta | Pitch y demo, Problema e impacto, Producto y UX |
+| [ADR-038](#adr-038) | El despliegue guardado en chain-421614 es de un nodo local, no de Arbitrum Sepolia | IA+Humano | aceptada | alta | Ecosistema Arbitrum, Pitch y demo, Implementacion tecnica |
+| [ADR-039](#adr-039) | La vista agregada de eventos se abre al visitante sin cuenta, como gancho de registro | IA+Humano | aceptada | alta | Producto y UX, Problema e impacto, Pitch y demo |
 
 ---
 
@@ -1253,3 +1258,103 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 **Evidencia en el codigo.** `src/lib/url-base.ts`, `src/app/layout.tsx`, `docs/DESPLIEGUE.md`
 
 > **Necesita decision humana:** Quedan tres pasos manuales que la IA no puede hacer y que rompen la demo si se olvidan. 1) Redeploy en Vercel: los metadatos de Open Graph se congelan en el build y el deploy actual todavia anuncia red-vecinal-chi.vercel.app, que ya da 404. 2) Antes del Redeploy, revisar que NEXT_PUBLIC_SITE_URL no este fijada al dominio viejo en las variables de Vercel: tiene prioridad sobre la deteccion automatica y sobrevivria al Redeploy. 3) Anadir https://vecino-seguro.vercel.app/api/auth/callback/google como URI de redireccion autorizada en Google Cloud Console.
+
+---
+
+## ADR-037
+
+### Una landing auto explicativa en /landing, fuera de la barra de pestanas
+
+`2026-08-07` · autor: **IA+Humano** · estado: **aceptada** · reversibilidad: **alta**
+
+**Contexto.** docs/CAPACITACINES.md recoge cinco workshops del hackathon. El primero ("Como ganar en una Hackathon Web3") insiste en que gana el equipo que resuelve un problema y lo explica en dos minutos, no el que tiene mas codigo, y que "nadie premia lo que no lograste explicar". El cuarto exige un Blockchain Fit explicito y distinguir lo esencial de lo simulado. Hoy la app abre en Inicio, que asume que ya sabes que es esto: muestra el estado de la red y como reportar, no que problema resuelve ni por que existe. Un jurado que abre la URL en frio no tiene por donde entrar.
+
+**Alternativas descartadas.**
+
+- *Poner la landing en la raiz y mover Inicio a otra ruta* — La raiz es el start_url del manifiesto PWA y el destino de la primera pestana. Cambiarla a cinco dias de la demo toca navegacion, manifiesto e instalacion de la PWA por una mejora de presentacion.
+- *Anadir una septima pestana* — CLAUDE.md cierra la navegacion en seis pestanas y ya estan justas en 360 px: Arquitectura va abreviada por eso. Una septima obliga a reordenar la barra entera.
+- *Un grupo de rutas con layout propio para que la landing ocupe todo el ancho* — Obliga a mover las seis rutas actuales dentro de un grupo y a partir el layout raiz en dos. Es el refactor con mas superficie de rotura posible en la semana de la entrega, a cambio de mas ancho en escritorio.
+
+**Decision.** Ruta nueva `/landing`, dentro del layout existente y por tanto en la misma columna de lectura que el resto de la app. No es pestana: se llega desde una tarjeta en Inicio y, sobre todo, compartiendo la URL directa. Es publica — `rutaRequiereSesion()` solo protege /reportar y /circulo (ADR-035), asi que un jurado la abre sin cuenta. El orden de sus secciones copia la estructura de pitch del Workshop 1: problema, solucion, por que blockchain, que es real, preguntas del jurado. Ningun dato se escribe a mano: todo sale de arquitectura.json y de src/lib/chain, para que la landing no pueda contradecir a la app.
+
+**Consecuencias.**
+
+- El jurado tiene una URL que se explica sola, sin necesidad de que alguien del equipo este al lado.
+- La comparacion de costo L1 contra L2 se calcula desde redes.ts, asi que si cambia el costo estimado cambia sola y no queda una cifra huerfana.
+- Hay una seccion que dice explicitamente lo que blockchain NO resuelve aqui: que el reporte sea cierto. Adelantarse a la pregunta esceptica vale mas que esquivarla.
+- Las preguntas tecnicas del jurado (numero de contratos, version de Solidity, optimizador, reentrancy, si estan desplegados) van contestadas en la propia pagina.
+- Coste: la landing repite en otro tono cosas que ya estan en Inicio y en Arquitectura. Es duplicacion de mensaje, no de datos.
+- Al vivir dentro del layout, hereda la columna de 512/672 px. En un monitor grande se ve angosta; se acepta a cambio de no tocar el layout raiz esta semana.
+
+**Costo de revertir.** Bajo: borrar src/app/landing/ y la tarjeta de Inicio. Ninguna otra ruta depende de ella.
+
+**Sirve a.** Pitch y demo, Problema e impacto, Producto y UX
+
+**Evidencia en el codigo.** `src/app/landing/page.tsx`, `src/app/page.tsx`, `docs/CAPACITACINES.md`
+
+---
+
+## ADR-038
+
+### El despliegue guardado en chain-421614 es de un nodo local, no de Arbitrum Sepolia
+
+`2026-08-07` · autor: **IA+Humano** · estado: **aceptada** · reversibilidad: **alta**
+
+**Contexto.** contracts/ignition/deployments/chain-421614/deployed_addresses.json contiene tres direcciones y el nombre de la carpeta es el chainId de Arbitrum Sepolia, lo que se lee como que los contratos ya estan en la testnet. No lo estan. Verificado contra el RPC publico de Arbitrum Sepolia (eth_chainId devuelve 0x66eee): eth_getCode de las tres direcciones devuelve 0x, y las tres transacciones del journal devuelven null por hash. La cuenta firmante es 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266, la Account #0 publica de Hardhat, y las direcciones son las deterministas de un nodo recien arrancado. La causa esta documentada en el propio hardhat.config.ts: la red `arbitrumLocal` es un `hardhat node --chain-id 421614`, asi que Ignition archivo el despliegue bajo ese chainId aunque apuntara a 127.0.0.1:8545.
+
+**Alternativas descartadas.**
+
+- *Borrar la carpeta del despliegue local* — Es un artefacto util: permite probar el flujo end-to-end con el frontend firmando de verdad sin gastar ETH de testnet. El problema no es que exista, es que se puede confundir con un despliegue real.
+- *Dejarlo como esta y aclararlo solo en el pitch* — Un jurado que copie una direccion y la busque en Arbiscan no encuentra nada y saca su propia conclusion. El Workshop 1 es explicito: el feedback honesto se agradece, la sorpresa se castiga.
+- *Desplegar ahora en Sepolia para cerrar el tema* — Necesita una wallet con ETH de testnet y una clave privada, que la IA no puede ni debe manejar. Es una accion del equipo, no una decision de codigo.
+
+**Decision.** Se declara la situacion en el limite "Anclaje on-chain" de arquitectura.json, que es lo que ve el jurado en la pestana Arquitectura y en la landing, y se apunta al artefacto concreto para que nadie confunda las direcciones locales con las de la testnet. La carpeta se conserva porque el nodo local sigue siendo el camino barato para probar el flujo completo.
+
+**Consecuencias.**
+
+- El estado real queda dicho dentro del producto y no solo en una conversacion.
+- Las tres direcciones locales quedan explicitamente marcadas como no verificables en Arbiscan.
+- Sigue pendiente el despliegue real: es lo unico que separa a la app del modo simulado, y no es codigo.
+- El modo simulado sigue siendo el de por defecto, asi que la demo no depende de que el despliegue ocurra.
+
+**Costo de revertir.** Ninguno: es documentacion. Cuando el despliegue real ocurra, se actualiza el limite y se cargan las direcciones.
+
+**Sirve a.** Ecosistema Arbitrum, Pitch y demo, Implementacion tecnica
+
+**Evidencia en el codigo.** `contracts/ignition/deployments/chain-421614/deployed_addresses.json`, `contracts/hardhat.config.ts`, `src/data/arquitectura.json`
+
+> **Necesita decision humana:** Para pasar a Arbitrum Sepolia real hacen falta cuatro cosas que la IA no puede hacer. 1) Llenar contracts/.env con DEPLOYER_PRIVATE_KEY (una wallet con ETH de testnet) y ARBITRUM_SEPOLIA_RPC_URL. 2) Desplegar contra --network arbitrumSepolia, NO arbitrumLocal. 3) Cargar las tres direcciones reales en NEXT_PUBLIC_REPORT_REGISTRY_ADDRESS, NEXT_PUBLIC_TOKEN_REWARD_ADDRESS y NEXT_PUBLIC_IDENTITY_ESCROW_ADDRESS, mas NEXT_PUBLIC_CHAIN_MODE=arbitrum y NEXT_PUBLIC_REPORT_REGISTRY_DEPLOY_BLOCK con el bloque real: sin ese bloque, eventos.ts pagina getLogs desde el bloque 0 y el RPC publico falla. 4) Redeploy en Vercel, porque las NEXT_PUBLIC_* se congelan en el build.
+
+---
+
+## ADR-039
+
+### La vista agregada de eventos se abre al visitante sin cuenta, como gancho de registro
+
+`2026-08-07` · autor: **IA+Humano** · estado: **aceptada** · reversibilidad: **alta**
+
+**Contexto.** El modelo de negocio de docs/PROYECTO.md dice dos cosas a la vez: el vecino nunca paga, y lo que se cobra son los mapas de riesgo agregados por zona para aseguradoras, juntas vecinales y gobiernos. Eso dejaba la vista agregada del lado de pago por defecto. Pero quien llega en frio a la URL no tiene forma de ver que hay actividad real: Inicio y la landing describen el producto, no lo muestran. El equipo pide que esa vista sea lo primero que se ve y el motivo para registrarse.
+
+**Alternativas descartadas.**
+
+- *Dejar la vista agregada solo tras registro* — Pide el registro antes de haber demostrado nada. Es justo el orden inverso al que convierte, y en una demo de hackathon significa que el jurado ve un muro antes que el producto.
+- *Abrir la vista completa, con detalle y ubicacion exacta* — Regala el producto que se le vende a aseguradoras y juntas, y expone el detalle del vecindario a cualquiera. La ubicacion fina de incidentes en abierto es un riesgo para el propio vecino.
+- *Un contador decorativo de actividad, sin datos reales* — Es un numero inventado. Contradice el principio de que no hay cifras decorativas y es exactamente lo que un jurado castiga si lo descubre.
+
+**Decision.** La landing abre con una vista de eventos publica: cifras de las ultimas 24 horas, ranking de zonas con mas actividad y los ultimos avisos con categoria, zona y antiguedad. Se queda fuera lo que da valor al producto de pago y lo que expone al vecino: descripcion completa, coordenada exacta, autor y quien corroboro. El CTA cambia segun el estado — sin sesion invita a entrar con Google, con sesion invita a reportar. Lleva EtiquetaSimulado porque mientras no haya contrato desplegado los datos son los del dispositivo mas los sembrados.
+
+**Consecuencias.**
+
+- El visitante ve actividad real antes de que se le pida nada. El registro deja de ser un peaje y pasa a ser el paso siguiente natural.
+- La linea entre gratis y de pago queda dibujada en el producto y no solo en un slide: agregado abierto, detalle y analitica cerrados.
+- Riesgo asumido: en un dispositivo nuevo solo se ven los datos sembrados de Lima, asi que la vista puede parecer mas viva de lo que la red esta. Por eso la etiqueta de simulado va visible y no en un tooltip escondido.
+- Cuando el contrato este desplegado, esta misma vista pasa a leer el indice compartido sin cambiar de forma: ya consume useApp(), no una fuente propia.
+- Coste: la landing tarda un poco mas en pintar porque la vista es cliente y espera a que carguen los reportes del dispositivo. Se cubre con el estado de carga en vez de bloquear la pagina.
+
+**Costo de revertir.** Bajo: quitar la seccion de la landing. El componente no lo usa nadie mas y no cambia el modelo de datos.
+
+**Sirve a.** Producto y UX, Problema e impacto, Pitch y demo
+
+**Evidencia en el codigo.** `src/components/landing/VistaEventosPublica.tsx`, `src/app/landing/page.tsx`, `docs/PROYECTO.md`
+
+> **Necesita decision humana:** Confirmar donde queda la linea entre lo abierto y lo de pago. Hoy se abre: conteo de reportes, numero de zonas activas, corroborados, ranking de las 4 zonas mas activas y los 5 ultimos avisos con categoria, zona y antiguedad. Se mantiene cerrado: descripcion, coordenada exacta, autor, quien corroboro, historico mas alla de 24 h y cualquier exportacion. Si el plan comercial para aseguradoras y juntas necesita que el ranking por zona sea de pago, hay que recortar esta vista antes de hablar con el primer cliente.
